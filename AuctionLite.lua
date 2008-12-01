@@ -1,5 +1,5 @@
 -------------------------------------------------------------------------------
--- AuctionLite 0.1
+-- AuctionLite 0.2
 --
 -- Lightweight addon to determine accurate market prices and to simplify
 -- the process of posting auctions.
@@ -26,7 +26,7 @@ AuctionLite:RegisterDefaults("realm", {
 });
 
 -- Constants.
-local AUCTIONLITE_VERSION = 0.1;
+local AUCTIONLITE_VERSION = 0.2;
 local AUCTIONS_PER_PAGE = 50;
 local POST_DISPLAY_SIZE = 16;
 local MIN_TIME_BETWEEN_SCANS = 0;
@@ -39,7 +39,7 @@ local Selling = false;
 -- Info about current AH query.
 local QueryRunning = false;
 local QueryWait = false;
-local QueryTerm = nil;
+local QueryLink = nil;
 local QueryPage = nil;
 local QueryData = nil;
 
@@ -75,14 +75,21 @@ function AuctionLite:PrintMoney(money)
 
   local result = "";
 
+  local append = function(s)
+    if result ~= "" then
+      result = result .. " ";
+    end
+    result = result .. s;
+  end
+
   if gold > 0 then
-    result = result .. "|cffd3c63a" .. gold .. "|rg";
+    append("|cffd3c63a" .. gold .. "|cffffffffg|r");
   end
   if silver > 0 then
-    result = result .. "|cffb0b0b0" .. silver .. "|rs";
+    append("|cffb0b0b0" .. silver .. "|cffffffffs|r");
   end
   if copper > 0 then
-    result = result .. "|cffb2734a" .. copper .. "|rc";
+    append("|cffb2734a" .. copper .. "|cffffffffc|r");
   end
 
   if result == "" then
@@ -107,6 +114,14 @@ function AuctionLite:GetDuration()
   return time;
 end
 
+-- Retrieve the item id and suffix id from an item link.
+function AuctionLite:SplitLink(link)
+  local _, _, str, name = link:find("|H(.*)|h%[(.*)%]");
+  local _, id, enchant, jewel1, jewel2, jewel3, jewel4, suffix, unique =
+        strsplit(":", str);
+  return name, tonumber(id), tonumber(suffix);
+end
+
 -------------------------------------------------------------------------------
 -- Bag functions
 -------------------------------------------------------------------------------
@@ -114,7 +129,7 @@ end
 -- Zero out the uniqueId field from an item link.
 function AuctionLite:RemoveUniqueId(link)
   if link ~= nil then
-    return link:gsub(":%d*:%d*|h", ":0:0|h");
+    return link:gsub(":%-?%d*:%-?%d*|h", ":0:0|h");
   else
     return nil;
   end
@@ -137,7 +152,7 @@ function AuctionLite:GetAuctionSellItemLink()
       local _, _, locked = GetContainerItemInfo(i, j);
       if locked then
         local link = GetContainerItemLink(i, j);
-        local _, _, name = link:find("%[(.*)%]");
+        local name = self:SplitLink(link);
         if name == targetName then
           if result == nil then
             result = link;
@@ -364,11 +379,10 @@ function AuctionLite:GeneratePrice(value)
 end
 
 -- Generate price, and dump some data to the console.
-function AuctionLite:ShowPriceData(itemName, itemValue, stackSize)
-  local hist = self:GetHistoricalPrice(itemName);
+function AuctionLite:ShowPriceData(itemLink, itemValue, stackSize)
+  local hist = self:GetHistoricalPrice(itemLink);
 
   local stackValue = itemValue * stackSize;
-  local bid, buyout = self:GeneratePrice(stackValue);
 
   local _, _, count, _, _, vendor = GetAuctionSellItemInfo();
   local itemVendor = vendor / count;
@@ -399,7 +413,11 @@ end
 -- stack size.
 function AuctionLite:UpdatePrices()
   if ItemValue > 0 then
-    local bid, buyout = self:GeneratePrice(ItemValue * PostSize:GetNumber());
+    local stackSize = PostSize:GetNumber();
+
+    local itemBid, itemBuyout = self:GeneratePrice(ItemValue);
+    local bid = itemBid * stackSize;
+    local buyout = itemBuyout * stackSize;
     
     MoneyInputFrame_SetCopper(PostBidPrice, bid);
     MoneyInputFrame_SetCopper(PostBuyoutPrice, buyout);
@@ -408,7 +426,8 @@ end
 
 -- Check whether there are any errors in the auction.
 function AuctionLite:ValidateAuction()
-  if GetAuctionSellItemInfo() and not QueryRunning then
+  local name, _, count, _, _, vendor = GetAuctionSellItemInfo();
+  if name ~= nil and not QueryRunning then
     local bid = MoneyInputFrame_GetCopper(PostBidPrice);
     local buyout = MoneyInputFrame_GetCopper(PostBuyoutPrice);
 
@@ -434,6 +453,10 @@ function AuctionLite:ValidateAuction()
     elseif GetMoney() < self:CalculateDeposit() then
       StatusError = true;
       PostStatusText:SetText("|cffff0000Not enough cash for deposit.|r");
+      PostCreateAuctionButton:Disable();
+    elseif buyout <= (vendor * size / count) then
+      StatusError = true;
+      PostStatusText:SetText("|cffff0000Buyout less than vendor price.|r");
       PostCreateAuctionButton:Disable();
     else
       StatusError = false;
@@ -470,7 +493,7 @@ function AuctionLite:ClickAuctionSellItemButton_Hook()
       PostStackText:SetText("Number of Items |cff808080(max " .. total .. ")|r");
 
       self:UpdateDeposit();
-      self:QueryAuctions(name);
+      self:QueryAuctions(self:RemoveUniqueId(self:GetAuctionSellItemLink()));
     end
   end
 end
@@ -480,11 +503,11 @@ end
 -------------------------------------------------------------------------------
 
 -- Start an auction query.
-function AuctionLite:StartQuery(name)
+function AuctionLite:StartQuery(link)
   if not QueryRunning then
     QueryRunning = true;
     QueryWait = true;
-    QueryTerm = name;
+    QueryLink = link;
     QueryPage = 0;
     QueryData = {};
     ItemValue = 0;
@@ -495,8 +518,8 @@ function AuctionLite:StartQuery(name)
 end
 
 -- Query a named item in the AH.
-function AuctionLite:QueryAuctions(name)
-  if self:StartQuery(name) then
+function AuctionLite:QueryAuctions(link)
+  if self:StartQuery(link) then
     self:SetStatus("|cffffff00Scanning...|r");
   end
 end
@@ -536,27 +559,27 @@ function AuctionLite:AnalyzeData(rawData)
 
   -- Split up our data into tables for each item.
   for i = 1, table.getn(rawData) do
-    -- local name, texture, count, quality, canUse, level,
-    --       minBid, minIncrement, buyoutPrice, bidAmount,
-    --       highBidder, owner = rawData[i];
-    local name = rawData[i][1];
-    local count = rawData[i][3];
-    local buyoutPrice = rawData[i][9];
-    local pricePerItem = buyoutPrice / count;
+    local link = rawData[i].link;
+    local count = rawData[i].count;
+    local buyoutPrice = rawData[i].buyoutPrice
+    local owner = rawData[i].owner;
 
+    local pricePerItem = buyoutPrice / count;
     if pricePerItem > 0 then
-      if itemData[name] == nil then
-        itemData[name] = {};
+      if itemData[link] == nil then
+        itemData[link] = {};
       end
 
-      local listing = { price = pricePerItem, count = count, keep = true };
-      table.insert(itemData[name], listing);
+      local ourAuction = (owner == UnitName("player"));
+      local listing = { price = pricePerItem, count = count,
+                        owner = owner, keep = not ourAuction };
+      table.insert(itemData[link], listing);
     end
   end
 
   -- Process each data set.
-  local name, data;
-  for name, data in pairs(itemData) do 
+  local link, data;
+  for link, data in pairs(itemData) do 
     local done = false;
 
     -- Discard any points that are more than 2 SDs away from the mean.
@@ -585,19 +608,62 @@ function AuctionLite:AnalyzeData(rawData)
     end
 
     result.data = data;
-    results[name] = result;
+    results[link] = result;
   end
 
   return results;
 end
 
+-- Request the next page of the current query.
+function AuctionLite:QueryNext()
+  QueryPage = QueryPage + 1;
+  QueryWait = true;
+end
+
+-- Our query has completed.  Analyze the data!
+function AuctionLite:QueryDone()
+  local results = self:AnalyzeData(QueryData);
+  -- Get the info for the item we really care about.
+  if QueryLink ~= "" then
+    local result = results[QueryLink];
+    if result ~= nil and result.listings > 0 then
+      local name = self:SplitLink(QueryLink);
+      ItemValue = result.price;
+      self:SetScrollData(name, result.data);
+      self:UpdatePrices();
+      self:ShowPriceData(QueryLink, ItemValue, PostSize:GetNumber());
+      self:SetStatus("|cff00ff00Scanned " .. result.listings ..  " listings.|r");
+    else
+      local hist = self:GetHistoricalPrice(QueryLink);
+      if hist ~= nil then
+        ItemValue = hist.price;
+        self:UpdatePrices();
+        self:ShowPriceData(QueryLink, ItemValue, PostSize:GetNumber());
+        self:SetStatus("|cffff0000Using historical data.|r");
+      else
+        ItemValue = 0;
+        self:SetStatus("|cffff0000No data for this item.|r");
+      end
+    end
+  end
+  -- Update our price info.
+  for link, result in pairs(results) do 
+    self:UpdateHistoricalPrice(link, result);
+  end
+  -- Update the UI.
+  self:AuctionFramePost_Update();
+  -- Indicate that we're done with this query.
+  QueryRunning = false;
+  QueryData = nil;
+end
+
 -- Handle a completed auction query.
 function AuctionLite:AUCTION_ITEM_LIST_UPDATE()
-  if QueryRunning then
+  if QueryRunning and not QueryWait then
     -- We've completed one of our own queries.
     local batch, total = GetNumAuctionItems("list");
     -- Update status.
-    if QueryTerm == "" then
+    if QueryLink == "" then
       local pct = math.floor((QueryPage * AUCTIONS_PER_PAGE + batch) * 100 / total);
       if pct == 100 then
         BrowseScanText:SetText("");
@@ -608,61 +674,35 @@ function AuctionLite:AUCTION_ITEM_LIST_UPDATE()
     -- Record results.
     local i;
     for i = 1, batch do
-      QueryData[QueryPage * AUCTIONS_PER_PAGE + i] =
-        { GetAuctionItemInfo("list", i) };
+      -- There has *got* to be a better way to do this...
+      local link = self:RemoveUniqueId(GetAuctionItemLink("list", i));
+      local name, texture, count, quality, canUse, level,
+            minBid, minIncrement, buyoutPrice, bidAmount,
+            highBidder, owner = GetAuctionItemInfo("list", i);
+      local listing = {
+        link = link, name = name, texture = texture, count = count,
+        quality = quality, canUse = canUse, level = level,
+        minBid = minBid, minIncrement = minIncrement,
+        buyoutPrice = buyoutPrice, bidAmount = bidAmount,
+        highBidder = highBidder, owner = owner
+      };
+      QueryData[QueryPage * AUCTIONS_PER_PAGE + i] = listing;
     end
     if QueryPage * AUCTIONS_PER_PAGE + batch < total then
       -- Request the next page.
-      QueryPage = QueryPage + 1;
-      QueryWait = true;
+      self:QueryNext();
     else
       -- We're done--time to analyze the data.
-      local results = self:AnalyzeData(QueryData);
-      -- Get the info for the item we really care about.
-      if QueryTerm ~= "" then
-        local result = results[QueryTerm];
-        if result ~= nil and result.listings > 0 then
-          ItemValue = result.price;
-          self:SetScrollData(QueryTerm, result.data);
-          self:UpdatePrices();
-          self:ShowPriceData(QueryTerm, ItemValue, PostSize:GetNumber());
-          self:SetStatus("|cff00ff00Scanned " .. result.listings ..  " listings.|r");
-        else
-          local hist = self:GetHistoricalPrice(QueryTerm);
-          if hist ~= nil then
-            ItemValue = hist.price;
-            self:UpdatePrices();
-            self:ShowPriceData(QueryTerm, ItemValue, PostSize:GetNumber());
-            self:SetStatus("|cffff0000Using historical data.|r");
-          else
-            ItemValue = 0;
-            self:SetStatus("|cffff0000No data for this item.|r");
-          end
-        end
-      end
-      -- Update our price info.
-      for name, result in pairs(results) do 
-        self:SetHistoricalPrice(name, result);
-      end
-      -- Update the UI.
-      self:AuctionFramePost_Update();
-      -- Indicate that we're done with this query.
-      QueryRunning = false;
-      QueryData = nil;
+      self:QueryDone();
     end
-  else
-    -- The user made their own query.  Let's peek...
-    local numItems = GetNumAuctionItems("list");
-    local data = {};
-    local results = {};
-
-    local i;
-    for i = 1, numItems do
-      data[i] = { GetAuctionItemInfo("list", i) };
-    end
-
-    self:AnalyzeData(data);
   end
+end
+
+-- Clean up if the auction house is closed.
+function AuctionLite:AUCTION_HOUSE_CLOSED()
+  self:ClearAuctionFrame();
+  Selling = false;
+  Coro = nil;
 end
 
 -------------------------------------------------------------------------------
@@ -670,20 +710,61 @@ end
 -------------------------------------------------------------------------------
 
 -- Retrieve historical price data for an item.
-function AuctionLite:GetHistoricalPrice(item)
-  return self.db.realm.prices[item];
+function AuctionLite:GetHistoricalPrice(link)
+  local name, id, suffix = self:SplitLink(link);
+  local info = self.db.realm.prices[id];
+
+  if info == nil then
+    -- Check to see whether we're using a database generated by v0.1,
+    -- which indexed by name instead of id.  If so, migrate it.
+    info = self.db.realm.prices[name];
+    if info ~= nil then
+      self:SetHistoricalPrice(link, info);
+      self.db.realm.prices[name] = nil;
+    end
+  elseif suffix ~= 0 or info.suffix then
+    -- This item has sub-tables, one for each possible suffix.
+    if suffix ~= 0 and info.suffix then
+      info = info[suffix];
+    else
+      info = nil;
+    end
+  end
+
+  return info;
+end
+
+-- Set historical price data for an item.
+function AuctionLite:SetHistoricalPrice(link, info)
+  local _, id, suffix = self:SplitLink(link);
+
+  if suffix == 0 then
+    -- This item has no suffix, so just use the id.
+    self.db.realm.prices[id] = info;
+  else
+    -- This item has a suffix, so index by suffix as well.
+    local parent = self.db.realm.prices[id];
+    if parent == nil or not parent.suffix then
+      parent = { suffix = true };
+      self.db.realm.prices[id] = parent;
+    end
+    parent[suffix] = info;
+  end
 end
 
 -- Update historical price data for an item given a price (per item) and
 -- the number of listings seen in the latest scan.
-function AuctionLite:SetHistoricalPrice(item, data)
-  local info = self.db.realm.prices[item];
+function AuctionLite:UpdateHistoricalPrice(link, data)
+  -- Get the current data.
+  local info = self:GetHistoricalPrice(link)
 
+  -- If we have no data for this item, start a new one.
   if info == nil then
-    info = { price = 0, listings = 0, scans = 0, time = 0, items = 0};
-    self.db.realm.prices[item] = info;
+    info = { price = 0, listings = 0, scans = 0, time = 0, items = 0 };
+    self:SetHistoricalPrice(link, info);
   end
 
+  -- Update the current data with our new data.
   local time = time();
   if info.time + MIN_TIME_BETWEEN_SCANS < time then
     local pastDiscountFactor = 0.5 ^ ((time - info.time) / HALF_LIFE);
@@ -752,7 +833,9 @@ end
 
 -- Clean up the "Post Auctions" frame.
 function AuctionLite:ClearAuctionFrame()
-  QueryTerm = nil;
+  QueryRunning = false;
+  QueryWait = false;
+  QueryLink = nil;
   ItemValue = 0;
 
   ScrollName = nil;
@@ -797,7 +880,13 @@ end
 function AuctionLite:AuctionFrame_OnUpdate()
   local canSend = CanSendAuctionQuery("list");
   if canSend and QueryWait then
-    QueryAuctionItems(QueryTerm, 0, 0, 0, 0, 0, QueryPage, 0, 0);
+    local name;
+    if QueryLink == "" then
+      name = "";
+    else
+      name = self:SplitLink(QueryLink);
+    end
+    QueryAuctionItems(name, 0, 0, 0, 0, 0, QueryPage, 0, 0);
     QueryWait = false;
   end
   if canSend and not QueryRunning then
@@ -843,6 +932,7 @@ function AuctionLite:PostAuctionDuration_OnClick(widget)
   self:UpdateDeposit();
 end
 
+-- Paint the scroll frame on the right-hand side with competing auctions.
 function AuctionLite:AuctionFramePost_Update()
   local offset = FauxScrollFrame_GetOffset(PostScrollFrame);
 
@@ -859,22 +949,26 @@ function AuctionLite:AuctionFramePost_Update()
       local bidFrame = _G[buttonName .. "BidFrame"];
       local buyoutFrame = _G[buttonName .. "BuyoutFrame"];
 
-      local color = 1.0;
-      if not item.keep then
-        color = 0.5;
+      local r, g, b, a = 1.0, 1.0, 1.0, 1.0;
+      if item.owner == UnitName("player") then
+        b = 0.0;
+      elseif not item.keep then
+        a = 0.5;
       end
 
       itemCount:SetText(tostring(item.count) .. "x");
-      itemCount:SetVertexColor(color, color, color);
+      itemCount:SetVertexColor(r, g, b);
+      itemCount:SetAlpha(a);
 
       itemName:SetText(ScrollName);
-      itemName:SetVertexColor(color, color, color);
+      itemName:SetVertexColor(r, g, b);
+      itemName:SetAlpha(a);
 
       MoneyFrame_Update(bidFrame, math.floor(item.price));
-      bidFrame:SetAlpha(color);
+      bidFrame:SetAlpha(a);
 
       MoneyFrame_Update(buyoutFrame, math.floor(item.price *item.count));
-      buyoutFrame:SetAlpha(color);
+      buyoutFrame:SetAlpha(a);
 
       button:Show();
     else
@@ -888,8 +982,9 @@ end
 
 -- Handle clicks on the scroll bar.
 function AuctionLite:PostScrollFrame_OnVerticalScroll(offset)
-  FauxScrollFrame_OnVerticalScroll(PostScrollFrame, offset, AUCTIONS_BUTTON_HEIGHT,
-                                   function() AuctionLite:AuctionFramePost_Update() end);
+  FauxScrollFrame_OnVerticalScroll(
+    PostScrollFrame, offset, PostButton1:GetHeight(),
+    function() AuctionLite:AuctionFramePost_Update() end);
 end
 
 -- Create the "Post Auctions" tab's scroll frame.
@@ -974,7 +1069,7 @@ function AuctionLite:CreateFramePost()
   frame:SetHeight(447);
 
   local titleText = frame:CreateFontString("PostTitle", "BACKGROUND", "GameFontNormal");
-  titleText:SetText("Post Auctions (AuctionLite)");
+  titleText:SetText("AuctionLite - Sell");
   titleText:SetPoint("TOP", AuctionFrame, "TOP", 0, -18);
 
   local tabText = frame:CreateFontString("PostTabText", "ARTWORK", "GameFontHighlightSmall");
@@ -1146,6 +1241,113 @@ function AuctionLite:CreateFramePost()
 end
 
 -------------------------------------------------------------------------------
+-- Tooltip code
+-------------------------------------------------------------------------------
+
+-- Add vendor and auction data to a tooltip.  We have count1 and count2
+-- for the upper and lower bound on the number of items; count2 may be nil.
+function AuctionLite:AddTooltipData(tooltip, link, count1, count2)
+  -- First add vendor info.  Always print a line for the vendor price.
+  local _, id = self:SplitLink(link);
+  local vendor = VendorData[id];
+  local vendorInfo;
+  if vendor ~= nil then
+    vendorInfo = self:PrintMoney(vendor * count1);
+    if count2 then
+      vendorInfo = vendorInfo .. " |cffffffff-|r " ..
+                   self:PrintMoney(vendor * count2);
+    end
+  else
+    vendorInfo = "|cffffffffn/a|r";
+  end
+  tooltip:AddDoubleLine("Vendor", vendorInfo);
+
+  -- Next show the auction price, if any exists.
+  local hist = self:GetHistoricalPrice(link);
+  if hist ~= nil and hist.price ~= nil then
+    local auctionInfo = self:PrintMoney(hist.price * count1);
+    if count2 then
+      auctionInfo = auctionInfo .. " |cffffffff-|r " ..
+                    self:PrintMoney(hist.price * count2);
+    end
+    tooltip:AddDoubleLine("Auction", auctionInfo);
+  end
+
+  tooltip:Show();
+end
+
+-- Add data to bag item tooltips.
+function AuctionLite:BagTooltip(tooltip, bag, slot)
+  if tooltip:NumLines() > 0 then
+    local link = GetContainerItemLink(bag, slot);
+    local _, count = GetContainerItemInfo(bag, slot);
+    self:AddTooltipData(tooltip, link, count);
+  end
+end
+
+-- Add data to inventory/bank tooltips.
+function AuctionLite:InventoryTooltip(tooltip, unit, slot)
+  if tooltip:NumLines() > 0 and
+     not (20 <= slot and slot <= 23) and  -- skip inventory bags
+     not (68 <= slot and slot <= 74) then -- skip bank bags
+    local link = GetInventoryItemLink(unit, slot);
+    local count = GetInventoryItemCount(unit, slot);
+    self:AddTooltipData(tooltip, link, count);
+  end
+end
+
+-- Add data to guild bank tooltips.
+function AuctionLite:GuildBankTooltip(tooltip, tab, slot)
+  if tooltip:NumLines() > 0 then
+    local link = GetGuildBankItemLink(tab, slot);
+    local _, count = GetGuildBankItemInfo(tab, slot);
+    self:AddTooltipData(tooltip, link, count);
+  end
+end
+
+-- Add data to trade skill tooltips.
+function AuctionLite:TradeSkillTooltip(tooltip, recipe, reagent)
+  if tooltip:NumLines() > 0 then
+    local link;
+    local count1;
+    local count2;
+    if reagent == nil then
+      -- We want the target of this skill.  If we make multiple items,
+      -- estimate the value based on the average number produced.
+      link = GetTradeSkillItemLink(recipe);
+      local min, max = GetTradeSkillNumMade(recipe);
+      count1 = min;
+      if min ~= max then
+        count2 = max;
+      end
+    else
+      -- We want a reagent.
+      link = GetTradeSkillReagentItemLink(recipe, reagent);
+      _, _, count1 = GetTradeSkillReagentInfo(recipe, reagent);
+    end
+    self:AddTooltipData(tooltip, link, count1, count2);
+  end
+end
+
+-- Add data to quest item tooltips.
+function AuctionLite:QuestTooltip(tooltip, itemType, id)
+  if tooltip:NumLines() > 0 then
+    local link = GetQuestItemLink(itemType, id);
+    local _, _, count = GetQuestItemInfo(itemType, id);
+    self:AddTooltipData(tooltip, link, count);
+  end
+end
+
+-- Add data to quest log item tooltips.
+function AuctionLite:QuestLogTooltip(tooltip, itemType, id)
+  if tooltip:NumLines() > 0 then
+    local link = GetQuestLogItemLink(itemType, id);
+    local _, _, count = GetQuestLogRewardInfo(id);
+    self:AddTooltipData(tooltip, link, count);
+  end
+end
+
+-------------------------------------------------------------------------------
 -- Hooks and boostrap code
 -------------------------------------------------------------------------------
 
@@ -1163,8 +1365,17 @@ end
 -- We're alive!  Register our event handlers.
 function AuctionLite:OnEnable()
   self:Print("AuctionLite v" .. AUCTIONLITE_VERSION .. " loaded!");
+
   self:RegisterEvent("ADDON_LOADED");
   self:RegisterEvent("AUCTION_ITEM_LIST_UPDATE");
+  self:RegisterEvent("AUCTION_HOUSE_CLOSED");
   self:RegisterEvent("BAG_UPDATE");
   self:RegisterEvent("ITEM_LOCK_CHANGED");
+
+  self:SecureHook(GameTooltip, "SetBagItem", "BagTooltip");
+  self:SecureHook(GameTooltip, "SetInventoryItem", "InventoryTooltip");
+  self:SecureHook(GameTooltip, "SetGuildBankItem", "GuildBankTooltip");
+  self:SecureHook(GameTooltip, "SetTradeSkillItem", "TradeSkillTooltip");
+  self:SecureHook(GameTooltip, "SetQuestItem", "QuestTooltip");
+  self:SecureHook(GameTooltip, "SetQuestLogItem", "QuestLogTooltip");
 end
