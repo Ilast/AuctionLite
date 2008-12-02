@@ -15,6 +15,20 @@ AuctionLite = AceLibrary("AceAddon-2.0"):new("AceConsole-2.0", "AceEvent-2.0",
 local options = {
   type = 'group',
   args = {
+    showvendor = {
+      type = "toggle",
+      desc = "Show vendor sell price in tooltips",
+      name = "Show Vendor Price",
+      get = "ShowVendor",
+      set = "ToggleShowVendor",
+    },
+    showauction = {
+      type = "toggle",
+      desc = "Show auction house value in tooltips",
+      name = "Show Auction Value",
+      get = "ShowAuction",
+      set = "ToggleShowAuction",
+    },
   },
 }
 
@@ -23,6 +37,10 @@ AuctionLite:RegisterChatCommand("/al", options);
 AuctionLite:RegisterDB("AuctionLiteDB");
 AuctionLite:RegisterDefaults("realm", {
   prices = {},
+});
+AuctionLite:RegisterDefaults("profile", {
+  showVendor = true,
+  showAuction = true,
 });
 
 -- Constants.
@@ -1241,6 +1259,30 @@ function AuctionLite:CreateFramePost()
 end
 
 -------------------------------------------------------------------------------
+-- Settings
+-------------------------------------------------------------------------------
+
+-- Show vendor data in tooltips?
+function AuctionLite:ShowVendor()
+  return self.db.profile.showVendor;
+end
+
+-- Toggle vendor data in tooltips.
+function AuctionLite:ToggleShowVendor()
+  self.db.profile.showVendor = not self.db.profile.showVendor;
+end
+
+-- Show auction value in tooltips?
+function AuctionLite:ShowAuction()
+  return self.db.profile.showAuction;
+end
+
+-- Toggle auction value in tooltips.
+function AuctionLite:ToggleShowAuction()
+  self.db.profile.showAuction = not self.db.profile.showAuction;
+end
+
+-------------------------------------------------------------------------------
 -- Tooltip code
 -------------------------------------------------------------------------------
 
@@ -1248,29 +1290,33 @@ end
 -- for the upper and lower bound on the number of items; count2 may be nil.
 function AuctionLite:AddTooltipData(tooltip, link, count1, count2)
   -- First add vendor info.  Always print a line for the vendor price.
-  local _, id = self:SplitLink(link);
-  local vendor = VendorData[id];
-  local vendorInfo;
-  if vendor ~= nil then
-    vendorInfo = self:PrintMoney(vendor * count1);
-    if count2 then
-      vendorInfo = vendorInfo .. " |cffffffff-|r " ..
-                   self:PrintMoney(vendor * count2);
+  if self.db.profile.showVendor then
+    local _, id = self:SplitLink(link);
+    local vendor = VendorData[id];
+    local vendorInfo;
+    if vendor ~= nil then
+      vendorInfo = self:PrintMoney(vendor * count1);
+      if count2 then
+        vendorInfo = vendorInfo .. " |cffffffff-|r " ..
+                     self:PrintMoney(vendor * count2);
+      end
+    else
+      vendorInfo = "|cffffffffn/a|r";
     end
-  else
-    vendorInfo = "|cffffffffn/a|r";
+    tooltip:AddDoubleLine("Vendor", vendorInfo);
   end
-  tooltip:AddDoubleLine("Vendor", vendorInfo);
 
   -- Next show the auction price, if any exists.
-  local hist = self:GetHistoricalPrice(link);
-  if hist ~= nil and hist.price ~= nil then
-    local auctionInfo = self:PrintMoney(hist.price * count1);
-    if count2 then
-      auctionInfo = auctionInfo .. " |cffffffff-|r " ..
-                    self:PrintMoney(hist.price * count2);
+  if self.db.profile.showAuction then
+    local hist = self:GetHistoricalPrice(link);
+    if hist ~= nil and hist.price ~= nil then
+      local auctionInfo = self:PrintMoney(hist.price * count1);
+      if count2 then
+        auctionInfo = auctionInfo .. " |cffffffff-|r " ..
+                      self:PrintMoney(hist.price * count2);
+      end
+      tooltip:AddDoubleLine("Auction", auctionInfo);
     end
-    tooltip:AddDoubleLine("Auction", auctionInfo);
   end
 
   tooltip:Show();
