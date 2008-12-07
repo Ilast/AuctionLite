@@ -412,14 +412,19 @@ function AuctionLite:ShowPriceData(itemLink, itemValue, stackSize)
   self:Print("|cff8080ffData for " .. link .. " x" .. stackSize .. "|r");
   self:Print("Vendor: " .. self:PrintMoney(itemVendor * stackSize));
 
-  if hist ~= nil then
+  if hist ~= nil and hist.scans > 0 and hist.price > 0 then
     self:Print("Historical: " .. self:PrintMoney(hist.price * stackSize) .. " (" ..
                math.floor(0.5 + hist.listings / hist.scans) .. " listings/scan, " ..
                math.floor(0.5 + hist.items / hist.scans) .. " items/scan)");
-    self:Print("Current: " .. self:PrintMoney(stackValue) .. " (" ..
-               (math.floor(100 * itemValue / hist.price) / 100) .. "x historical, " ..
-               (math.floor(100 * itemValue / itemVendor) / 100) .. "x vendor)");
-  else
+    if itemVendor > 0 then
+      self:Print("Current: " .. self:PrintMoney(stackValue) .. " (" ..
+                 (math.floor(100 * itemValue / hist.price) / 100) .. "x historical, " ..
+                 (math.floor(100 * itemValue / itemVendor) / 100) .. "x vendor)");
+    else
+      self:Print("Current: " .. self:PrintMoney(stackValue) .. " (" ..
+                 (math.floor(100 * itemValue / hist.price) / 100) .. "x historical)");
+    end
+  elseif itemVendor > 0 then
     self:Print("Current: " .. self:PrintMoney(stackValue) .. " (" ..
                (math.floor(100 * itemValue / itemVendor) / 100) .. "x vendor)");
   end
@@ -770,6 +775,16 @@ function AuctionLite:SetHistoricalPrice(link, info)
   end
 end
 
+-- Make sure that the price data structure is a valid one.
+function AuctionLite:ValidateHistoricalPrice(info)
+  local field;
+  for _, field in ipairs({"price", "listings", "scans", "time", "items"}) do
+    if info[field] == nil then
+      info[field] = 0;
+    end
+  end
+end
+
 -- Update historical price data for an item given a price (per item) and
 -- the number of listings seen in the latest scan.
 function AuctionLite:UpdateHistoricalPrice(link, data)
@@ -782,14 +797,17 @@ function AuctionLite:UpdateHistoricalPrice(link, data)
     self:SetHistoricalPrice(link, info);
   end
 
+  -- Make sure we have the right format.
+  self:ValidateHistoricalPrice(info);
+
   -- Update the current data with our new data.
   local time = time();
-  if info.time + MIN_TIME_BETWEEN_SCANS < time then
+  if info.time + MIN_TIME_BETWEEN_SCANS < time and data.listings > 0 then
     local pastDiscountFactor = 0.5 ^ ((time - info.time) / HALF_LIFE);
     local presentDiscountFactor = 1 - 0.5 ^ ((time - info.time) / INDEPENDENT_SCANS);
     info.price = (data.price * data.listings * presentDiscountFactor +
                   info.price * info.listings * pastDiscountFactor) /
-	               (data.listings * presentDiscountFactor +
+                 (data.listings * presentDiscountFactor +
                   info.listings * pastDiscountFactor);
     info.listings = data.listings * presentDiscountFactor +
                     info.listings * pastDiscountFactor;
