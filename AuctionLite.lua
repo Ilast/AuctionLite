@@ -1411,6 +1411,24 @@ function AuctionLite:QuestLogTooltip(tooltip, itemType, id)
   end
 end
 
+-- Add data to auction item tooltips.
+function AuctionLite:AuctionTooltip(tooltip, itemType, index)
+  if tooltip:NumLines() > 0 then
+    local link = GetAuctionItemLink(itemType, index);
+    local _, _, count = GetAuctionItemInfo(itemType, index);
+    self:AddTooltipData(tooltip, link, count);
+  end
+end
+
+-- Add data to auction sell item tooltips.
+function AuctionLite:AuctionSellTooltip(tooltip)
+  if tooltip:NumLines() > 0 then
+    local link = self:GetAuctionSellItemLink();
+    local _, _, count = GetAuctionSellItemInfo();
+    self:AddTooltipData(tooltip, link, count);
+  end
+end
+
 -------------------------------------------------------------------------------
 -- Hooks and boostrap code
 -------------------------------------------------------------------------------
@@ -1442,4 +1460,6 @@ function AuctionLite:OnEnable()
   self:SecureHook(GameTooltip, "SetTradeSkillItem", "TradeSkillTooltip");
   self:SecureHook(GameTooltip, "SetQuestItem", "QuestTooltip");
   self:SecureHook(GameTooltip, "SetQuestLogItem", "QuestLogTooltip");
+  self:SecureHook(GameTooltip, "SetAuctionItem", "AuctionTooltip");
+  self:SecureHook(GameTooltip, "SetAuctionSellItem", "AuctionSellTooltip");
 end
