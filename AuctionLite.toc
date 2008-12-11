@@ -2,7 +2,7 @@
 ## Title: AuctionLite
 ## Notes: A lightweight addon that tracks auction house data and improves the auction posting interface.
 ## Author: merial.kilrogg@gmail.com
-## Version: 0.2
+## Version: 0.3
 ## OptionalDeps: Ace2
 ## SavedVariables: AuctionLiteDB
 ## X-Category: Interface Enhancements
