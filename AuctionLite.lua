@@ -1317,37 +1317,39 @@ end
 -- Add vendor and auction data to a tooltip.  We have count1 and count2
 -- for the upper and lower bound on the number of items; count2 may be nil.
 function AuctionLite:AddTooltipData(tooltip, link, count1, count2)
-  -- First add vendor info.  Always print a line for the vendor price.
-  if self.db.profile.showVendor then
-    local _, id = self:SplitLink(link);
-    local vendor = VendorData[id];
-    local vendorInfo;
-    if vendor ~= nil then
-      vendorInfo = self:PrintMoney(vendor * count1);
-      if count2 then
-        vendorInfo = vendorInfo .. " |cffffffff-|r " ..
-                     self:PrintMoney(vendor * count2);
+  if link ~= nil and count1 ~= nil then
+    -- First add vendor info.  Always print a line for the vendor price.
+    if self.db.profile.showVendor then
+      local _, id = self:SplitLink(link);
+      local vendor = VendorData[id];
+      local vendorInfo;
+      if vendor ~= nil then
+        vendorInfo = self:PrintMoney(vendor * count1);
+        if count2 ~= nil then
+          vendorInfo = vendorInfo .. " |cffffffff-|r " ..
+                       self:PrintMoney(vendor * count2);
+        end
+      else
+        vendorInfo = "|cffffffffn/a|r";
       end
-    else
-      vendorInfo = "|cffffffffn/a|r";
+      tooltip:AddDoubleLine("Vendor", vendorInfo);
     end
-    tooltip:AddDoubleLine("Vendor", vendorInfo);
-  end
 
-  -- Next show the auction price, if any exists.
-  if self.db.profile.showAuction then
-    local hist = self:GetHistoricalPrice(link);
-    if hist ~= nil and hist.price ~= nil then
-      local auctionInfo = self:PrintMoney(hist.price * count1);
-      if count2 then
-        auctionInfo = auctionInfo .. " |cffffffff-|r " ..
-                      self:PrintMoney(hist.price * count2);
+    -- Next show the auction price, if any exists.
+    if self.db.profile.showAuction then
+      local hist = self:GetHistoricalPrice(link);
+      if hist ~= nil and hist.price ~= nil then
+        local auctionInfo = self:PrintMoney(hist.price * count1);
+        if count2 ~= nil then
+          auctionInfo = auctionInfo .. " |cffffffff-|r " ..
+                        self:PrintMoney(hist.price * count2);
+        end
+        tooltip:AddDoubleLine("Auction", auctionInfo);
       end
-      tooltip:AddDoubleLine("Auction", auctionInfo);
     end
-  end
 
-  tooltip:Show();
+    tooltip:Show();
+  end
 end
 
 -- Add data to bag item tooltips.
