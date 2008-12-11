@@ -1,5 +1,5 @@
 -------------------------------------------------------------------------------
--- AuctionLite 0.2
+-- AuctionLite 0.3
 --
 -- Lightweight addon to determine accurate market prices and to simplify
 -- the process of posting auctions.
@@ -46,7 +46,7 @@ AuctionLite:RegisterDefaults("profile", {
 });
 
 -- Constants.
-local AUCTIONLITE_VERSION = 0.2;
+local AUCTIONLITE_VERSION = 0.3;
 local AUCTIONS_PER_PAGE = 50;
 local POST_DISPLAY_SIZE = 16;
 local MIN_TIME_BETWEEN_SCANS = 0;
@@ -639,7 +639,7 @@ function AuctionLite:AnalyzeData(rawData)
       done = true;
       local avg, stddev = self:ComputeStats(data);
       for i = 1, table.getn(data) do
-        if data[i].keep and math.abs(data[i].price - avg) > 2 * stddev then
+        if data[i].keep and math.abs(data[i].price - avg) > 2.5 * stddev then
           data[i].keep = false;
           done = false;
         end
