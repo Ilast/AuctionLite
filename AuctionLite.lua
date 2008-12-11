@@ -764,6 +764,11 @@ function AuctionLite:GetHistoricalPrice(link)
     end
   end
 
+  if info ~= nil then
+    -- Make sure we have the right format.
+    self:ValidateHistoricalPrice(info);
+  end
+
   return info;
 end
 
@@ -806,9 +811,6 @@ function AuctionLite:UpdateHistoricalPrice(link, data)
     info = { price = 0, listings = 0, scans = 0, time = 0, items = 0 };
     self:SetHistoricalPrice(link, info);
   end
-
-  -- Make sure we have the right format.
-  self:ValidateHistoricalPrice(info);
 
   -- Update the current data with our new data.
   local time = time();
