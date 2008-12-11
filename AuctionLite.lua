@@ -154,13 +154,16 @@ function AuctionLite:RemoveUniqueId(link)
 end
 
 -- Given the name of an item in the auction slot, get the item link for
--- that item.  Since it's in the auction slot, it must be locked.
--- Returns nil if the item is not found or if the correct link cannot be
--- conclusively determined.
+-- that item, as well as the container and slot where that item is found.
+-- Since it's in the auction slot, it must be locked.  Returns nil if
+-- the item is not found or if the correct link cannot be conclusively
+-- determined.
 function AuctionLite:GetAuctionSellItemLink()
   local targetName = GetAuctionSellItemInfo();
 
   local result = nil;
+  local container = nil;
+  local slot = nil;
   local ambiguous = false;
   local i, j;
 
@@ -174,6 +177,8 @@ function AuctionLite:GetAuctionSellItemLink()
         if name == targetName then
           if result == nil then
             result = link;
+            container = i;
+            slot = j;
           elseif result ~= link then
             ambiguous = true;
           end
@@ -184,10 +189,12 @@ function AuctionLite:GetAuctionSellItemLink()
 
   if ambiguous then
     result = nil;
+    container = nil;
+    slot = nil;
   end
 
-  return result;
-end
+  return result, container, slot;
+end 
 
 -- Count the number of items matching the link (ignoring uniqueId).
 function AuctionLite:CountItems(targetLink)
@@ -307,7 +314,9 @@ function AuctionLite:CreateAuctions()
     -- auction it!  Otherwise, just clear out the auction slot to make
     -- room for the real thing.
     if count == size then
+      local _, container, slot = self:GetAuctionSellItemLink();
       StartAuction(bid, buyout, time);
+      self:WaitForEmpty(container, slot);
       created = created + 1;
     else
       ClearCursor();
@@ -653,22 +662,23 @@ function AuctionLite:QueryDone()
       local name = self:SplitLink(QueryLink);
       ItemValue = result.price;
       self:SetScrollData(name, result.data);
-      self:UpdatePrices();
       self:ShowPriceData(QueryLink, ItemValue, PostSize:GetNumber());
       self:SetStatus("|cff00ff00Scanned " .. result.listings ..  " listings.|r");
     else
       local hist = self:GetHistoricalPrice(QueryLink);
       if hist ~= nil then
         ItemValue = hist.price;
-        self:UpdatePrices();
         self:ShowPriceData(QueryLink, ItemValue, PostSize:GetNumber());
         self:SetStatus("|cffff0000Using historical data.|r");
       else
-        ItemValue = 0;
-        self:SetStatus("|cffff0000No data for this item.|r");
+        local _, _, count, _, _, vendor = GetAuctionSellItemInfo();
+        ItemValue = 3 * vendor / count;
+        self:SetStatus("|cffff0000Using 3x vendor price.|r");
       end
     end
   end
+  -- Update the suggested prices.
+  self:UpdatePrices();
   -- Update our price info.
   for link, result in pairs(results) do 
     self:UpdateHistoricalPrice(link, result);
