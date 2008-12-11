@@ -982,6 +982,18 @@ function AuctionLite:AuctionFrameTab_OnClick_Hook(button, index)
   end
 end
 
+-- Handles clicks on buttons in the "Competing Auctions" display.
+-- Get the appropriate auction and undercut it!
+function AuctionLite:PostButton_OnClick(id)
+  local offset = FauxScrollFrame_GetOffset(PostScrollFrame);
+  local item = ScrollData[offset + id];
+
+  if item ~= nil then
+    ItemValue = math.floor(item.price);
+    self:UpdatePrices();
+  end
+end
+
 -- Handle updates to the auction duration (1 = 12h, 2 = 24h, 3 = 48h).
 function AuctionLite:ChangeAuctionDuration(value)
   self.db.profile.duration = value;
@@ -1081,7 +1093,7 @@ function AuctionLite:AuctionFramePost_Update()
       MoneyFrame_Update(bidFrame, math.floor(item.price));
       bidFrame:SetAlpha(a);
 
-      MoneyFrame_Update(buyoutFrame, math.floor(item.price *item.count));
+      MoneyFrame_Update(buyoutFrame, math.floor(item.price * item.count));
       buyoutFrame:SetAlpha(a);
 
       button:Show();

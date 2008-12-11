@@ -64,6 +64,11 @@
 				</Scripts>
 			</Frame>
 		</Frames>
+		<Scripts>
+			<OnClick>
+      				AuctionLite:PostButton_OnClick(self:GetID());
+			</OnClick>
+		</Scripts>
 		<HighlightTexture name="$parentHighlight" file="Interface\HelpFrame\HelpFrameButton-Highlight" alphaMode="ADD">
 			<Size>
 				<AbsDimension x="572" y="18"/>
