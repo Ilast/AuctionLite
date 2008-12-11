@@ -41,6 +41,8 @@ AuctionLite:RegisterDefaults("realm", {
 AuctionLite:RegisterDefaults("profile", {
   showVendor = true,
   showAuction = true,
+  duration = 3,
+  method = 1,
 });
 
 -- Constants.
@@ -299,6 +301,13 @@ function AuctionLite:CreateAuctions()
   local buyout = MoneyInputFrame_GetCopper(PostBuyoutPrice);
   local time = self:GetDuration();
 
+  -- If we're pricing per item, then get the stack price.
+  if self.db.profile.method == 1 then
+    bid = bid * size;
+    buyout = buyout * size;
+  end
+  
+  -- Now do some sanity checks.
   if bid == 0 then
     self:Print("Invalid starting bid.");
   elseif buyout < bid then
@@ -445,11 +454,14 @@ end
 -- stack size.
 function AuctionLite:UpdatePrices()
   if ItemValue > 0 then
-    local stackSize = PostSize:GetNumber();
+    local bid, buyout = self:GeneratePrice(ItemValue);
 
-    local itemBid, itemBuyout = self:GeneratePrice(ItemValue);
-    local bid = itemBid * stackSize;
-    local buyout = itemBuyout * stackSize;
+    -- If we're pricing by stack, multiply by our stack size.
+    if self.db.profile.method == 2 then
+      local stackSize = PostSize:GetNumber();
+      bid = bid * stackSize;
+      buyout = buyout * stackSize;
+    end
     
     MoneyInputFrame_SetCopper(PostBidPrice, bid);
     MoneyInputFrame_SetCopper(PostBuyoutPrice, buyout);
@@ -466,6 +478,13 @@ function AuctionLite:ValidateAuction()
     local stacks = PostStacks:GetNumber();
     local size = PostSize:GetNumber();
 
+    -- If we're pricing by item, get the full stack price.
+    if self.db.profile.method == 1 then
+      bid = bid * size;
+      buyout = buyout * size;
+    end
+    
+    -- Now perform our checks.
     if stacks * size <= 0 then
       StatusError = true;
       PostStatusText:SetText("|cffff0000Invalid stack size/count.|r");
@@ -963,21 +982,68 @@ function AuctionLite:AuctionFrameTab_OnClick_Hook(button, index)
   end
 end
 
--- Handle clicks on the duration radio buttons.
-function AuctionLite:PostAuctionDuration_OnClick(widget)
+-- Handle updates to the auction duration (1 = 12h, 2 = 24h, 3 = 48h).
+function AuctionLite:ChangeAuctionDuration(value)
+  self.db.profile.duration = value;
+
   PostShortAuctionButton:SetChecked(nil);
   PostMediumAuctionButton:SetChecked(nil);
   PostLongAuctionButton:SetChecked(nil);
 
-  if widget:GetID() == 1 then
+  if value == 1 then
     PostShortAuctionButton:SetChecked(true);
-  elseif widget:GetID() == 2 then
+  elseif value == 2 then
     PostMediumAuctionButton:SetChecked(true);
-  elseif widget:GetID() == 3 then
+  elseif value == 3 then
     PostLongAuctionButton:SetChecked(true);
   end
 
   self:UpdateDeposit();
+end
+
+-- Handle updates to the pricing method (1 = per item, 2 = per stack).
+function AuctionLite:ChangePricingMethod(value)
+  local prevValue = self.db.profile.method;
+  self.db.profile.method = value;
+
+  local stackSize = PostSize:GetNumber();
+
+  -- Clear everything.
+  PostPerItemButton:SetChecked(nil);
+  PostPerStackButton:SetChecked(nil);
+
+  -- Now update the UI based on the new value.
+  if value == 1 then
+    -- We're now per-item.
+    PostPerItemButton:SetChecked(true);
+
+    PostBidStackText:SetText("|cff808080(per item)|r");
+    PostBuyoutStackText:SetText("|cff808080(per item)|r");
+
+    -- Adjust prices if we just came from per-stack.
+    if prevValue == 2 and stackSize > 0 then
+      local oldBid = MoneyInputFrame_GetCopper(PostBidPrice);
+      MoneyInputFrame_SetCopper(PostBidPrice, oldBid / stackSize);
+
+      local oldBuyout = MoneyInputFrame_GetCopper(PostBuyoutPrice);
+      MoneyInputFrame_SetCopper(PostBuyoutPrice, oldBuyout / stackSize);
+    end
+  elseif value == 2 then
+    -- We're not per-stack.
+    PostPerStackButton:SetChecked(true);
+
+    PostBidStackText:SetText("|cff808080(per stack)|r");
+    PostBuyoutStackText:SetText("|cff808080(per stack)|r");
+
+    -- Adjust prices if we just came from per-item.
+    if prevValue == 1 and stackSize > 0 then
+      local oldBid = MoneyInputFrame_GetCopper(PostBidPrice);
+      MoneyInputFrame_SetCopper(PostBidPrice, oldBid * stackSize);
+
+      local oldBuyout = MoneyInputFrame_GetCopper(PostBuyoutPrice);
+      MoneyInputFrame_SetCopper(PostBuyoutPrice, oldBuyout * stackSize);
+    end
+  end
 end
 
 -- Paint the scroll frame on the right-hand side with competing auctions.
@@ -1182,17 +1248,23 @@ function AuctionLite:CreateFramePost()
     AuctionLite:ValidateAuction();
   end);
 
-  local bidText = frame:CreateFontString("PostPriceText", "ARTWORK", "GameFontHighlightSmall");
-  bidText:SetText("Starting Bid |cff808080(per stack)|r");
+  local bidText = frame:CreateFontString("PostBidText", "ARTWORK", "GameFontHighlightSmall");
+  bidText:SetText("Starting Bid");
   bidText:SetPoint("TOPLEFT", stackText, "TOPLEFT", 0, -38);
+
+  local bidStackText = frame:CreateFontString("PostBidStackText", "ARTWORK", "GameFontHighlightSmall");
+  bidStackText:SetPoint("LEFT", bidText, "RIGHT", 3, 0);
 
   local bid = CreateFrame("Frame", "PostBidPrice", frame, "MoneyInputFrameTemplate");
   bid:SetPoint("TOPLEFT", bidText, "BOTTOMLEFT", 3, -2);
   MoneyInputFrame_SetOnValueChangedFunc(bid, function() AuctionLite:ValidateAuction() end);
 
   local buyoutText = frame:CreateFontString("PostBuyoutText", "ARTWORK", "GameFontHighlightSmall");
-  buyoutText:SetText("Buyout Price |cff808080(per stack)|r");
+  buyoutText:SetText("Buyout Price");
   buyoutText:SetPoint("TOPLEFT", bidText, "TOPLEFT", 0, -38);
+
+  local buyoutStackText = frame:CreateFontString("PostBuyoutStackText", "ARTWORK", "GameFontHighlightSmall");
+  buyoutStackText:SetPoint("LEFT", buyoutText, "RIGHT", 2, 0);
 
   local buyout = CreateFrame("Frame", "PostBuyoutPrice", frame, "MoneyInputFrameTemplate");
   buyout:SetPoint("TOPLEFT", buyoutText, "BOTTOMLEFT", 3, -2);
@@ -1203,31 +1275,46 @@ function AuctionLite:CreateFramePost()
 
   local durationText = frame:CreateFontString("PostDurationText", "ARTWORK", "GameFontHighlightSmall");
   durationText:SetText("Auction Duration");
-  durationText:SetPoint("TOPLEFT", buyoutText, "TOPLEFT", 0, -78);
+  durationText:SetPoint("TOPLEFT", buyoutText, "TOPLEFT", 0, -69);
 
   local short = CreateFrame("CheckButton", "PostShortAuctionButton", frame, "UIRadioButtonTemplate");
   short:SetID(1);
-  short:SetPoint("TOPLEFT", durationText, "BOTTOMLEFT", 3, -2);
-  short:SetScript("OnClick", function(widget, button) AuctionLite:PostAuctionDuration_OnClick(widget) end);
+  short:SetPoint("TOPLEFT", durationText, "BOTTOMLEFT", 3, 0);
+  short:SetScript("OnClick", function(widget, button) AuctionLite:ChangeAuctionDuration(widget:GetID()) end);
   PostShortAuctionButtonText:SetText("12h");
 
   local medium = CreateFrame("CheckButton", "PostMediumAuctionButton", frame, "UIRadioButtonTemplate");
   medium:SetID(2);
   medium:SetPoint("TOPLEFT", short, "TOPLEFT", 55, 0);
-  medium:SetScript("OnClick", function(widget, button) AuctionLite:PostAuctionDuration_OnClick(widget) end);
+  medium:SetScript("OnClick", function(widget, button) AuctionLite:ChangeAuctionDuration(widget:GetID()) end);
   PostMediumAuctionButtonText:SetText("24h");
 
   local long = CreateFrame("CheckButton", "PostLongAuctionButton", frame, "UIRadioButtonTemplate");
   long:SetID(3);
   long:SetText("48h");
   long:SetPoint("TOPLEFT", medium, "TOPLEFT", 55, 0);
-  long:SetChecked(true);
-  long:SetScript("OnClick", function(widget, button) AuctionLite:PostAuctionDuration_OnClick(widget) end);
+  long:SetScript("OnClick", function(widget, button) AuctionLite:ChangeAuctionDuration(widget:GetID()) end);
   PostLongAuctionButtonText:SetText("48h");
+
+  local methodText = frame:CreateFontString("PostMethodText", "ARTWORK", "GameFontHighlightSmall");
+  methodText:SetText("Pricing Method");
+  methodText:SetPoint("TOPLEFT", durationText, "TOPLEFT", 0, -30);
+
+  local perItem = CreateFrame("CheckButton", "PostPerItemButton", frame, "UIRadioButtonTemplate");
+  perItem:SetID(1);
+  perItem:SetPoint("TOPLEFT", methodText, "BOTTOMLEFT", 3, 0);
+  perItem:SetScript("OnClick", function(widget, button) AuctionLite:ChangePricingMethod(widget:GetID()) end);
+  PostPerItemButtonText:SetText("per item");
+
+  local perStack = CreateFrame("CheckButton", "PostPerStackButton", frame, "UIRadioButtonTemplate");
+  perStack:SetID(2);
+  perStack:SetPoint("TOPLEFT", perItem, "TOPLEFT", 80, 0);
+  perStack:SetScript("OnClick", function(widget, button) AuctionLite:ChangePricingMethod(widget:GetID()) end);
+  PostPerStackButtonText:SetText("per stack");
 
   local depositText = frame:CreateFontString("PostDepositText", "ARTWORK", "GameFontNormal");
   depositText:SetText("Deposit:");
-  depositText:SetPoint("TOPLEFT", durationText, "TOPLEFT", 0, -67);
+  depositText:SetPoint("TOPLEFT", methodText, "TOPLEFT", 0, -46);
 
   local deposit = CreateFrame("Frame", "PostDepositMoneyFrame", frame, "SmallMoneyFrameTemplate");
   deposit:SetPoint("LEFT", depositText, "RIGHT", 5, 0);
@@ -1286,6 +1373,10 @@ function AuctionLite:CreateFramePost()
       PostBidPriceGold:SetFocus();
     end
   end);
+
+  -- Set preferences.
+  self:ChangeAuctionDuration(self.db.profile.duration);
+  self:ChangePricingMethod(self.db.profile.method);
 end
 
 -------------------------------------------------------------------------------
