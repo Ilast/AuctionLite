@@ -166,33 +166,36 @@ function AuctionLite:GetAuctionSellItemLink()
   local result = nil;
   local container = nil;
   local slot = nil;
-  local ambiguous = false;
-  local i, j;
 
-  for i = 0, 4 do
-    local numItems = GetContainerNumSlots(i);
-    for j = 1, numItems do
-      local _, _, locked = GetContainerItemInfo(i, j);
-      if locked then
-        local link = GetContainerItemLink(i, j);
-        local name = self:SplitLink(link);
-        if name == targetName then
-          if result == nil then
-            result = link;
-            container = i;
-            slot = j;
-          elseif result ~= link then
-            ambiguous = true;
+  if targetName ~= nil then
+    local ambiguous = false;
+    local i, j;
+
+    for i = 0, 4 do
+      local numItems = GetContainerNumSlots(i);
+      for j = 1, numItems do
+        local _, _, locked = GetContainerItemInfo(i, j);
+        if locked then
+          local link = GetContainerItemLink(i, j);
+          local name = self:SplitLink(link);
+          if name == targetName then
+            if result == nil then
+              result = link;
+              container = i;
+              slot = j;
+            elseif result ~= link then
+              ambiguous = true;
+            end
           end
         end
       end
     end
-  end
 
-  if ambiguous then
-    result = nil;
-    container = nil;
-    slot = nil;
+    if ambiguous then
+      result = nil;
+      container = nil;
+      slot = nil;
+    end
   end
 
   return result, container, slot;
@@ -201,15 +204,17 @@ end
 -- Count the number of items matching the link (ignoring uniqueId).
 function AuctionLite:CountItems(targetLink)
   local total = 0;
-  local i, j;
 
-  for i = 0, 4 do
-    local numItems = GetContainerNumSlots(i);
-    for j = 1, numItems do
-      local link = self:RemoveUniqueId(GetContainerItemLink(i, j));
-      if link == targetLink then
-        local _, count = GetContainerItemInfo(i, j);
-        total = total + count;
+  if targetLink ~= nil then
+    local i, j;
+    for i = 0, 4 do
+      local numItems = GetContainerNumSlots(i);
+      for j = 1, numItems do
+        local link = self:RemoveUniqueId(GetContainerItemLink(i, j));
+        if link == targetLink then
+          local _, count = GetContainerItemInfo(i, j);
+          total = total + count;
+        end
       end
     end
   end
@@ -289,91 +294,100 @@ end
 function AuctionLite:CreateAuctions()
   -- TODO: check stack size against max size
 
-  Selling = true;
+  if not Selling then
+    Selling = true;
 
-  local name, _, count = GetAuctionSellItemInfo();
-  local link = self:RemoveUniqueId(self:GetAuctionSellItemLink());
+    local name, _, count = GetAuctionSellItemInfo();
+    local link = self:RemoveUniqueId(self:GetAuctionSellItemLink());
 
-  local stacks = PostStacks:GetNumber();
-  local size = PostSize:GetNumber();
+    local stacks = PostStacks:GetNumber();
+    local size = PostSize:GetNumber();
 
-  local bid = MoneyInputFrame_GetCopper(PostBidPrice);
-  local buyout = MoneyInputFrame_GetCopper(PostBuyoutPrice);
-  local time = self:GetDuration();
+    local bid = MoneyInputFrame_GetCopper(PostBidPrice);
+    local buyout = MoneyInputFrame_GetCopper(PostBuyoutPrice);
+    local time = self:GetDuration();
 
-  -- If we're pricing per item, then get the stack price.
-  if self.db.profile.method == 1 then
-    bid = bid * size;
-    buyout = buyout * size;
-  end
-  
-  -- Now do some sanity checks.
-  if bid == 0 then
-    self:Print("Invalid starting bid.");
-  elseif buyout < bid then
-    self:Print("Buyout cannot be less than starting bid.");
-  elseif GetMoney() < self:CalculateDeposit() then
-    self:Print("Not enough cash for deposit.");
-  elseif self:CountAuctionSellItems() < stacks * size then
-    self:Print("Not enough items available.");
-  elseif count ~= nil and stacks > 0 then
-    local created = 0;
-
-    -- If the auction slot already contains a stack of the correct size,
-    -- auction it!  Otherwise, just clear out the auction slot to make
-    -- room for the real thing.
-    if count == size then
-      local _, container, slot = self:GetAuctionSellItemLink();
-      StartAuction(bid, buyout, time);
-      self:WaitForEmpty(container, slot);
-      created = created + 1;
-    else
-      ClearCursor();
-      ClickAuctionSellItemButton();
-      ClearCursor();
+    -- If we're pricing per item, then get the stack price.
+    if self.db.profile.method == 1 then
+      bid = bid * size;
+      buyout = buyout * size;
     end
 
-    -- Do we have more to do?
-    -- Find an empty bag slot in which we can build stacks of items.
-    local container, slot = self:GetEmptySlot();
-    if container ~= nil then
-      -- Create the remaining auctions.
-      while created < stacks do
-        -- Create a stack of the appropriate size.
-        self:MakeStackInSlot(link, size, container, slot);
+    -- Now do some sanity checks.
+    if bid == 0 then
+      self:Print("Invalid starting bid.");
+    elseif buyout < bid then
+      self:Print("Buyout cannot be less than starting bid.");
+    elseif GetMoney() < self:CalculateDeposit() then
+      self:Print("Not enough cash for deposit.");
+    elseif self:CountAuctionSellItems() < stacks * size then
+      self:Print("Not enough items available.");
+    elseif count ~= nil and stacks > 0 then
+      local created = 0;
 
-        -- Pick it up and put it in the auction slot.
-        self:WaitForUnlock(container, slot);
-        PickupContainerItem(container, slot);
-        ClickAuctionSellItemButton();
+      -- Disable the auction creation button.
+      PostCreateAuctionButton:Disable();
 
-        -- One final sanity check.
-        local auctionName, _, auctionCount = GetAuctionSellItemInfo();
-        if auctionName == name and auctionCount == size then
-          -- And away she goes!
-          StartAuction(bid, buyout, time);
-          self:WaitForEmpty(container, slot);
-        else
-          self:Print("Error when creating auctions.");
-          break;
-        end
-
+      -- If the auction slot already contains a stack of the correct size,
+      -- auction it!  Otherwise, just clear out the auction slot to make
+      -- room for the real thing.
+      if count == size then
+        local _, container, slot = self:GetAuctionSellItemLink();
+        StartAuction(bid, buyout, time);
+        self:WaitForEmpty(container, slot);
         created = created + 1;
+        PostStacks:SetNumber(stacks - created);
+      else
+        ClearCursor();
+        ClickAuctionSellItemButton();
+        ClearCursor();
       end
 
-      self:ClearAuctionFrame();
-    elseif created < stocks then
-      -- Couldn't find an empty bag slot.
-      self:Print("Need an empty bag slot to create auctions.");
-    else
-      -- We're done anyway.
-      self:ClearAuctionFrame();
+      -- Do we have more to do?
+      -- Find an empty bag slot in which we can build stacks of items.
+      local container, slot = self:GetEmptySlot();
+      if container ~= nil then
+        -- Create the remaining auctions.
+        while created < stacks do
+          -- Create a stack of the appropriate size.
+          self:MakeStackInSlot(link, size, container, slot);
+
+          -- Pick it up and put it in the auction slot.
+          self:WaitForUnlock(container, slot);
+          PickupContainerItem(container, slot);
+          ClickAuctionSellItemButton();
+
+          -- One final sanity check.
+          local auctionName, _, auctionCount = GetAuctionSellItemInfo();
+          if auctionName == name and auctionCount == size then
+            -- And away she goes!
+            StartAuction(bid, buyout, time);
+            self:WaitForEmpty(container, slot);
+          else
+            self:Print("Error when creating auctions.");
+            break;
+          end
+
+          created = created + 1;
+          PostStacks:SetNumber(stacks - created);
+        end
+
+        self:ClearAuctionFrame();
+      elseif created < stocks then
+        -- Couldn't find an empty bag slot.
+        self:Print("Need an empty bag slot to create auctions.");
+      else
+        -- We're done anyway.
+        self:ClearAuctionFrame();
+      end
+
+      self:Print("Created " .. created .. " auctions of " .. name .. " x" .. size .. ".");
     end
 
-    self:Print("Created " .. created .. " auctions of " .. name .. " x" .. size .. ".");
+    Selling = false;
+  else
+    self:Print("Auction creation is already in progress.");
   end
-
-  Selling = false;
 end
 
 -------------------------------------------------------------------------------
@@ -423,11 +437,7 @@ function AuctionLite:ShowPriceData(itemLink, itemValue, stackSize)
   local _, _, count, _, _, vendor = GetAuctionSellItemInfo();
   local itemVendor = vendor / count;
 
-  local link = self:RemoveUniqueId(self:GetAuctionSellItemLink());
-
-  --self:Print("|cff8080ffData for " .. link .. " x" .. stackSize ..
-  --           "|cff8080ff at " .. time() .. "|r");
-  self:Print("|cff8080ffData for " .. link .. " x" .. stackSize .. "|r");
+  self:Print("|cff8080ffData for " .. itemLink .. " x" .. stackSize .. "|r");
   self:Print("Vendor: " .. self:PrintMoney(itemVendor * stackSize));
 
   if hist ~= nil and hist.scans > 0 and hist.price > 0 then
@@ -943,8 +953,9 @@ function AuctionLite:SetScrollData(name, data)
   ScrollData = data;
 end
 
--- Use this update event to continue a pending AH query.
+-- Use this update event to do a bunch of housekeeping.
 function AuctionLite:AuctionFrame_OnUpdate()
+  -- Continue pending auction queries.
   local canSend = CanSendAuctionQuery("list");
   if canSend and QueryWait then
     local name;
@@ -956,6 +967,8 @@ function AuctionLite:AuctionFrame_OnUpdate()
     QueryAuctionItems(name, 0, 0, 0, 0, 0, QueryPage, 0, 0);
     QueryWait = false;
   end
+
+  -- Update the scan button.
   if canSend and not QueryRunning then
     BrowseScanButton:Enable();
   else
@@ -1347,8 +1360,10 @@ function AuctionLite:CreateFramePost()
   create:SetText("Create Auction");
   create:SetPoint("BOTTOMLEFT", AuctionFrameAuctions, "BOTTOMLEFT", 18, 39);
   create:SetScript("OnClick", function()
-    Coro = coroutine.create(function() AuctionLite:CreateAuctions() end);
-    coroutine.resume(Coro);
+    if Coro == nil then
+      Coro = coroutine.create(function() AuctionLite:CreateAuctions() end);
+      AuctionLite:ResumeCoroutine();
+    end
   end);
 
   local headerText = frame:CreateFontString("PostHeaderText", "ARTWORK", "GameFontHighlightSmall");
