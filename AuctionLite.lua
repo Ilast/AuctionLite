@@ -155,50 +155,47 @@ function AuctionLite:RemoveUniqueId(link)
   end
 end
 
--- Given the name of an item in the auction slot, get the item link for
--- that item, as well as the container and slot where that item is found.
--- Since it's in the auction slot, it must be locked.  Returns nil if
--- the item is not found or if the correct link cannot be conclusively
--- determined.
-function AuctionLite:GetAuctionSellItemLink()
-  local targetName = GetAuctionSellItemInfo();
+-- Get auction sell item info as well as a link to the item and the
+-- location of the item in the player's bags.  We use the fact that it
+-- must be locked (since it's in the auction slot).  Returns nil if the
+-- item is not found or if we can't pinpoint the exact bag slot.
+function AuctionLite:GetAuctionSellItemInfoAndLink()
+  local name, texture, count, quality, canUse, price = GetAuctionSellItemInfo();
 
-  local result = nil;
+  local link = nil;
   local container = nil;
   local slot = nil;
 
-  if targetName ~= nil then
-    local ambiguous = false;
+  if name ~= nil then
     local i, j;
 
+    -- Look through the bags to find a matching item.
     for i = 0, 4 do
       local numItems = GetContainerNumSlots(i);
       for j = 1, numItems do
-        local _, _, locked = GetContainerItemInfo(i, j);
-        if locked then
-          local link = GetContainerItemLink(i, j);
-          local name = self:SplitLink(link);
-          if name == targetName then
-            if result == nil then
-              result = link;
+        local _, curCount, locked = GetContainerItemInfo(i, j);
+        if count == curCount and locked then
+          -- We've found a partial match.  Now check the name...
+          local curLink = GetContainerItemLink(i, j);
+          local curName = self:SplitLink(curLink);
+          if name == curName then
+            if link == nil then
+              -- It's our first match--make a note of it.
+              link = self:RemoveUniqueId(curLink);
               container = i;
               slot = j;
-            elseif result ~= link then
-              ambiguous = true;
+            else
+              -- Ambiguous result.  Bail!
+              return;
             end
           end
         end
       end
     end
-
-    if ambiguous then
-      result = nil;
-      container = nil;
-      slot = nil;
-    end
   end
 
-  return result, container, slot;
+  -- Return all the original item info plus our three results.
+  return name, texture, count, quality, canUse, price, link, container, slot;
 end 
 
 -- Count the number of items matching the link (ignoring uniqueId).
@@ -220,12 +217,6 @@ function AuctionLite:CountItems(targetLink)
   end
 
   return total;
-end
-
--- Count the number of items matching the current auction item.
-function AuctionLite:CountAuctionSellItems()
-  local link = self:RemoveUniqueId(self:GetAuctionSellItemLink());
-  return self:CountItems(link);
 end
 
 -- Find an empty bag slot.
@@ -297,8 +288,8 @@ function AuctionLite:CreateAuctions()
   if not Selling then
     Selling = true;
 
-    local name, _, count = GetAuctionSellItemInfo();
-    local link = self:RemoveUniqueId(self:GetAuctionSellItemLink());
+    local name, _, count, _, _, _, link, sellContainer, sellSlot =
+      self:GetAuctionSellItemInfoAndLink();
 
     local stacks = PostStacks:GetNumber();
     local size = PostSize:GetNumber();
@@ -314,13 +305,15 @@ function AuctionLite:CreateAuctions()
     end
 
     -- Now do some sanity checks.
-    if bid == 0 then
+    if name == nil then
+      self:Print("Error locating item in bags.  Please try again!");
+    elseif bid == 0 then
       self:Print("Invalid starting bid.");
     elseif buyout < bid then
       self:Print("Buyout cannot be less than starting bid.");
     elseif GetMoney() < self:CalculateDeposit() then
       self:Print("Not enough cash for deposit.");
-    elseif self:CountAuctionSellItems() < stacks * size then
+    elseif self:CountItems(link) < stacks * size then
       self:Print("Not enough items available.");
     elseif count ~= nil and stacks > 0 then
       local created = 0;
@@ -332,9 +325,8 @@ function AuctionLite:CreateAuctions()
       -- auction it!  Otherwise, just clear out the auction slot to make
       -- room for the real thing.
       if count == size then
-        local _, container, slot = self:GetAuctionSellItemLink();
         StartAuction(bid, buyout, time);
-        self:WaitForEmpty(container, slot);
+        self:WaitForEmpty(sellContainer, sellSlot);
         created = created + 1;
         PostStacks:SetNumber(stacks - created);
       else
@@ -480,7 +472,9 @@ end
 
 -- Check whether there are any errors in the auction.
 function AuctionLite:ValidateAuction()
-  local name, _, count, _, _, vendor = GetAuctionSellItemInfo();
+  local name, _, count, _, _, vendor, link =
+    self:GetAuctionSellItemInfoAndLink();
+
   if name ~= nil and not QueryRunning then
     local bid = MoneyInputFrame_GetCopper(PostBidPrice);
     local buyout = MoneyInputFrame_GetCopper(PostBuyoutPrice);
@@ -499,7 +493,7 @@ function AuctionLite:ValidateAuction()
       StatusError = true;
       PostStatusText:SetText("|cffff0000Invalid stack size/count.|r");
       PostCreateAuctionButton:Disable();
-    elseif self:CountAuctionSellItems() < stacks * size then
+    elseif self:CountItems(link) < stacks * size then
       StatusError = true;
       PostStatusText:SetText("|cffff0000Not enough items available.|r");
       PostCreateAuctionButton:Disable();
@@ -535,7 +529,9 @@ function AuctionLite:ClickAuctionSellItemButton_Hook()
     self:ClearAuctionFrame();
 
     -- If we've got a new item in the auction slot, fill out the fields.
-    local name, texture, count = GetAuctionSellItemInfo();
+    local name, texture, count, _, _, _, link =
+      self:GetAuctionSellItemInfoAndLink();
+
     if name ~= nil then
       PostItemButton:SetNormalTexture(texture);
       PostItemButtonName:SetText(name);
@@ -550,11 +546,11 @@ function AuctionLite:ClickAuctionSellItemButton_Hook()
       PostStacks:SetText(1);
       PostSize:SetText(count);
 
-      local total = self:CountAuctionSellItems();
+      local total = self:CountItems(link);
       PostStackText:SetText("Number of Items |cff808080(max " .. total .. ")|r");
 
       self:UpdateDeposit();
-      self:QueryAuctions(self:RemoveUniqueId(self:GetAuctionSellItemLink()));
+      self:QueryAuctions(link);
     end
   end
 end
@@ -1555,8 +1551,7 @@ end
 -- Add data to auction sell item tooltips.
 function AuctionLite:AuctionSellTooltip(tooltip)
   if tooltip:NumLines() > 0 then
-    local link = self:GetAuctionSellItemLink();
-    local _, _, count = GetAuctionSellItemInfo();
+    local _, _, count, _, _, _, link = self:GetAuctionSellItemInfoAndLink();
     self:AddTooltipData(tooltip, link, count);
   end
 end
