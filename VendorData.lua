@@ -5,7 +5,7 @@
 -- Data courtesy of Wowhead.  Thanks, Wowhead!
 -------------------------------------------------------------------------------
 
-VendorData = {
+AuctionLite.VendorData = {
   [25] = 7,
   [35] = 9,
   [36] = 7,

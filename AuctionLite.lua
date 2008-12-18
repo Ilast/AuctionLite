@@ -47,8 +47,22 @@ AuctionLite:RegisterDefaults("profile", {
 
 -- Constants.
 local AUCTIONLITE_VERSION = 0.3;
+
 local AUCTIONS_PER_PAGE = 50;
-local POST_DISPLAY_SIZE = 16;
+local BUY_DISPLAY_SIZE = 15;
+local SELL_DISPLAY_SIZE = 16;
+
+local QUERY_STATE_IDLE = 1;
+local QUERY_STATE_SEND = 2;
+local QUERY_STATE_WAIT = 3;
+
+local QUERY_TYPE_NONE = 1;
+local QUERY_TYPE_SCAN = 2;
+local QUERY_TYPE_SEARCH = 3;
+local QUERY_TYPE_BID = 4;
+local QUERY_TYPE_BUY = 5;
+local QUERY_TYPE_SELL = 6;
+
 local MIN_TIME_BETWEEN_SCANS = 0;
 local HALF_LIFE = 604800; -- 1 week
 local INDEPENDENT_SCANS = 172800; -- 2 days
@@ -57,8 +71,9 @@ local INDEPENDENT_SCANS = 172800; -- 2 days
 local Selling = false;
 
 -- Info about current AH query.
-local QueryRunning = false;
-local QueryWait = false;
+local QueryState = QUERY_STATE_IDLE;
+local QueryType = QUERY_TYPE_NONE;
+local QueryName = nil;
 local QueryLink = nil;
 local QueryPage = nil;
 local QueryData = nil;
@@ -68,7 +83,14 @@ local ItemValue = 0;
 
 -- Info about data to be shown in scrolling pane.
 local ScrollName = nil;
-local ScrollData = nil;
+local ScrollData = {};
+local BuyScrollName = nil;
+local BuyScrollData = {};
+local BuySelectedItem = nil;
+
+-- Info for auction buyout.
+local TargetIndex = nil;
+local TargetPrice = nil;
 
 -- Status shown in auction posting frame.
 local StatusMessage = "";
@@ -78,7 +100,8 @@ local StatusError = false;
 local Coro = nil;
 
 -- Index of our tab in the auction frame.
-local TabIndex = nil;
+local BuyTabIndex = nil;
+local SellTabIndex = nil;
 
 -------------------------------------------------------------------------------
 -- Helpers
@@ -123,11 +146,11 @@ end
 function AuctionLite:GetDuration()
   local time = 0;
 
-  if PostShortAuctionButton:GetChecked() then
+  if SellShortAuctionButton:GetChecked() then
     time = 720;
-  elseif PostMediumAuctionButton:GetChecked() then
+  elseif SellMediumAuctionButton:GetChecked() then
     time = 1440;
-  elseif PostLongAuctionButton:GetChecked() then
+  elseif SellLongAuctionButton:GetChecked() then
     time = 2880;
   end
 
@@ -281,7 +304,7 @@ end
 -- Auction creation
 -------------------------------------------------------------------------------
 
--- Create new auctions based on the fields in the "Post Auctions" tab.
+-- Create new auctions based on the fields in the "Sell" tab.
 function AuctionLite:CreateAuctions()
   -- TODO: check stack size against max size
 
@@ -291,11 +314,11 @@ function AuctionLite:CreateAuctions()
     local name, _, count, _, _, _, link, sellContainer, sellSlot =
       self:GetAuctionSellItemInfoAndLink();
 
-    local stacks = PostStacks:GetNumber();
-    local size = PostSize:GetNumber();
+    local stacks = SellStacks:GetNumber();
+    local size = SellSize:GetNumber();
 
-    local bid = MoneyInputFrame_GetCopper(PostBidPrice);
-    local buyout = MoneyInputFrame_GetCopper(PostBuyoutPrice);
+    local bid = MoneyInputFrame_GetCopper(SellBidPrice);
+    local buyout = MoneyInputFrame_GetCopper(SellBuyoutPrice);
     local time = self:GetDuration();
 
     -- If we're pricing per item, then get the stack price.
@@ -319,7 +342,7 @@ function AuctionLite:CreateAuctions()
       local created = 0;
 
       -- Disable the auction creation button.
-      PostCreateAuctionButton:Disable();
+      SellCreateAuctionButton:Disable();
 
       -- If the auction slot already contains a stack of the correct size,
       -- auction it!  Otherwise, just clear out the auction slot to make
@@ -328,7 +351,7 @@ function AuctionLite:CreateAuctions()
         StartAuction(bid, buyout, time);
         self:WaitForEmpty(sellContainer, sellSlot);
         created = created + 1;
-        PostStacks:SetNumber(stacks - created);
+        SellStacks:SetNumber(stacks - created);
       else
         ClearCursor();
         ClickAuctionSellItemButton();
@@ -361,16 +384,16 @@ function AuctionLite:CreateAuctions()
           end
 
           created = created + 1;
-          PostStacks:SetNumber(stacks - created);
+          SellStacks:SetNumber(stacks - created);
         end
 
-        self:ClearAuctionFrame();
+        self:ClearSellFrame();
       elseif created < stocks then
         -- Couldn't find an empty bag slot.
         self:Print("Need an empty bag slot to create auctions.");
       else
         -- We're done anyway.
-        self:ClearAuctionFrame();
+        self:ClearSellFrame();
       end
 
       self:Print("Created " .. created .. " auctions of " .. name .. " x" .. size .. ".");
@@ -395,8 +418,8 @@ MoneyTypeInfo["AUCTIONLITE_DEPOSIT"] = {
 -- Determine the correct deposit for a single item.
 function AuctionLite:CalculateDeposit()
   local time = self:GetDuration();
-  local stacks = PostStacks:GetNumber();
-  local size = PostSize:GetNumber();
+  local stacks = SellStacks:GetNumber();
+  local size = SellSize:GetNumber();
   local _, _, count = GetAuctionSellItemInfo();
 
   return math.floor(CalculateAuctionDeposit(time) * stacks * size / count);
@@ -404,7 +427,7 @@ end
 
 -- Update the deposit field.
 function AuctionLite:UpdateDeposit()
-  MoneyFrame_Update("PostDepositMoneyFrame", self:CalculateDeposit());
+  MoneyFrame_Update("SellDepositMoneyFrame", self:CalculateDeposit());
 end
 
 -- Generate a suggested bid and buyout from the market value.  These
@@ -460,13 +483,13 @@ function AuctionLite:UpdatePrices()
 
     -- If we're pricing by stack, multiply by our stack size.
     if self.db.profile.method == 2 then
-      local stackSize = PostSize:GetNumber();
+      local stackSize = SellSize:GetNumber();
       bid = bid * stackSize;
       buyout = buyout * stackSize;
     end
     
-    MoneyInputFrame_SetCopper(PostBidPrice, bid);
-    MoneyInputFrame_SetCopper(PostBuyoutPrice, buyout);
+    MoneyInputFrame_SetCopper(SellBidPrice, bid);
+    MoneyInputFrame_SetCopper(SellBuyoutPrice, buyout);
   end
 end
 
@@ -475,12 +498,12 @@ function AuctionLite:ValidateAuction()
   local name, _, count, _, _, vendor, link =
     self:GetAuctionSellItemInfoAndLink();
 
-  if name ~= nil and not QueryRunning then
-    local bid = MoneyInputFrame_GetCopper(PostBidPrice);
-    local buyout = MoneyInputFrame_GetCopper(PostBuyoutPrice);
+  if name ~= nil and QueryState == QUERY_STATE_IDLE then
+    local bid = MoneyInputFrame_GetCopper(SellBidPrice);
+    local buyout = MoneyInputFrame_GetCopper(SellBuyoutPrice);
 
-    local stacks = PostStacks:GetNumber();
-    local size = PostSize:GetNumber();
+    local stacks = SellStacks:GetNumber();
+    local size = SellSize:GetNumber();
 
     -- If we're pricing by item, get the full stack price.
     if self.db.profile.method == 1 then
@@ -491,32 +514,32 @@ function AuctionLite:ValidateAuction()
     -- Now perform our checks.
     if stacks * size <= 0 then
       StatusError = true;
-      PostStatusText:SetText("|cffff0000Invalid stack size/count.|r");
-      PostCreateAuctionButton:Disable();
+      SellStatusText:SetText("|cffff0000Invalid stack size/count.|r");
+      SellCreateAuctionButton:Disable();
     elseif self:CountItems(link) < stacks * size then
       StatusError = true;
-      PostStatusText:SetText("|cffff0000Not enough items available.|r");
-      PostCreateAuctionButton:Disable();
+      SellStatusText:SetText("|cffff0000Not enough items available.|r");
+      SellCreateAuctionButton:Disable();
     elseif bid == 0 then
       StatusError = true;
-      PostStatusText:SetText("|cffff0000No bid price set.|r");
-      PostCreateAuctionButton:Disable();
+      SellStatusText:SetText("|cffff0000No bid price set.|r");
+      SellCreateAuctionButton:Disable();
     elseif buyout < bid then
       StatusError = true;
-      PostStatusText:SetText("|cffff0000Buyout less than bid.|r");
-      PostCreateAuctionButton:Disable();
+      SellStatusText:SetText("|cffff0000Buyout less than bid.|r");
+      SellCreateAuctionButton:Disable();
     elseif GetMoney() < self:CalculateDeposit() then
       StatusError = true;
-      PostStatusText:SetText("|cffff0000Not enough cash for deposit.|r");
-      PostCreateAuctionButton:Disable();
+      SellStatusText:SetText("|cffff0000Not enough cash for deposit.|r");
+      SellCreateAuctionButton:Disable();
     elseif buyout <= (vendor * size / count) then
       StatusError = true;
-      PostStatusText:SetText("|cffff0000Buyout less than vendor price.|r");
-      PostCreateAuctionButton:Disable();
+      SellStatusText:SetText("|cffff0000Buyout less than vendor price.|r");
+      SellCreateAuctionButton:Disable();
     else
       StatusError = false;
-      PostStatusText:SetText(StatusMessage);
-      PostCreateAuctionButton:Enable();
+      SellStatusText:SetText(StatusMessage);
+      SellCreateAuctionButton:Enable();
     end
   end
 end
@@ -526,31 +549,31 @@ function AuctionLite:ClickAuctionSellItemButton_Hook()
   -- Ignore clicks that we generated ourselves.
   if not Selling then
     -- Clear everything first.
-    self:ClearAuctionFrame();
+    self:ClearSellFrame();
 
     -- If we've got a new item in the auction slot, fill out the fields.
     local name, texture, count, _, _, _, link =
       self:GetAuctionSellItemInfoAndLink();
 
     if name ~= nil then
-      PostItemButton:SetNormalTexture(texture);
-      PostItemButtonName:SetText(name);
+      SellItemButton:SetNormalTexture(texture);
+      SellItemButtonName:SetText(name);
 
       if count > 1 then
-        PostItemButtonCount:SetText(count);
-        PostItemButtonCount:Show();
+        SellItemButtonCount:SetText(count);
+        SellItemButtonCount:Show();
       else
-        PostItemButtonCount:Hide();
+        SellItemButtonCount:Hide();
       end
 
-      PostStacks:SetText(1);
-      PostSize:SetText(count);
+      SellStacks:SetText(1);
+      SellSize:SetText(count);
 
       local total = self:CountItems(link);
-      PostStackText:SetText("Number of Items |cff808080(max " .. total .. ")|r");
+      SellStackText:SetText("Number of Items |cff808080(max " .. total .. ")|r");
 
       self:UpdateDeposit();
-      self:QueryAuctions(link);
+      self:QuerySell(link);
     end
   end
 end
@@ -559,11 +582,63 @@ end
 -- Auction scanning
 -------------------------------------------------------------------------------
 
+-- Popup dialog for buying out auctions.
+StaticPopupDialogs["AUCTIONLITE_BID"] = {
+	text = "Bid on auction at:",
+	button1 = ACCEPT,
+	button2 = CANCEL,
+	OnAccept = function(self)
+    -- Place the buyout.
+		PlaceAuctionBid("list", TargetIndex, TargetPrice);
+    -- Update the scroll frame.
+    BuyScrollData[BuySelectedItem].bid = TargetPrice;
+    AuctionLite:AuctionFrameBuy_Update();
+    -- Clean up.
+    TargetIndex = nil;
+    TargetPrice = nil;
+	end,
+	OnShow = function(self)
+		MoneyFrame_Update(self.moneyFrame, TargetPrice);
+	end,
+	hasMoneyFrame = 1,
+	showAlert = 1,
+	timeout = 0,
+	exclusive = 1,
+	hideOnEscape = 1
+};
+
+-- Popup dialog for buying out auctions.
+StaticPopupDialogs["AUCTIONLITE_BUYOUT"] = {
+	text = BUYOUT_AUCTION_CONFIRMATION,
+	button1 = ACCEPT,
+	button2 = CANCEL,
+	OnAccept = function(self)
+    -- Place the buyout.
+		PlaceAuctionBid("list", TargetIndex, TargetPrice);
+    -- Update the scroll frame.
+    table.remove(BuyScrollData, BuySelectedItem);
+    BuySelectedItem = nil;
+    AuctionLite:AuctionFrameBuy_Update();
+    -- Clean up.
+    TargetIndex = nil;
+    TargetPrice = nil;
+	end,
+	OnShow = function(self)
+		MoneyFrame_Update(self.moneyFrame, TargetPrice);
+	end,
+	hasMoneyFrame = 1,
+	showAlert = 1,
+	timeout = 0,
+	exclusive = 1,
+	hideOnEscape = 1
+};
+
 -- Start an auction query.
-function AuctionLite:StartQuery(link)
-  if not QueryRunning then
-    QueryRunning = true;
-    QueryWait = true;
+function AuctionLite:StartQuery(queryType, name, link)
+  if QueryState == QUERY_STATE_IDLE then
+    QueryState = QUERY_STATE_SEND;
+    QueryType = queryType;
+    QueryName = name;
     QueryLink = link;
     QueryPage = 0;
     QueryData = {};
@@ -574,18 +649,48 @@ function AuctionLite:StartQuery(link)
   end
 end
 
--- Query a named item in the AH.
-function AuctionLite:QueryAuctions(link)
-  if self:StartQuery(link) then
+-- Query for an item dropped in the sell tab.
+function AuctionLite:QuerySell(link)
+  if self:StartQuery(QUERY_TYPE_SELL, nil, link) then
     self:SetStatus("|cffffff00Scanning...|r");
   end
 end
 
+-- Query to bid on an item.
+function AuctionLite:QueryBid(name)
+  self:StartQuery(QUERY_TYPE_BID, name, nil);
+end
+
+-- Query to buyout an item.
+function AuctionLite:QueryBuy(name)
+  self:StartQuery(QUERY_TYPE_BUY, name, nil);
+end
+
+-- Query for the buy tab.
+function AuctionLite:QuerySearch(name)
+  self:StartQuery(QUERY_TYPE_SEARCH, name, nil);
+end
+
 -- Query all items in the AH.
-function AuctionLite:QueryAll()
-  if self:StartQuery("") then
+function AuctionLite:QueryScan()
+  if self:StartQuery(QUERY_TYPE_SCAN, nil, nil) then
     BrowseScanText:SetText("0%");
   end
+end
+
+-- Get the next page.
+function AuctionLite:QueryNext()
+  assert(QueryState == QUERY_STATE_WAIT);
+  QueryState = QUERY_STATE_SEND;
+  QueryPage = QueryPage + 1;
+end
+
+-- End the current query.
+function AuctionLite:QueryEnd()
+  assert(QueryState == QUERY_STATE_WAIT);
+  QueryState = QUERY_STATE_IDLE;
+  QueryType = QUERY_TYPE_NONE;
+  QueryData = nil;
 end
 
 -- Compute the average and standard deviation of the points in data.
@@ -618,20 +723,31 @@ function AuctionLite:AnalyzeData(rawData)
   for i = 1, table.getn(rawData) do
     local link = rawData[i].link;
     local count = rawData[i].count;
-    local buyoutPrice = rawData[i].buyoutPrice
+    local buyout = rawData[i].buyoutPrice
     local owner = rawData[i].owner;
+    local bidder = rawData[i].highBidder;
 
-    local pricePerItem = buyoutPrice / count;
-    if pricePerItem > 0 then
-      if itemData[link] == nil then
-        itemData[link] = {};
-      end
-
-      local ourAuction = (owner == UnitName("player"));
-      local listing = { price = pricePerItem, count = count,
-                        owner = owner, keep = not ourAuction };
-      table.insert(itemData[link], listing);
+    local bid = rawData[i].bidAmount;
+    if bid <= 0 then
+      bid = rawData[i].minBid;
     end
+
+    local price = buyout / count;
+    if price <= 0 then
+      price = bid / count;
+    end
+
+    local keep = owner ~= UnitName("player") and buyout > 0;
+
+    local listing = { bid = bid, buyout = buyout,
+                      price = price, count = count,
+                      owner = owner, bidder = bidder, keep = keep };
+
+    if itemData[link] == nil then
+      itemData[link] = {};
+    end
+
+    table.insert(itemData[link], listing);
   end
 
   -- Process each data set.
@@ -671,29 +787,29 @@ function AuctionLite:AnalyzeData(rawData)
   return results;
 end
 
--- Request the next page of the current query.
-function AuctionLite:QueryNext()
-  QueryPage = QueryPage + 1;
-  QueryWait = true;
-end
-
 -- Our query has completed.  Analyze the data!
-function AuctionLite:QueryDone()
+function AuctionLite:QueryFinished()
   local results = self:AnalyzeData(QueryData);
   -- Get the info for the item we really care about.
-  if QueryLink ~= "" then
+  if QueryType == QUERY_TYPE_SEARCH then
+    for link, result in pairs(results) do
+      self:Print(link);
+      local name = self:SplitLink(link);
+      self:SetBuyScrollData(name, result.data);
+    end
+  elseif QueryLink ~= "" then
     local result = results[QueryLink];
     if result ~= nil and result.listings > 0 then
       local name = self:SplitLink(QueryLink);
       ItemValue = result.price;
       self:SetScrollData(name, result.data);
-      self:ShowPriceData(QueryLink, ItemValue, PostSize:GetNumber());
+      self:ShowPriceData(QueryLink, ItemValue, SellSize:GetNumber());
       self:SetStatus("|cff00ff00Scanned " .. result.listings ..  " listings.|r");
     else
       local hist = self:GetHistoricalPrice(QueryLink);
       if hist ~= nil then
         ItemValue = hist.price;
-        self:ShowPriceData(QueryLink, ItemValue, PostSize:GetNumber());
+        self:ShowPriceData(QueryLink, ItemValue, SellSize:GetNumber());
         self:SetStatus("|cffff0000Using historical data.|r");
       else
         local _, _, count, _, _, vendor = GetAuctionSellItemInfo();
@@ -709,20 +825,19 @@ function AuctionLite:QueryDone()
     self:UpdateHistoricalPrice(link, result);
   end
   -- Update the UI.
-  self:AuctionFramePost_Update();
-  -- Indicate that we're done with this query.
-  QueryRunning = false;
-  QueryData = nil;
+  self:AuctionFrameBuy_Update();
+  self:AuctionFrameSell_Update();
 end
 
 -- Handle a completed auction query.
 function AuctionLite:AUCTION_ITEM_LIST_UPDATE()
-  if QueryRunning and not QueryWait then
+  if QueryState == QUERY_STATE_WAIT then
     -- We've completed one of our own queries.
     local batch, total = GetNumAuctionItems("list");
+    local seen = QueryPage * AUCTIONS_PER_PAGE + batch;
     -- Update status.
-    if QueryLink == "" then
-      local pct = math.floor((QueryPage * AUCTIONS_PER_PAGE + batch) * 100 / total);
+    if QueryType == QUERY_TYPE_SCAN then
+      local pct = math.floor(seen * 100 / total);
       if pct == 100 then
         BrowseScanText:SetText("");
       else
@@ -730,35 +845,89 @@ function AuctionLite:AUCTION_ITEM_LIST_UPDATE()
       end
     end
     -- Record results.
-    local i;
-    for i = 1, batch do
-      -- There has *got* to be a better way to do this...
-      local link = self:RemoveUniqueId(GetAuctionItemLink("list", i));
-      local name, texture, count, quality, canUse, level,
-            minBid, minIncrement, buyoutPrice, bidAmount,
-            highBidder, owner = GetAuctionItemInfo("list", i);
-      local listing = {
-        link = link, name = name, texture = texture, count = count,
-        quality = quality, canUse = canUse, level = level,
-        minBid = minBid, minIncrement = minIncrement,
-        buyoutPrice = buyoutPrice, bidAmount = bidAmount,
-        highBidder = highBidder, owner = owner
-      };
-      QueryData[QueryPage * AUCTIONS_PER_PAGE + i] = listing;
-    end
-    if QueryPage * AUCTIONS_PER_PAGE + batch < total then
-      -- Request the next page.
-      self:QueryNext();
-    else
-      -- We're done--time to analyze the data.
-      self:QueryDone();
+    if QueryType == QUERY_TYPE_SCAN or
+       QueryType == QUERY_TYPE_SEARCH or
+       QueryType == QUERY_TYPE_SELL then
+      local i;
+      for i = 1, batch do
+        -- There has *got* to be a better way to do this...
+        local link = self:RemoveUniqueId(GetAuctionItemLink("list", i));
+        local name, texture, count, quality, canUse, level,
+              minBid, minIncrement, buyoutPrice, bidAmount,
+              highBidder, owner = GetAuctionItemInfo("list", i);
+        local listing = {
+          link = link, name = name, texture = texture, count = count,
+          quality = quality, canUse = canUse, level = level,
+          minBid = minBid, minIncrement = minIncrement,
+          buyoutPrice = buyoutPrice, bidAmount = bidAmount,
+          highBidder = highBidder, owner = owner
+        };
+        QueryData[QueryPage * AUCTIONS_PER_PAGE + i] = listing;
+      end
+      if seen < total then
+        -- Request the next page.
+        self:QueryNext();
+      else
+        -- We're done--time to analyze the data.
+        self:QueryFinished();
+        -- Indicate that we're done with this query.
+        self:QueryEnd();
+      end
+    elseif QueryType == QUERY_TYPE_BID or QueryType == QUERY_TYPE_BUY then
+      if BuyScrollData ~= nil then
+        local target = BuyScrollData[BuySelectedItem];
+        local success = false;
+
+        -- See if we've found the auction we're looking for.
+        for i = 1, batch do
+          local name, texture, count, quality, canUse, level,
+                minBid, minIncrement, buyoutPrice, bidAmount,
+                highBidder, owner = GetAuctionItemInfo("list", i);
+          local bid = bidAmount;
+          if bid <= 0 then
+            bid = minBid;
+          end
+          if BuyScrollName == name and
+             target.count == count and
+             target.bid == bid and
+             target.buyout == buyoutPrice and
+             target.owner == owner then
+            -- Place our bid/buyout.
+            if QueryType == QUERY_TYPE_BID then
+              TargetIndex = i;
+              TargetPrice = bid;
+              if TargetPrice == bidAmount then
+                TargetPrice = TargetPrice + minIncrement;
+              end
+              StaticPopup_Show("AUCTIONLITE_BID");
+            elseif QueryType == QUERY_TYPE_BUY then
+              TargetIndex = i;
+              TargetPrice = buyoutPrice;
+              StaticPopup_Show("AUCTIONLITE_BUYOUT");
+            end
+            -- Indicate that we succeeded.
+            success = true;
+            break;
+          end
+        end
+
+        -- If we succeded, stop.  If we didn't, get the next page.
+        if success then
+          self:QueryEnd();
+        elseif seen < total then
+          self:QueryNext();
+        else
+          self:QueryEnd();
+          self:Print("Could not find the selected listing in the auction house.");
+        end
+      end
     end
   end
 end
 
 -- Clean up if the auction house is closed.
 function AuctionLite:AUCTION_HOUSE_CLOSED()
-  self:ClearAuctionFrame();
+  self:ClearSellFrame();
   Selling = false;
   Coro = nil;
 end
@@ -880,6 +1049,14 @@ function AuctionLite:WaitForEmpty(container, slot)
   end
 end
 
+-- Start a coroutine to call the specified function.
+function AuctionLite:StartCoroutine(fn)
+  if Coro == nil then
+    Coro = coroutine.create(fn);
+    AuctionLite:ResumeCoroutine();
+  end
+end
+
 -- Resume the stalled coroutine.
 function AuctionLite:ResumeCoroutine()
   if Coro ~= nil then
@@ -904,71 +1081,120 @@ end
 -- UI functions
 -------------------------------------------------------------------------------
 
--- Clean up the "Post Auctions" frame.
-function AuctionLite:ClearAuctionFrame()
-  QueryRunning = false;
-  QueryWait = false;
+-- Clean up the "Sell" tab.
+function AuctionLite:ClearSellFrame()
+  QueryState = QUERY_STATE_IDLE;
+  QueryType = QUERY_TYPE_NONE;
+
+  QueryName = nil;
   QueryLink = nil;
+  QueryData = nil;
+
   ItemValue = 0;
 
   ScrollName = nil;
   ScrollData = {};
 
-  PostItemButton:SetNormalTexture(nil);
-  PostItemButtonName:SetText("");
-  PostItemButtonCount:Hide();
+  BuyScrollName = nil;
+  BuyScrollData = {};
+  BuySelectedItem = nil;
 
-  PostStackText:SetText("Number of Items");
-  PostStacks:SetText("");
-  PostSize:SetText("");
+  SellItemButton:SetNormalTexture(nil);
+  SellItemButtonName:SetText("");
+  SellItemButtonCount:Hide();
 
-  MoneyInputFrame_ResetMoney(PostBidPrice);
-  MoneyInputFrame_ResetMoney(PostBuyoutPrice);
+  SellStackText:SetText("Number of Items");
+  SellStacks:SetText("");
+  SellSize:SetText("");
 
-  PostCreateAuctionButton:Disable();
+  MoneyInputFrame_ResetMoney(SellBidPrice);
+  MoneyInputFrame_ResetMoney(SellBuyoutPrice);
+
+  SellCreateAuctionButton:Disable();
 
   self:SetStatus("");
   self:UpdateDeposit();
 
-  self:AuctionFramePost_Update();
+  FauxScrollFrame_SetOffset(SellScrollFrame, 0);
+
+  self:AuctionFrameSell_Update();
 end
 
 -- Set the status line.
 function AuctionLite:SetStatus(message)
   StatusMessage = message;
   if not StatusError then
-    PostStatusText:SetText(message);
+    SellStatusText:SetText(message);
   end
 end
 
 -- Set the data for the scrolling frame.
 function AuctionLite:SetScrollData(name, data)
-  table.sort(data, function(a, b) return a.price < b.price end);
+  local filtered = {};
+  
+  local i;
+  for i = 1, table.getn(data) do
+    if data[i].buyout > 0 then
+      table.insert(filtered, data[i]);
+    end
+  end
+
+  table.sort(filtered, function(a, b) return a.price < b.price end);
 
   ScrollName = name;
-  ScrollData = data;
+  ScrollData = filtered;
+end
+
+-- Set the data for the scrolling frame.
+function AuctionLite:SetBuyScrollData(name, data)
+  table.sort(data, function(a, b) return a.price < b.price end);
+
+  BuyScrollName = name;
+  BuyScrollData = data;
 end
 
 -- Use this update event to do a bunch of housekeeping.
 function AuctionLite:AuctionFrame_OnUpdate()
   -- Continue pending auction queries.
   local canSend = CanSendAuctionQuery("list");
-  if canSend and QueryWait then
-    local name;
-    if QueryLink == "" then
+  if canSend and QueryState == QUERY_STATE_SEND then
+    local name = nil;
+    if QueryType == QUERY_TYPE_SCAN then
       name = "";
-    else
+    elseif QueryType == QUERY_TYPE_SEARCH or
+           QueryType == QUERY_TYPE_BID or
+           QueryType == QUERY_TYPE_BUY then
+      name = QueryName;
+    elseif QueryType == QUERY_TYPE_SELL then
       name = self:SplitLink(QueryLink);
     end
-    QueryAuctionItems(name, 0, 0, 0, 0, 0, QueryPage, 0, 0);
-    QueryWait = false;
+    if name ~= nil then
+      QueryAuctionItems(name, 0, 0, 0, 0, 0, QueryPage, 0, 0);
+      QueryState = QUERY_STATE_WAIT;
+    else
+      QueryState = QUERY_STATE_IDLE;
+    end
   end
 
   -- Update the scan button.
-  if canSend and not QueryRunning then
+  if canSend and QueryState == QUERY_STATE_IDLE then
     BrowseScanButton:Enable();
   else
     BrowseScanButton:Disable();
+  end
+
+  -- Update the bid and buyout buttons.
+  if canSend and QueryState == QUERY_STATE_IDLE and
+     BuySelectedItem ~= nil then
+    BuyBidButton:Enable();
+  else
+    BuyBidButton:Disable();
+  end
+  if canSend and QueryState == QUERY_STATE_IDLE and
+     BuySelectedItem ~= nil and BuyScrollData[BuySelectedItem].buyout > 0 then
+    BuyBuyoutButton:Enable();
+  else
+    BuyBuyoutButton:Disable();
   end
 end
 
@@ -978,23 +1204,54 @@ function AuctionLite:AuctionFrameTab_OnClick_Hook(button, index)
     index = button:GetID();
   end
 
-  if index == TabIndex then
+  AuctionFrameBuy:Hide();
+  AuctionFrameSell:Hide();
+
+  if index == BuyTabIndex then
+    AuctionFrameTopLeft:SetTexture("Interface\\AuctionFrame\\UI-AuctionFrame-Bid-TopLeft");
+    AuctionFrameTop:SetTexture("Interface\\AuctionFrame\\UI-AuctionFrame-Bid-Top");
+    AuctionFrameTopRight:SetTexture("Interface\\AuctionFrame\\UI-AuctionFrame-Bid-TopRight");
+    AuctionFrameBotLeft:SetTexture("Interface\\AuctionFrame\\UI-AuctionFrame-Bid-BotLeft");
+    AuctionFrameBot:SetTexture("Interface\\AuctionFrame\\UI-AuctionFrame-Bid-Bot");
+    AuctionFrameBotRight:SetTexture("Interface\\AuctionFrame\\UI-AuctionFrame-Bid-BotRight");
+    AuctionFrameBuy:Show();
+  elseif index == SellTabIndex then
     AuctionFrameTopLeft:SetTexture("Interface\\AuctionFrame\\UI-AuctionFrame-Auction-TopLeft");
     AuctionFrameTop:SetTexture("Interface\\AuctionFrame\\UI-AuctionFrame-Auction-Top");
     AuctionFrameTopRight:SetTexture("Interface\\AuctionFrame\\UI-AuctionFrame-Auction-TopRight");
     AuctionFrameBotLeft:SetTexture("Interface\\AuctionFrame\\UI-AuctionFrame-Auction-BotLeft");
     AuctionFrameBot:SetTexture("Interface\\AuctionFrame\\UI-AuctionFrame-Auction-Bot");
     AuctionFrameBotRight:SetTexture("Interface\\AuctionFrame\\UI-AuctionFrame-Auction-BotRight");
-    AuctionFramePost:Show();
-  else
-    AuctionFramePost:Hide();
+    AuctionFrameSell:Show();
   end
+end
+
+-- Handles clicks on the buttons in the "Buy" scroll frame.
+function AuctionLite:BuyButton_OnClick(id)
+  local offset = FauxScrollFrame_GetOffset(BuyScrollFrame);
+  BuySelectedItem = offset + id;
+  self:AuctionFrameBuy_Update();
+end
+
+-- Handles clicks on the "Bid" button
+function AuctionLite:BuyBidButton_OnClick()
+  self:QueryBid(BuyScrollName);
+end
+
+-- Handles clicks on the "Buyout" button
+function AuctionLite:BuyBuyoutButton_OnClick()
+  self:QueryBuy(BuyScrollName);
+end
+
+-- Handles clicks on the "Create Auctions" button.
+function AuctionLite:CreateAuctionButton_OnClick()
+  AuctionLite:StartCoroutine(function() AuctionLite:CreateAuctions() end);
 end
 
 -- Handles clicks on buttons in the "Competing Auctions" display.
 -- Get the appropriate auction and undercut it!
-function AuctionLite:PostButton_OnClick(id)
-  local offset = FauxScrollFrame_GetOffset(PostScrollFrame);
+function AuctionLite:SellButton_OnClick(id)
+  local offset = FauxScrollFrame_GetOffset(SellScrollFrame);
   local item = ScrollData[offset + id];
 
   if item ~= nil then
@@ -1007,19 +1264,24 @@ end
 function AuctionLite:ChangeAuctionDuration(value)
   self.db.profile.duration = value;
 
-  PostShortAuctionButton:SetChecked(nil);
-  PostMediumAuctionButton:SetChecked(nil);
-  PostLongAuctionButton:SetChecked(nil);
+  SellShortAuctionButton:SetChecked(nil);
+  SellMediumAuctionButton:SetChecked(nil);
+  SellLongAuctionButton:SetChecked(nil);
 
   if value == 1 then
-    PostShortAuctionButton:SetChecked(true);
+    SellShortAuctionButton:SetChecked(true);
   elseif value == 2 then
-    PostMediumAuctionButton:SetChecked(true);
+    SellMediumAuctionButton:SetChecked(true);
   elseif value == 3 then
-    PostLongAuctionButton:SetChecked(true);
+    SellLongAuctionButton:SetChecked(true);
   end
 
   self:UpdateDeposit();
+end
+
+-- Handle clicks on the "Buy" tab search button.
+function AuctionLite:AuctionFrameBuy_Search()
+  self:QuerySearch(BuyName:GetText());
 end
 
 -- Handle updates to the pricing method (1 = per item, 2 = per stack).
@@ -1027,61 +1289,140 @@ function AuctionLite:ChangePricingMethod(value)
   local prevValue = self.db.profile.method;
   self.db.profile.method = value;
 
-  local stackSize = PostSize:GetNumber();
+  local stackSize = SellSize:GetNumber();
 
   -- Clear everything.
-  PostPerItemButton:SetChecked(nil);
-  PostPerStackButton:SetChecked(nil);
+  SellPerItemButton:SetChecked(nil);
+  SellPerStackButton:SetChecked(nil);
 
   -- Now update the UI based on the new value.
   if value == 1 then
     -- We're now per-item.
-    PostPerItemButton:SetChecked(true);
+    SellPerItemButton:SetChecked(true);
 
-    PostBidStackText:SetText("|cff808080(per item)|r");
-    PostBuyoutStackText:SetText("|cff808080(per item)|r");
+    SellBidStackText:SetText("|cff808080(per item)|r");
+    SellBuyoutStackText:SetText("|cff808080(per item)|r");
 
     -- Adjust prices if we just came from per-stack.
     if prevValue == 2 and stackSize > 0 then
-      local oldBid = MoneyInputFrame_GetCopper(PostBidPrice);
-      MoneyInputFrame_SetCopper(PostBidPrice, oldBid / stackSize);
+      local oldBid = MoneyInputFrame_GetCopper(SellBidPrice);
+      MoneyInputFrame_SetCopper(SellBidPrice, oldBid / stackSize);
 
-      local oldBuyout = MoneyInputFrame_GetCopper(PostBuyoutPrice);
-      MoneyInputFrame_SetCopper(PostBuyoutPrice, oldBuyout / stackSize);
+      local oldBuyout = MoneyInputFrame_GetCopper(SellBuyoutPrice);
+      MoneyInputFrame_SetCopper(SellBuyoutPrice, oldBuyout / stackSize);
     end
   elseif value == 2 then
     -- We're not per-stack.
-    PostPerStackButton:SetChecked(true);
+    SellPerStackButton:SetChecked(true);
 
-    PostBidStackText:SetText("|cff808080(per stack)|r");
-    PostBuyoutStackText:SetText("|cff808080(per stack)|r");
+    SellBidStackText:SetText("|cff808080(per stack)|r");
+    SellBuyoutStackText:SetText("|cff808080(per stack)|r");
 
     -- Adjust prices if we just came from per-item.
     if prevValue == 1 and stackSize > 0 then
-      local oldBid = MoneyInputFrame_GetCopper(PostBidPrice);
-      MoneyInputFrame_SetCopper(PostBidPrice, oldBid * stackSize);
+      local oldBid = MoneyInputFrame_GetCopper(SellBidPrice);
+      MoneyInputFrame_SetCopper(SellBidPrice, oldBid * stackSize);
 
-      local oldBuyout = MoneyInputFrame_GetCopper(PostBuyoutPrice);
-      MoneyInputFrame_SetCopper(PostBuyoutPrice, oldBuyout * stackSize);
+      local oldBuyout = MoneyInputFrame_GetCopper(SellBuyoutPrice);
+      MoneyInputFrame_SetCopper(SellBuyoutPrice, oldBuyout * stackSize);
     end
   end
 end
 
 -- Paint the scroll frame on the right-hand side with competing auctions.
-function AuctionLite:AuctionFramePost_Update()
-  local offset = FauxScrollFrame_GetOffset(PostScrollFrame);
+function AuctionLite:AuctionFrameBuy_Update()
+  local offset = FauxScrollFrame_GetOffset(BuyScrollFrame);
 
   local i;
-  for i = 1, POST_DISPLAY_SIZE do
-    local item = ScrollData[offset + i];
+  for i = 1, BUY_DISPLAY_SIZE do
+    local item = BuyScrollData[offset + i];
 
-    local buttonName = "PostButton" .. i;
+    local buttonName = "BuyButton" .. i;
     local button = _G[buttonName];
 
     if item ~= nil then
       local itemCount = _G[buttonName .. "Count"];
       local itemName = _G[buttonName .. "Name"];
+      local bidEachFrame = _G[buttonName .. "BidEachFrame"];
       local bidFrame = _G[buttonName .. "BidFrame"];
+      local buyoutEachFrame = _G[buttonName .. "BuyoutEachFrame"];
+      local buyoutFrame = _G[buttonName .. "BuyoutFrame"];
+
+      local r, g, b, a = 1.0, 1.0, 1.0, 1.0;
+      if item.owner == UnitName("player") then
+        b = 0.0;
+      end
+
+      itemCount:SetText(tostring(item.count) .. "x");
+      itemCount:SetVertexColor(r, g, b);
+      itemCount:SetAlpha(a);
+
+      itemName:SetText(BuyScrollName);
+      itemName:SetVertexColor(r, g, b);
+      itemName:SetAlpha(a);
+
+      MoneyFrame_Update(bidEachFrame, math.floor(item.bid / item.count));
+      bidEachFrame:SetAlpha(0.5);
+      if item.bidder then
+        SetMoneyFrameColor(buttonName .. "BidEachFrame", "yellow");
+      end
+
+      MoneyFrame_Update(bidFrame, math.floor(item.bid));
+      bidFrame:SetAlpha(0.5);
+      if item.bidder then
+        SetMoneyFrameColor(buttonName .. "BidFrame", "yellow");
+      end
+
+      if item.buyout > 0 then
+        MoneyFrame_Update(buyoutEachFrame, math.floor(item.buyout / item.count));
+        buyoutEachFrame:SetAlpha(a);
+        buyoutEachFrame:Show();
+
+        MoneyFrame_Update(buyoutFrame, math.floor(item.buyout));
+        buyoutFrame:SetAlpha(a);
+        buyoutFrame:Show();
+      else
+        buyoutEachFrame:Hide();
+        buyoutFrame:Hide();
+      end
+
+      if offset + i == BuySelectedItem then
+        button:LockHighlight();
+      else
+        button:UnlockHighlight();
+      end
+
+      button:Show();
+    else
+      button:Hide();
+    end
+  end
+
+  FauxScrollFrame_Update(BuyScrollFrame, table.getn(BuyScrollData),
+                         BUY_DISPLAY_SIZE, BuyButton1:GetHeight());
+
+  if table.getn(BuyScrollData) > 0 then
+    BuyHeader:Show();
+  else
+    BuyHeader:Hide();
+  end
+end
+
+-- Paint the scroll frame on the right-hand side with competing auctions.
+function AuctionLite:AuctionFrameSell_Update()
+  local offset = FauxScrollFrame_GetOffset(SellScrollFrame);
+
+  local i;
+  for i = 1, SELL_DISPLAY_SIZE do
+    local item = ScrollData[offset + i];
+
+    local buttonName = "SellButton" .. i;
+    local button = _G[buttonName];
+
+    if item ~= nil then
+      local itemCount = _G[buttonName .. "Count"];
+      local itemName = _G[buttonName .. "Name"];
+      local buyoutEachFrame = _G[buttonName .. "BuyoutEachFrame"];
       local buyoutFrame = _G[buttonName .. "BuyoutFrame"];
 
       local r, g, b, a = 1.0, 1.0, 1.0, 1.0;
@@ -1099,10 +1440,10 @@ function AuctionLite:AuctionFramePost_Update()
       itemName:SetVertexColor(r, g, b);
       itemName:SetAlpha(a);
 
-      MoneyFrame_Update(bidFrame, math.floor(item.price));
-      bidFrame:SetAlpha(a);
+      MoneyFrame_Update(buyoutEachFrame, math.floor(item.buyout / item.count));
+      buyoutEachFrame:SetAlpha(a);
 
-      MoneyFrame_Update(buyoutFrame, math.floor(item.price * item.count));
+      MoneyFrame_Update(buyoutFrame, math.floor(item.buyout));
       buyoutFrame:SetAlpha(a);
 
       button:Show();
@@ -1111,72 +1452,19 @@ function AuctionLite:AuctionFramePost_Update()
     end
   end
 
-  FauxScrollFrame_Update(PostScrollFrame, table.getn(ScrollData),
-                         POST_DISPLAY_SIZE, PostButton1:GetHeight());
+  FauxScrollFrame_Update(SellScrollFrame, table.getn(ScrollData),
+                         SELL_DISPLAY_SIZE, SellButton1:GetHeight());
 end
 
 -- Handle clicks on the scroll bar.
-function AuctionLite:PostScrollFrame_OnVerticalScroll(offset)
+function AuctionLite:SellScrollFrame_OnVerticalScroll(offset)
   FauxScrollFrame_OnVerticalScroll(
-    PostScrollFrame, offset, PostButton1:GetHeight(),
-    function() AuctionLite:AuctionFramePost_Update() end);
+    SellScrollFrame, offset, SellButton1:GetHeight(),
+    function() AuctionLite:AuctionFrameSell_Update() end);
 end
 
--- Create the "Post Auctions" tab's scroll frame.
-function AuctionLite:CreateScrollFrame()
-  local frame = AuctionFramePost;
-
-  local scroll = CreateFrame("ScrollFrame", "PostScrollFrame", frame, "FauxScrollFrameTemplate");
-  scroll:SetWidth(435);
-  scroll:SetHeight(339);
-  scroll:SetPoint("TOPRIGHT", AuctionFrameAuctions, "TOPRIGHT", 40, -72);
-  scroll:SetScript("OnEnter", function() AuctionLite:Print("enter") end);
-  scroll:SetScript("OnVerticalScroll", function(widget, offset)
-    AuctionLite:PostScrollFrame_OnVerticalScroll(offset)
-  end);
-  FauxScrollFrame_SetOffset(scroll, 0);
-
-  local scrollTex1 = scroll:CreateTexture(nil, "ARTWORK");
-  scrollTex1:SetWidth(31);
-  scrollTex1:SetHeight(256);
-  scrollTex1:SetPoint("TOPLEFT", scroll, "TOPRIGHT", -2, 5);
-  scrollTex1:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-ScrollBar");
-  scrollTex1:SetTexCoord(0, 0.484375, 0, 1.0);
-
-  local scrollTex2 = scroll:CreateTexture(nil, "ARTWORK");
-  scrollTex2:SetWidth(31);
-  scrollTex2:SetHeight(106);
-  scrollTex2:SetPoint("BOTTOMLEFT", scroll, "BOTTOMRIGHT", -2, -2);
-  scrollTex2:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-ScrollBar");
-  scrollTex2:SetTexCoord(0.515625, 1.0, 0, 0.4140625);
-
-  local i;
-  for i = 1, POST_DISPLAY_SIZE do
-    local button = CreateFrame("Button", "PostButton" .. i, frame, "PostButtonTemplate");
-    button:SetID(i);
-    if i == 1 then
-      button:SetPoint("TOPLEFT", AuctionFrameAuctions, "TOPLEFT", 219, -76);
-    else
-      button:SetPoint("TOPLEFT", "PostButton" .. (i - 1), "BOTTOMLEFT", 0, 0);
-    end
-    button:Hide();
-  end
-end
-
--- Create the "Post Auctions" tab.
-function AuctionLite:CreateFramePost()
-  -- Tweak the "Browse" tab.
-  local scan = CreateFrame("Button", "BrowseScanButton", AuctionFrameBrowse, "UIPanelButtonTemplate");
-  scan:SetWidth(60);
-  scan:SetHeight(22);
-  scan:SetText("Scan");
-  scan:SetPoint("TOPLEFT", AuctionFrameBrowse, "TOPLEFT", 185, -410);
-  scan:SetScript("OnClick", function() AuctionLite:QueryAll() end);
-
-  local scanText = AuctionFrameBrowse:CreateFontString("BrowseScanText", "BACKGROUND", "GameFontNormal");
-  scanText:SetPoint("TOPLEFT", scan, "TOPRIGHT", 5, -5);
-
-  -- Hook the auction frame's update function.
+-- Adds our hook to the main auction frame's update handler.
+function AuctionLite:HookAuctionFrameUpdate()
   local frameUpdate = AuctionFrame:GetScript("OnUpdate");
   AuctionFrame:SetScript("OnUpdate", function()
     if frameUpdate ~= nil then
@@ -1184,218 +1472,74 @@ function AuctionLite:CreateFramePost()
     end
     AuctionLite:AuctionFrame_OnUpdate();
   end);
+end
 
-  -- Create our new tab.
-  TabIndex = 1;
-  while getglobal("AuctionFrameTab" .. TabIndex) ~= nil do
-    TabIndex = TabIndex + 1;
+-- Adds our scan button to the "Browse" tab.
+function AuctionLite:ModifyBrowseTab()
+  -- Create the scan button.
+  local scan = CreateFrame("Button", "BrowseScanButton", AuctionFrameBrowse, "UIPanelButtonTemplate");
+  scan:SetWidth(60);
+  scan:SetHeight(22);
+  scan:SetText("Scan");
+  scan:SetPoint("TOPLEFT", AuctionFrameBrowse, "TOPLEFT", 185, -410);
+  scan:SetScript("OnClick", function() AuctionLite:QueryScan() end);
+
+  -- Create the status text next to it.
+  local scanText = AuctionFrameBrowse:CreateFontString("BrowseScanText", "BACKGROUND", "GameFontNormal");
+  scanText:SetPoint("TOPLEFT", scan, "TOPRIGHT", 5, -5);
+end
+
+-- Create a new tab on the auction frame.  Caller provides the name of the
+-- tab and the frame object to which it will be linked.
+function AuctionLite:CreateTab(name, frame)
+  -- Find a free index.
+  local tabIndex = 1;
+  while getglobal("AuctionFrameTab" .. tabIndex) ~= nil do
+    tabIndex = tabIndex + 1;
   end
 
-  local tab = CreateFrame("Button", "AuctionFrameTab" .. TabIndex, AuctionFrame, "AuctionTabTemplate");
-  tab:SetID(TabIndex);
-  tab:SetText("AuctionLite - Sell");
-  tab:SetPoint("TOPLEFT", "AuctionFrameTab" .. (TabIndex - 1), "TOPRIGHT", -8, 0);
+  -- Create the tab itself.
+  local tab = CreateFrame("Button", "AuctionFrameTab" .. tabIndex, AuctionFrame, "AuctionTabTemplate");
+  tab:SetID(tabIndex);
+  tab:SetText(name);
+  tab:SetPoint("TOPLEFT", "AuctionFrameTab" .. (tabIndex - 1), "TOPRIGHT", -8, 0);
+
+  -- Link it into the auction frame.
   PanelTemplates_DeselectTab(tab);
-  PanelTemplates_SetNumTabs(AuctionFrame, TabIndex);
+  PanelTemplates_SetNumTabs(AuctionFrame, tabIndex);
 
-  -- Create the frame associated with our tab.
-  local frame = CreateFrame("Frame", "AuctionFramePost", AuctionFrame);
-  frame:SetWidth(758);
-  frame:SetHeight(447);
+  frame:SetParent(AuctionFrame);
+  frame:SetPoint("TOPLEFT", AuctionFrame, "TOPLEFT", 0, 0);
 
-  local titleText = frame:CreateFontString("PostTitle", "BACKGROUND", "GameFontNormal");
-  titleText:SetText("AuctionLite - Sell");
-  titleText:SetPoint("TOP", AuctionFrame, "TOP", 0, -18);
+  return tabIndex;
+end
 
-  local tabText = frame:CreateFontString("PostTabText", "ARTWORK", "GameFontHighlightSmall");
-  tabText:SetText("Create Auction");
-  tabText:SetPoint("TOP", AuctionFrame, "TOPLEFT", 121, -55);
+-- Create the "Buy" tab.
+function AuctionLite:CreateBuyFrame()
+  -- Create our tab.
+  BuyTabIndex = self:CreateTab("AuctionLite - Buy", AuctionFrameBuy);
 
-  local itemText = frame:CreateFontString("PostItemText", "ARTWORK", "GameFontHighlightSmall");
-  itemText:SetText("Auction Item");
-  itemText:SetPoint("TOPLEFT", AuctionFrame, "TOPLEFT", 28, -83);
+  -- Paint the screen for good measure.
+  self:AuctionFrameBuy_Update();
+end
 
-  local item = CreateFrame("Button", "PostItemButton", frame);
-  item:SetWidth(37);
-  item:SetHeight(37);
-  item:SetPoint("TOPLEFT", AuctionFrameAuctions, "TOPLEFT", 28, -98);
-  item:RegisterForDrag("LeftButton");
-  item:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD");
-  item:SetScript("OnClick", function(widget, button)
-    ClickAuctionSellItemButton(widget, button);
-    AuctionsFrameAuctions_ValidateAuction();
-  end);
-  item:SetScript("OnReceiveDrag", item:GetScript("OnClick"));
-  item:SetScript("OnDragStart", item:GetScript("OnClick"));
-
-  local itemName = item:CreateFontString("PostItemButtonName", "BACKGROUND", "GameFontNormal");
-  itemName:SetWidth(124);
-  itemName:SetHeight(30);
-  itemName:SetPoint("TOPLEFT", item, "TOPRIGHT", 5, 0);
-
-  local itemCount = item:CreateFontString("PostItemButtonCount", "OVERLAY", "NumberFontNormal");
-  itemCount:SetJustifyH("RIGHT");
-  itemCount:SetPoint("BOTTOMRIGHT", item, "BOTTOMRIGHT", -5, 2);
-  itemCount:Hide();
-
-  local stackText = frame:CreateFontString("PostStackText", "ARTWORK", "GameFontHighlightSmall");
-  stackText:SetText("Number of Items");
-  stackText:SetPoint("TOPLEFT", itemText, "TOPLEFT", 0, -60);
-
-  local stacks = CreateFrame("EditBox", "PostStacks", frame, "InputBoxTemplate");
-  stacks:SetWidth(30);
-  stacks:SetHeight(20);
-  stacks:SetPoint("TOPLEFT", stackText, "BOTTOMLEFT", 3, -2);
-  stacks:SetAutoFocus(nil);
-  stacks:SetNumeric(true);
-  stacks:SetScript("OnTextChanged", function()
-    AuctionLite:UpdateDeposit();
-    AuctionLite:ValidateAuction();
-  end);
-
-  local stackOfText = frame:CreateFontString("PostStacksOfText", "ARTWORK", "GameFontHighlightSmall");
-  stackOfText:SetText("|cffc0c0c0stacks of|r");
-  stackOfText:SetPoint("TOPLEFT", stacks, "TOPRIGHT", 5, -5);
-
-  local size = CreateFrame("EditBox", "PostSize", frame, "InputBoxTemplate");
-  size:SetWidth(30);
-  size:SetHeight(20);
-  size:SetPoint("TOPLEFT", stackOfText, "TOPRIGHT", 10, 5);
-  size:SetAutoFocus(nil);
-  size:SetNumeric(true);
-  size:SetScript("OnTextChanged", function()
-    AuctionLite:UpdateDeposit();
-    AuctionLite:UpdatePrices();
-    AuctionLite:ValidateAuction();
-  end);
-
-  local bidText = frame:CreateFontString("PostBidText", "ARTWORK", "GameFontHighlightSmall");
-  bidText:SetText("Starting Bid");
-  bidText:SetPoint("TOPLEFT", stackText, "TOPLEFT", 0, -38);
-
-  local bidStackText = frame:CreateFontString("PostBidStackText", "ARTWORK", "GameFontHighlightSmall");
-  bidStackText:SetPoint("LEFT", bidText, "RIGHT", 3, 0);
-
-  local bid = CreateFrame("Frame", "PostBidPrice", frame, "MoneyInputFrameTemplate");
-  bid:SetPoint("TOPLEFT", bidText, "BOTTOMLEFT", 3, -2);
-  MoneyInputFrame_SetOnValueChangedFunc(bid, function() AuctionLite:ValidateAuction() end);
-
-  local buyoutText = frame:CreateFontString("PostBuyoutText", "ARTWORK", "GameFontHighlightSmall");
-  buyoutText:SetText("Buyout Price");
-  buyoutText:SetPoint("TOPLEFT", bidText, "TOPLEFT", 0, -38);
-
-  local buyoutStackText = frame:CreateFontString("PostBuyoutStackText", "ARTWORK", "GameFontHighlightSmall");
-  buyoutStackText:SetPoint("LEFT", buyoutText, "RIGHT", 2, 0);
-
-  local buyout = CreateFrame("Frame", "PostBuyoutPrice", frame, "MoneyInputFrameTemplate");
-  buyout:SetPoint("TOPLEFT", buyoutText, "BOTTOMLEFT", 3, -2);
-  MoneyInputFrame_SetOnValueChangedFunc(buyout, function() AuctionLite:ValidateAuction() end);
-
-  local statusText = frame:CreateFontString("PostStatusText", "ARTWORK", "GameFontHighlightSmall");
-  statusText:SetPoint("TOPLEFT", buyoutText, "TOPLEFT", 0, -38);
-
-  local durationText = frame:CreateFontString("PostDurationText", "ARTWORK", "GameFontHighlightSmall");
-  durationText:SetText("Auction Duration");
-  durationText:SetPoint("TOPLEFT", buyoutText, "TOPLEFT", 0, -69);
-
-  local short = CreateFrame("CheckButton", "PostShortAuctionButton", frame, "UIRadioButtonTemplate");
-  short:SetID(1);
-  short:SetPoint("TOPLEFT", durationText, "BOTTOMLEFT", 3, 0);
-  short:SetScript("OnClick", function(widget, button) AuctionLite:ChangeAuctionDuration(widget:GetID()) end);
-  PostShortAuctionButtonText:SetText("12h");
-
-  local medium = CreateFrame("CheckButton", "PostMediumAuctionButton", frame, "UIRadioButtonTemplate");
-  medium:SetID(2);
-  medium:SetPoint("TOPLEFT", short, "TOPLEFT", 55, 0);
-  medium:SetScript("OnClick", function(widget, button) AuctionLite:ChangeAuctionDuration(widget:GetID()) end);
-  PostMediumAuctionButtonText:SetText("24h");
-
-  local long = CreateFrame("CheckButton", "PostLongAuctionButton", frame, "UIRadioButtonTemplate");
-  long:SetID(3);
-  long:SetText("48h");
-  long:SetPoint("TOPLEFT", medium, "TOPLEFT", 55, 0);
-  long:SetScript("OnClick", function(widget, button) AuctionLite:ChangeAuctionDuration(widget:GetID()) end);
-  PostLongAuctionButtonText:SetText("48h");
-
-  local methodText = frame:CreateFontString("PostMethodText", "ARTWORK", "GameFontHighlightSmall");
-  methodText:SetText("Pricing Method");
-  methodText:SetPoint("TOPLEFT", durationText, "TOPLEFT", 0, -30);
-
-  local perItem = CreateFrame("CheckButton", "PostPerItemButton", frame, "UIRadioButtonTemplate");
-  perItem:SetID(1);
-  perItem:SetPoint("TOPLEFT", methodText, "BOTTOMLEFT", 3, 0);
-  perItem:SetScript("OnClick", function(widget, button) AuctionLite:ChangePricingMethod(widget:GetID()) end);
-  PostPerItemButtonText:SetText("per item");
-
-  local perStack = CreateFrame("CheckButton", "PostPerStackButton", frame, "UIRadioButtonTemplate");
-  perStack:SetID(2);
-  perStack:SetPoint("TOPLEFT", perItem, "TOPLEFT", 80, 0);
-  perStack:SetScript("OnClick", function(widget, button) AuctionLite:ChangePricingMethod(widget:GetID()) end);
-  PostPerStackButtonText:SetText("per stack");
-
-  local depositText = frame:CreateFontString("PostDepositText", "ARTWORK", "GameFontNormal");
-  depositText:SetText("Deposit:");
-  depositText:SetPoint("TOPLEFT", methodText, "TOPLEFT", 0, -46);
-
-  local deposit = CreateFrame("Frame", "PostDepositMoneyFrame", frame, "SmallMoneyFrameTemplate");
-  deposit:SetPoint("LEFT", depositText, "RIGHT", 5, 0);
-  deposit.small = 1;
-  MoneyFrame_SetType(deposit, "AUCTIONLITE_DEPOSIT");
-
-  local close = CreateFrame("Button", "PostCloseButton", frame, "UIPanelButtonTemplate");
-  close:SetWidth(80);
-  close:SetHeight(22);
-  close:SetText("Close");
-  close:SetPoint("BOTTOMRIGHT", AuctionFrameAuctions, "BOTTOMRIGHT", 66, 14);
-  close:SetScript("OnClick", function() HideUIPanel(AuctionFrame) end);
-
-  local create = CreateFrame("Button", "PostCreateAuctionButton", frame, "UIPanelButtonTemplate");
-  create:Disable();
-  create:SetWidth(191);
-  create:SetHeight(20);
-  create:SetText("Create Auction");
-  create:SetPoint("BOTTOMLEFT", AuctionFrameAuctions, "BOTTOMLEFT", 18, 39);
-  create:SetScript("OnClick", function()
-    if Coro == nil then
-      Coro = coroutine.create(function() AuctionLite:CreateAuctions() end);
-      AuctionLite:ResumeCoroutine();
-    end
-  end);
-
-  local headerText = frame:CreateFontString("PostHeaderText", "ARTWORK", "GameFontHighlightSmall");
-  headerText:SetText("Competing Auctions");
-  headerText:SetPoint("TOPLEFT", AuctionFrameAuctions, "TOPLEFT", 230, -55);
-
-  local eachHeaderText = frame:CreateFontString("PostEachHeaderText", "ARTWORK", "GameFontHighlightSmall");
-  eachHeaderText:SetText("Buyout Per Item");
-  eachHeaderText:SetPoint("TOPLEFT", headerText, "TOPRIGHT", 200, 0);
-
-  local totalHeaderText = frame:CreateFontString("PostTotalHeaderText", "ARTWORK", "GameFontHighlightSmall");
-  totalHeaderText:SetText("Buyout Total");
-  totalHeaderText:SetPoint("TOPLEFT", eachHeaderText, "TOPRIGHT", 75, 0);
+-- Create the "Sell" tab.
+function AuctionLite:CreateSellFrame()
+  -- Create our tab.
+  SellTabIndex = self:CreateTab("AuctionLite - Sell", AuctionFrameSell);
 
   -- Set up tabbing between fields.
-  MoneyInputFrame_SetNextFocus(PostBidPrice, PostBuyoutPriceGold);
-  MoneyInputFrame_SetPreviousFocus(PostBidPrice, size);
+  MoneyInputFrame_SetNextFocus(SellBidPrice, SellBuyoutPriceGold);
+  MoneyInputFrame_SetPreviousFocus(SellBidPrice, size);
 
-  MoneyInputFrame_SetNextFocus(PostBuyoutPrice, stacks);
-  MoneyInputFrame_SetPreviousFocus(PostBuyoutPrice, PostBidPriceCopper);
+  MoneyInputFrame_SetNextFocus(SellBuyoutPrice, stacks);
+  MoneyInputFrame_SetPreviousFocus(SellBuyoutPrice, SellBidPriceCopper);
 
-  stacks:SetScript("OnTabPressed", function()
-    if IsShiftKeyDown() then
-      PostBuyoutPriceCopper:SetFocus();
-    else
-      PostSize:SetFocus();
-    end
-  end);
+	-- Miscellaneous additional setup.
+	MoneyFrame_SetType(SellDepositMoneyFrame, "AUCTIONLITE_DEPOSIT");
 
-  size:SetScript("OnTabPressed", function()
-    if IsShiftKeyDown() then
-      PostStacks:SetFocus();
-    else
-      PostBidPriceGold:SetFocus();
-    end
-  end);
+  -- Make sure it's pristine.
+  self:ClearSellFrame();
 
   -- Set preferences.
   self:ChangeAuctionDuration(self.db.profile.duration);
@@ -1437,7 +1581,7 @@ function AuctionLite:AddTooltipData(tooltip, link, count1, count2)
     -- First add vendor info.  Always print a line for the vendor price.
     if self.db.profile.showVendor then
       local _, id = self:SplitLink(link);
-      local vendor = VendorData[id];
+      local vendor = self.VendorData[id];
       local vendorInfo;
       if vendor ~= nil then
         vendorInfo = self:PrintMoney(vendor * count1);
@@ -1565,9 +1709,12 @@ function AuctionLite:ADDON_LOADED(name)
   if name == "Blizzard_AuctionUI" then
     self:SecureHook("AuctionFrameTab_OnClick", "AuctionFrameTab_OnClick_Hook");
     self:SecureHook("ClickAuctionSellItemButton", "ClickAuctionSellItemButton_Hook");
-    self:CreateFramePost();
-    self:CreateScrollFrame();
-    self:ClearAuctionFrame();
+
+    self:HookAuctionFrameUpdate();
+
+    self:ModifyBrowseTab();
+    self:CreateBuyFrame();
+    self:CreateSellFrame();
   end
 end
 

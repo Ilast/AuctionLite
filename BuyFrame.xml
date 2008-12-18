@@ -1,0 +1,487 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/
+..\..\FrameXML\UI.xsd">
+	<Button name="BuyButtonTemplate" hidden="false" virtual="true">
+		<Size>
+			<AbsDimension x="770" y="21"/>
+		</Size>
+		<Layers>
+			<Layer level="BACKGROUND">
+				<FontString name="$parentCount" inherits="GameFontNormal" justifyH="CENTER">
+					<Size>
+						<AbsDimension x="43" y="18"/>
+					</Size>
+					<Anchors>
+						<Anchor point="TOPLEFT">
+							<Offset>
+								<AbsDimension x="0" y="0"/>
+							</Offset>
+						</Anchor>
+					</Anchors>
+				</FontString>
+				<FontString name="$parentName" inherits="GameFontNormal" justifyH="LEFT">
+					<Size>
+						<AbsDimension x="180" y="18"/>
+					</Size>
+					<Anchors>
+						<Anchor point="TOPLEFT">
+							<Offset>
+								<AbsDimension x="43" y="0"/>
+							</Offset>
+						</Anchor>
+					</Anchors>
+				</FontString>
+			</Layer>
+		</Layers>
+		<Frames>
+			<Frame name="$parentBidEachFrame" inherits="SmallMoneyFrameTemplate">
+				<Anchors>
+					<Anchor point="RIGHT">
+						<Offset>
+							<AbsDimension x="-395" y="2"/>
+						</Offset>
+					</Anchor>
+				</Anchors>
+				<Scripts>
+					<OnLoad>
+						SmallMoneyFrame_OnLoad(self);
+						MoneyFrame_SetType(self, "AUCTION");
+					</OnLoad>
+				</Scripts>
+			</Frame>
+			<Frame name="$parentBidFrame" inherits="SmallMoneyFrameTemplate">
+				<Anchors>
+					<Anchor point="RIGHT">
+						<Offset>
+							<AbsDimension x="-260" y="2"/>
+						</Offset>
+					</Anchor>
+				</Anchors>
+				<Scripts>
+					<OnLoad>
+						SmallMoneyFrame_OnLoad(self);
+						MoneyFrame_SetType(self, "AUCTION");
+					</OnLoad>
+				</Scripts>
+			</Frame>
+			<Frame name="$parentBuyoutEachFrame" inherits="SmallMoneyFrameTemplate">
+				<Anchors>
+					<Anchor point="RIGHT">
+						<Offset>
+							<AbsDimension x="-125" y="2"/>
+						</Offset>
+					</Anchor>
+				</Anchors>
+				<Scripts>
+					<OnLoad>
+						SmallMoneyFrame_OnLoad(self);
+						MoneyFrame_SetType(self, "AUCTION");
+					</OnLoad>
+				</Scripts>
+			</Frame>
+			<Frame name="$parentBuyoutFrame" inherits="SmallMoneyFrameTemplate">
+				<Anchors>
+					<Anchor point="RIGHT">
+						<Offset>
+							<AbsDimension x="10" y="2"/>
+						</Offset>
+					</Anchor>
+				</Anchors>
+				<Scripts>
+					<OnLoad>
+						SmallMoneyFrame_OnLoad(self);
+						MoneyFrame_SetType(self, "AUCTION");
+					</OnLoad>
+				</Scripts>
+			</Frame>
+		</Frames>
+		<Scripts>
+			<OnClick>
+				AuctionLite:BuyButton_OnClick(self:GetID());
+			</OnClick>
+		</Scripts>
+		<HighlightTexture name="$parentHighlight" file="Interface\HelpFrame\HelpFrameButton-Highlight" alphaMode="ADD">
+			<Size>
+				<AbsDimension x="770" y="18"/>
+			</Size>
+			<Anchors>
+				<Anchor point="TOPLEFT">
+					<Offset>
+						<AbsDimension x="0" y="0"/>
+					</Offset>
+				</Anchor>
+			</Anchors>
+			<TexCoords left="0" right="1.0" top="0" bottom="0.578125"/>
+		</HighlightTexture>
+	</Button>
+  <Frame name="AuctionFrameBuy" hidden="true">
+    <Size>
+      <AbsDimension x="758" y="447"/>
+    </Size>
+    <Anchors>
+      <Anchor point="TOPLEFT"/>
+    </Anchors>
+    <Layers>
+      <Layer level="BACKGROUND">
+        <FontString name="BuyTitle" inherits="GameFontNormal" text="AuctionLite - Buy">
+          <Anchors>
+            <Anchor point="TOP">
+              <Offset>
+                <AbsDimension x="0" y="-18"/>
+              </Offset>
+            </Anchor>
+          </Anchors>
+        </FontString>
+      </Layer>
+      <Layer level="ARTWORK">
+        <FontString name="BuyNameText" inherits="GameFontHighlightSmall" text="Name">
+          <Anchors>
+            <Anchor point="TOPLEFT">
+              <Offset>
+                <AbsDimension x="80" y="-38"/>
+              </Offset>
+            </Anchor>
+          </Anchors>
+        </FontString>
+			</Layer>
+		</Layers>
+    <Frames>
+			<Frame name="BuyHeader">
+        <Size>
+          <AbsDimension x="750" y="447"/>
+        </Size>
+				<Anchors>
+					<Anchor point="TOPLEFT">
+						<Offset>
+							<AbsDimension x="0" y="0"/>
+						</Offset>
+					</Anchor>
+				</Anchors>
+				<Layers>
+					<Layer level="ARTWORK">
+						<FontString name="BuyItemText" inherits="GameFontHighlightSmall" text="Item">
+							<Anchors>
+								<Anchor point="TOPLEFT">
+									<Offset>
+										<AbsDimension x="70" y="-80"/>
+									</Offset>
+								</Anchor>
+							</Anchors>
+						</FontString>
+						<FontString name="BuyBuyoutAllText" inherits="GameFontHighlightSmall" text="Buyout Total">
+							<Anchors>
+								<Anchor point="TOPRIGHT">
+									<Offset>
+										<AbsDimension x="43" y="-80"/>
+									</Offset>
+								</Anchor>
+							</Anchors>
+						</FontString>
+						<FontString name="BuyBuyoutEachText" inherits="GameFontHighlightSmall" text="Buyout Per Item">
+							<Anchors>
+								<Anchor point="TOPRIGHT" relativeTo="BuyBuyoutAllText">
+									<Offset>
+										<AbsDimension x="-135" y="0"/>
+									</Offset>
+								</Anchor>
+							</Anchors>
+						</FontString>
+						<FontString name="BuyBidAllText" inherits="GameFontHighlightSmall" text="Bid Total">
+							<Anchors>
+								<Anchor point="TOPRIGHT" relativeTo="BuyBuyoutEachText">
+									<Offset>
+										<AbsDimension x="-135" y="0"/>
+									</Offset>
+								</Anchor>
+							</Anchors>
+						</FontString>
+						<FontString name="BuyBidEachText" inherits="GameFontHighlightSmall" text="Bid Per Item">
+							<Anchors>
+								<Anchor point="TOPRIGHT" relativeTo="BuyBidAllText">
+									<Offset>
+										<AbsDimension x="-135" y="0"/>
+									</Offset>
+								</Anchor>
+							</Anchors>
+						</FontString>
+					</Layer>
+				</Layers>
+			</Frame>
+      <EditBox name="BuyName" autoFocus="false" inherits="InputBoxTemplate">
+        <Size>
+          <AbsDimension x="300" y="16"/>
+        </Size>
+        <Anchors>
+          <Anchor point="TOPLEFT" relativeTo="BuyNameText" relativePoint="BOTTOMLEFT">
+            <Offset>
+              <AbsDimension x="3" y="-2"/>
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Scripts>
+          <OnTabPressed>
+          </OnTabPressed>
+          <OnEnterPressed>
+            AuctionLite:AuctionFrameBuy_Search();
+            self:ClearFocus();
+          </OnEnterPressed>
+        </Scripts>
+        <FontString inherits="ChatFontNormal" bytes="64"/>
+      </EditBox>
+      <Button name="BrowseSearchButton" inherits="UIPanelButtonTemplate" text="Search">
+        <Size>
+          <AbsDimension x="80" y="22"/>
+        </Size>
+        <Anchors>
+          <Anchor point="TOPRIGHT">
+            <Offset>
+              <AbsDimension x="50" y="-44"/>
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Scripts>
+          <OnClick>
+            AuctionLite:AuctionFrameBuy_Search();
+          </OnClick>
+          <OnUpdate>
+            --AuctionLite:BuySearchButton_OnUpdate(self, elapsed);
+          </OnUpdate>
+        </Scripts>
+      </Button>
+      <ScrollFrame name="BuyScrollFrame" inherits="FauxScrollFrameTemplate">
+        <Size>
+          <AbsDimension x="625" y="335"/>
+        </Size>
+        <Anchors>
+          <Anchor point="TOPRIGHT">
+            <Offset>
+              <AbsDimension x="40" y="-74"/>
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Layers>
+          <Layer level="ARTWORK">
+            <Texture file="Interface\PaperDollInfoFrame\UI-Character-ScrollBar">
+              <Size>
+                <AbsDimension x="31" y="256"/>
+              </Size>
+              <Anchors>
+                <Anchor point="TOPLEFT" relativePoint="TOPRIGHT">
+                  <Offset>
+                    <AbsDimension x="-2" y="5"/>
+                  </Offset>
+                </Anchor>
+              </Anchors>
+              <TexCoords left="0" right="0.484375" top="0" bottom="1.0"/>
+            </Texture>
+            <Texture file="Interface\PaperDollInfoFrame\UI-Character-ScrollBar">
+              <Size>
+                <AbsDimension x="31" y="106"/>
+              </Size>
+              <Anchors>
+                <Anchor point="BOTTOMLEFT" relativePoint="BOTTOMRIGHT">
+                  <Offset>
+                    <AbsDimension x="-2" y="-2"/>
+                  </Offset>
+                </Anchor>
+              </Anchors>
+              <TexCoords left="0.515625" right="1.0" top="0" bottom="0.4140625"/>
+            </Texture>
+          </Layer>
+        </Layers>
+        <Scripts>
+          <OnVerticalScroll>
+            FauxScrollFrame_OnVerticalScroll(
+              self, offset, BuyButton1:GetHeight(),
+              function() AuctionLite:AuctionFrameBuy_Update() end);
+          </OnVerticalScroll>
+        </Scripts>
+      </ScrollFrame>
+      <Button name="BuyButton1" inherits="BuyButtonTemplate" id="1">
+        <Anchors>
+          <Anchor point="TOPLEFT">
+            <Offset>
+              <AbsDimension x="27" y="-96"/>
+            </Offset>
+          </Anchor>
+        </Anchors>
+      </Button>
+      <Button name="BuyButton2" inherits="BuyButtonTemplate" id="2">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativeTo="BuyButton1" relativePoint="BOTTOMLEFT">
+            <Offset>
+              <AbsDimension x="0" y="0"/>
+            </Offset>
+          </Anchor>
+        </Anchors>
+      </Button>
+      <Button name="BuyButton3" inherits="BuyButtonTemplate" id="3">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativeTo="BuyButton2" relativePoint="BOTTOMLEFT">
+            <Offset>
+              <AbsDimension x="0" y="0"/>
+            </Offset>
+          </Anchor>
+        </Anchors>
+      </Button>
+      <Button name="BuyButton4" inherits="BuyButtonTemplate" id="4">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativeTo="BuyButton3" relativePoint="BOTTOMLEFT">
+            <Offset>
+              <AbsDimension x="0" y="0"/>
+            </Offset>
+          </Anchor>
+        </Anchors>
+      </Button>
+      <Button name="BuyButton5" inherits="BuyButtonTemplate" id="5">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativeTo="BuyButton4" relativePoint="BOTTOMLEFT">
+            <Offset>
+              <AbsDimension x="0" y="0"/>
+            </Offset>
+          </Anchor>
+        </Anchors>
+      </Button>
+      <Button name="BuyButton6" inherits="BuyButtonTemplate" id="6">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativeTo="BuyButton5" relativePoint="BOTTOMLEFT">
+            <Offset>
+              <AbsDimension x="0" y="0"/>
+            </Offset>
+          </Anchor>
+        </Anchors>
+      </Button>
+      <Button name="BuyButton7" inherits="BuyButtonTemplate" id="7">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativeTo="BuyButton6" relativePoint="BOTTOMLEFT">
+            <Offset>
+              <AbsDimension x="0" y="0"/>
+            </Offset>
+          </Anchor>
+        </Anchors>
+      </Button>
+      <Button name="BuyButton8" inherits="BuyButtonTemplate" id="8">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativeTo="BuyButton7" relativePoint="BOTTOMLEFT">
+            <Offset>
+              <AbsDimension x="0" y="0"/>
+            </Offset>
+          </Anchor>
+        </Anchors>
+      </Button>
+      <Button name="BuyButton9" inherits="BuyButtonTemplate" id="9">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativeTo="BuyButton8" relativePoint="BOTTOMLEFT">
+            <Offset>
+              <AbsDimension x="0" y="0"/>
+            </Offset>
+          </Anchor>
+        </Anchors>
+      </Button>
+      <Button name="BuyButton10" inherits="BuyButtonTemplate" id="10">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativeTo="BuyButton9" relativePoint="BOTTOMLEFT">
+            <Offset>
+              <AbsDimension x="0" y="0"/>
+            </Offset>
+          </Anchor>
+        </Anchors>
+      </Button>
+      <Button name="BuyButton11" inherits="BuyButtonTemplate" id="11">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativeTo="BuyButton10" relativePoint="BOTTOMLEFT">
+            <Offset>
+              <AbsDimension x="0" y="0"/>
+            </Offset>
+          </Anchor>
+        </Anchors>
+      </Button>
+      <Button name="BuyButton12" inherits="BuyButtonTemplate" id="12">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativeTo="BuyButton11" relativePoint="BOTTOMLEFT">
+            <Offset>
+              <AbsDimension x="0" y="0"/>
+            </Offset>
+          </Anchor>
+        </Anchors>
+      </Button>
+      <Button name="BuyButton13" inherits="BuyButtonTemplate" id="13">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativeTo="BuyButton12" relativePoint="BOTTOMLEFT">
+            <Offset>
+              <AbsDimension x="0" y="0"/>
+            </Offset>
+          </Anchor>
+        </Anchors>
+      </Button>
+      <Button name="BuyButton14" inherits="BuyButtonTemplate" id="14">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativeTo="BuyButton13" relativePoint="BOTTOMLEFT">
+            <Offset>
+              <AbsDimension x="0" y="0"/>
+            </Offset>
+          </Anchor>
+        </Anchors>
+      </Button>
+      <Button name="BuyButton15" inherits="BuyButtonTemplate" id="15">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativeTo="BuyButton14" relativePoint="BOTTOMLEFT">
+            <Offset>
+              <AbsDimension x="0" y="0"/>
+            </Offset>
+          </Anchor>
+        </Anchors>
+      </Button>
+			<Button name="BuyCloseButton" inherits="UIPanelButtonTemplate" text="CLOSE">
+				<Size>
+					<AbsDimension x="80" y="22"/>
+				</Size>
+				<Anchors>
+					<Anchor point="BOTTOMRIGHT" relativePoint="BOTTOMRIGHT">
+						<Offset>
+							<AbsDimension x="66" y="14"/>
+						</Offset>
+					</Anchor>
+				</Anchors>
+				<Scripts>
+					<OnClick>
+						HideUIPanel(self:GetParent():GetParent());
+					</OnClick>
+				</Scripts>
+			</Button>
+			<Button name="BuyBuyoutButton" inherits="UIPanelButtonTemplate" text="BUYOUT">
+				<Size>
+					<AbsDimension x="80" y="22"/>
+				</Size>
+				<Anchors>
+					<Anchor point="RIGHT" relativeTo="BuyCloseButton" relativePoint="LEFT">
+						<Offset>
+							<AbsDimension x="0" y="0"/>
+						</Offset>
+					</Anchor>
+				</Anchors>
+				<Scripts>
+					<OnClick>
+					  AuctionLite:BuyBuyoutButton_OnClick();
+					</OnClick>
+				</Scripts>
+			</Button>
+			<Button name="BuyBidButton" inherits="UIPanelButtonTemplate" text="BID">
+				<Size>
+					<AbsDimension x="80" y="22"/>
+				</Size>
+				<Anchors>
+					<Anchor point="RIGHT" relativeTo="BuyBuyoutButton" relativePoint="LEFT">
+						<Offset>
+							<AbsDimension x="0" y="0"/>
+						</Offset>
+					</Anchor>
+				</Anchors>
+				<Scripts>
+					<OnClick>
+					  AuctionLite:BuyBidButton_OnClick();
+					</OnClick>
+				</Scripts>
+			</Button>
+    </Frames>
+  </Frame>
+</Ui>
