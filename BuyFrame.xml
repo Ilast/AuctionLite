@@ -483,5 +483,10 @@
 				</Scripts>
 			</Button>
     </Frames>
+		<Scripts>
+			<OnUpdate>
+				AuctionLite:AuctionFrameBuy_OnUpdate();
+			</OnUpdate>
+		</Scripts>
   </Frame>
 </Ui>

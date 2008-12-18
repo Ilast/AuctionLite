@@ -15,8 +15,21 @@ Libs\AceConsole-2.0\AceConsole-2.0.lua
 Libs\AceEvent-2.0\AceEvent-2.0.lua
 Libs\AceHook-2.1\AceHook-2.1.lua
 
-BuyFrame.xml
-SellFrame.xml
-
 AuctionLite.lua
+
+AuctionFrame.lua
+
+BuyFrame.xml
+BuyFrame.lua
+
+SellFrame.xml
+SellFrame.lua
+
+CreateAuctions.lua
+QueryAuctions.lua
+
+History.lua
 VendorData.lua
+Tooltip.lua
+
+Util.lua

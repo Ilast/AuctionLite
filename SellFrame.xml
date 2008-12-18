@@ -710,7 +710,7 @@
 				</Anchors>
 				<Scripts>
 					<OnClick>
-						AuctionLite:CreateAuctionButton_OnClick();
+						AuctionLite:CreateAuctions();
 					</OnClick>
 				</Scripts>
 			</Button>
