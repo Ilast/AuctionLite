@@ -204,27 +204,29 @@ function AuctionLite:AnalyzeData(rawData)
     local owner = rawData[i].owner;
     local bidder = rawData[i].highBidder;
 
-    local bid = rawData[i].bidAmount;
-    if bid <= 0 then
-      bid = rawData[i].minBid;
+    if link ~= nil then
+      local bid = rawData[i].bidAmount;
+      if bid <= 0 then
+        bid = rawData[i].minBid;
+      end
+
+      local price = buyout / count;
+      if price <= 0 then
+        price = bid / count;
+      end
+
+      local keep = owner ~= UnitName("player") and buyout > 0;
+
+      local listing = { bid = bid, buyout = buyout,
+                        price = price, count = count,
+                        owner = owner, bidder = bidder, keep = keep };
+
+      if itemData[link] == nil then
+        itemData[link] = {};
+      end
+
+      table.insert(itemData[link], listing);
     end
-
-    local price = buyout / count;
-    if price <= 0 then
-      price = bid / count;
-    end
-
-    local keep = owner ~= UnitName("player") and buyout > 0;
-
-    local listing = { bid = bid, buyout = buyout,
-                      price = price, count = count,
-                      owner = owner, bidder = bidder, keep = keep };
-
-    if itemData[link] == nil then
-      itemData[link] = {};
-    end
-
-    table.insert(itemData[link], listing);
   end
 
   -- Process each data set.
