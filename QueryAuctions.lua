@@ -275,7 +275,8 @@ function AuctionLite:QueryFinished()
       local name = self:SplitLink(link);
       self:SetBuyScrollData(name, result.data);
     end
-  elseif QueryLink ~= "" then
+    self:AuctionFrameBuy_Update();
+  elseif QueryType == QUERY_TYPE_SELL then
     local result = results[QueryLink];
     local itemValue = 0;
     if result ~= nil and result.listings > 0 then
@@ -298,14 +299,12 @@ function AuctionLite:QueryFinished()
     end
     -- Update the suggested prices.
     self:UpdatePrices(itemValue);
+    self:AuctionFrameSell_Update();
   end
   -- Update our price info.
   for link, result in pairs(results) do 
     self:UpdateHistoricalPrice(link, result);
   end
-  -- Update the UI.
-  self:AuctionFrameBuy_Update();
-  self:AuctionFrameSell_Update();
 end
 
 -- Handle a completed auction query.
