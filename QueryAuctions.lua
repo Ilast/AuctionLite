@@ -4,18 +4,24 @@
 -- Queries the auction house.
 -------------------------------------------------------------------------------
 
+-- Number of results returned per query.
 local AUCTIONS_PER_PAGE = 50;
 
-local QUERY_STATE_IDLE = 1;
-local QUERY_STATE_SEND = 2;
-local QUERY_STATE_WAIT = 3;
+-- State of our current auction query.
+local QUERY_STATE_IDLE = 1;  -- no query running
+local QUERY_STATE_SEND = 2;  -- ready to request a new page
+local QUERY_STATE_WAIT = 3;  -- waiting for results of previous request
 
-local QUERY_TYPE_NONE = 1;
-local QUERY_TYPE_SCAN = 2;
-local QUERY_TYPE_SEARCH = 3;
-local QUERY_TYPE_BID = 4;
-local QUERY_TYPE_BUY = 5;
-local QUERY_TYPE_SELL = 6;
+-- Type of the current query.
+local QUERY_TYPE_NONE = 1;   -- no query running
+local QUERY_TYPE_SCAN = 2;   -- auction scan
+local QUERY_TYPE_SEARCH = 3; -- search for buy tab (by name)
+local QUERY_TYPE_BID = 4;    -- place a bid
+local QUERY_TYPE_BUY = 5;    -- place a buyout
+local QUERY_TYPE_SELL = 6;   -- search for sell tab (by link)
+
+-- Time to wait (in seconds) after incomplete results are returned.
+local QUERY_DELAY = 5;
 
 -- Info about current AH query.
 local QueryState = QUERY_STATE_IDLE;
@@ -23,6 +29,7 @@ local QueryType = QUERY_TYPE_NONE;
 local QueryName = nil;
 local QueryLink = nil;
 local QueryPage = nil;
+local QueryTime = nil;
 local QueryData = nil;
 
 -- Popup dialog for bidding on auctions.
@@ -148,6 +155,11 @@ function AuctionLite:QueryUpdate()
       QueryState = QUERY_STATE_IDLE;
     end
   end
+
+  if QueryTime ~= nil and QueryTime + QUERY_DELAY < time() then
+    QueryTime = nil;
+    self:QueryNewData();
+  end
 end
 
 -- Get the next page.
@@ -163,6 +175,7 @@ function AuctionLite:QueryEnd()
   QueryState = QUERY_STATE_IDLE;
   QueryType = QUERY_TYPE_NONE;
   QueryData = nil;
+  QueryTime = nil;
 end
 
 -- Is there currently a query pending?
@@ -310,94 +323,111 @@ end
 -- Handle a completed auction query.
 function AuctionLite:AUCTION_ITEM_LIST_UPDATE()
   if QueryState == QUERY_STATE_WAIT then
-    -- We've completed one of our own queries.
-    local batch, total = GetNumAuctionItems("list");
-    local seen = QueryPage * AUCTIONS_PER_PAGE + batch;
-    -- Update status.
-    if QueryType == QUERY_TYPE_SCAN then
-      local pct = math.floor(seen * 100 / total);
-      if pct == 100 then
-        BrowseScanText:SetText("");
-      else
-        BrowseScanText:SetText(tostring(pct) .. "%");
+    Batch, Total = GetNumAuctionItems("list");
+
+    local incomplete = 0;
+    local i;
+
+    for i = 1, Batch do
+      -- There has *got* to be a better way to do this...
+      local link = self:RemoveUniqueId(GetAuctionItemLink("list", i));
+      local name, texture, count, quality, canUse, level,
+            minBid, minIncrement, buyoutPrice, bidAmount,
+            highBidder, owner = GetAuctionItemInfo("list", i);
+      local listing = {
+        link = link, name = name, texture = texture, count = count,
+        quality = quality, canUse = canUse, level = level,
+        minBid = minBid, minIncrement = minIncrement,
+        buyoutPrice = buyoutPrice, bidAmount = bidAmount,
+        highBidder = highBidder, owner = owner
+      };
+      QueryData[QueryPage * AUCTIONS_PER_PAGE + i] = listing;
+      if owner == nil then
+        incomplete = incomplete + 1;
       end
     end
-    -- Record results.
-    if QueryType == QUERY_TYPE_SCAN or
-       QueryType == QUERY_TYPE_SEARCH or
-       QueryType == QUERY_TYPE_SELL then
-      local i;
-      for i = 1, batch do
-        -- There has *got* to be a better way to do this...
-        local link = self:RemoveUniqueId(GetAuctionItemLink("list", i));
-        local name, texture, count, quality, canUse, level,
-              minBid, minIncrement, buyoutPrice, bidAmount,
-              highBidder, owner = GetAuctionItemInfo("list", i);
-        local listing = {
-          link = link, name = name, texture = texture, count = count,
-          quality = quality, canUse = canUse, level = level,
-          minBid = minBid, minIncrement = minIncrement,
-          buyoutPrice = buyoutPrice, bidAmount = bidAmount,
-          highBidder = highBidder, owner = owner
-        };
-        QueryData[QueryPage * AUCTIONS_PER_PAGE + i] = listing;
+
+    if incomplete > 0 then
+      QueryTime = time();
+    else
+      if QueryTime ~= nil then
+        QueryTime = nil;
       end
-      if seen < total then
-        -- Request the next page.
+      self:QueryNewData();
+    end
+  end
+end
+
+-- We've got new data.
+function AuctionLite:QueryNewData()
+  -- We've completed one of our own queries.
+  local seen = QueryPage * AUCTIONS_PER_PAGE + Batch;
+  -- Update status.
+  if QueryType == QUERY_TYPE_SCAN then
+    local pct = math.floor(seen * 100 / Total);
+    if pct == 100 then
+      BrowseScanText:SetText("");
+    else
+      BrowseScanText:SetText(tostring(pct) .. "%");
+    end
+  end
+  -- Record results.
+  if QueryType == QUERY_TYPE_SCAN or
+     QueryType == QUERY_TYPE_SEARCH or
+     QueryType == QUERY_TYPE_SELL then
+    if seen < Total then
+      -- Request the next page.
+      self:QueryNext();
+    else
+      -- We're done.  Analyze the data and end the query.
+      self:QueryFinished();
+      self:QueryEnd();
+    end
+  elseif QueryType == QUERY_TYPE_BID or QueryType == QUERY_TYPE_BUY then
+    local targetName, target = self:GetBuyItem();
+    if targetName ~= nil and target ~= nil then
+      local success = false;
+
+      -- See if we've found the auction we're looking for.
+      for i = 1, Batch do
+        local listing = QueryData[QueryPage * AUCTIONS_PER_PAGE + i];
+        local bid = listing.bidAmount;
+        if bid <= 0 then
+          bid = listing.minBid;
+        end
+        if targetName == listing.name and
+           target.count == listing.count and
+           target.bid == bid and
+           target.buyout == listing.buyoutPrice and
+           (target.owner == nil or listing.owner == nil or
+            target.owner == listing.owner) then
+          -- Place our bid/buyout.
+          if QueryType == QUERY_TYPE_BID then
+            TargetIndex = i;
+            TargetPrice = bid;
+            if TargetPrice == listing.bidAmount then
+              TargetPrice = TargetPrice + listing.minIncrement;
+            end
+            StaticPopup_Show("AUCTIONLITE_BID");
+          elseif QueryType == QUERY_TYPE_BUY then
+            TargetIndex = i;
+            TargetPrice = listing.buyoutPrice;
+            StaticPopup_Show("AUCTIONLITE_BUYOUT");
+          end
+          -- Indicate that we succeeded.
+          success = true;
+          break;
+        end
+      end
+
+      -- If we succeded, stop.  If we didn't, get the next page.
+      if success then
+        self:QueryEnd();
+      elseif seen < Total then
         self:QueryNext();
       else
-        -- We're done--time to analyze the data.
-        self:QueryFinished();
-        -- Indicate that we're done with this query.
         self:QueryEnd();
-      end
-    elseif QueryType == QUERY_TYPE_BID or QueryType == QUERY_TYPE_BUY then
-      local targetName, target = self:GetBuyItem();
-      if targetName ~= nil and target ~= nil then
-        local success = false;
-
-        -- See if we've found the auction we're looking for.
-        for i = 1, batch do
-          local name, texture, count, quality, canUse, level,
-                minBid, minIncrement, buyoutPrice, bidAmount,
-                highBidder, owner = GetAuctionItemInfo("list", i);
-          local bid = bidAmount;
-          if bid <= 0 then
-            bid = minBid;
-          end
-          if targetName == name and
-             target.count == count and
-             target.bid == bid and
-             target.buyout == buyoutPrice and
-             target.owner == owner then
-            -- Place our bid/buyout.
-            if QueryType == QUERY_TYPE_BID then
-              TargetIndex = i;
-              TargetPrice = bid;
-              if TargetPrice == bidAmount then
-                TargetPrice = TargetPrice + minIncrement;
-              end
-              StaticPopup_Show("AUCTIONLITE_BID");
-            elseif QueryType == QUERY_TYPE_BUY then
-              TargetIndex = i;
-              TargetPrice = buyoutPrice;
-              StaticPopup_Show("AUCTIONLITE_BUYOUT");
-            end
-            -- Indicate that we succeeded.
-            success = true;
-            break;
-          end
-        end
-
-        -- If we succeded, stop.  If we didn't, get the next page.
-        if success then
-          self:QueryEnd();
-        elseif seen < total then
-          self:QueryNext();
-        else
-          self:QueryEnd();
-          self:Print("Could not find the selected listing in the auction house.");
-        end
+        self:Print("Could not find the selected listing in the auction house.");
       end
     end
   end
