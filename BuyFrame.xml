@@ -4,94 +4,177 @@
 		<Size>
 			<AbsDimension x="770" y="21"/>
 		</Size>
-		<Layers>
-			<Layer level="BACKGROUND">
-				<FontString name="$parentCount" inherits="GameFontNormal" justifyH="CENTER">
-					<Size>
-						<AbsDimension x="43" y="18"/>
-					</Size>
-					<Anchors>
-						<Anchor point="TOPLEFT">
-							<Offset>
-								<AbsDimension x="0" y="0"/>
-							</Offset>
-						</Anchor>
-					</Anchors>
-				</FontString>
-				<FontString name="$parentName" inherits="GameFontNormal" justifyH="LEFT">
-					<Size>
-						<AbsDimension x="180" y="18"/>
-					</Size>
-					<Anchors>
-						<Anchor point="TOPLEFT">
-							<Offset>
-								<AbsDimension x="43" y="0"/>
-							</Offset>
-						</Anchor>
-					</Anchors>
-				</FontString>
-			</Layer>
-		</Layers>
 		<Frames>
-			<Frame name="$parentBidEachFrame" inherits="SmallMoneyFrameTemplate">
+			<Frame name="$parentDetail">
+				<Size>
+					<AbsDimension x="770" y="21"/>
+				</Size>
 				<Anchors>
-					<Anchor point="RIGHT">
+					<Anchor point="TOPLEFT">
 						<Offset>
-							<AbsDimension x="-395" y="2"/>
+							<AbsDimension x="0" y="0"/>
 						</Offset>
 					</Anchor>
 				</Anchors>
-				<Scripts>
-					<OnLoad>
-						SmallMoneyFrame_OnLoad(self);
-						MoneyFrame_SetType(self, "AUCTION");
-					</OnLoad>
-				</Scripts>
+				<Layers>
+					<Layer level="BACKGROUND">
+						<FontString name="$parentCount" inherits="GameFontNormal" justifyH="CENTER">
+							<Size>
+								<AbsDimension x="43" y="18"/>
+							</Size>
+							<Anchors>
+								<Anchor point="TOPLEFT">
+									<Offset>
+										<AbsDimension x="0" y="0"/>
+									</Offset>
+								</Anchor>
+							</Anchors>
+						</FontString>
+						<FontString name="$parentName" inherits="GameFontNormal" justifyH="LEFT">
+							<Size>
+								<AbsDimension x="180" y="18"/>
+							</Size>
+							<Anchors>
+								<Anchor point="TOPLEFT">
+									<Offset>
+										<AbsDimension x="43" y="0"/>
+									</Offset>
+								</Anchor>
+							</Anchors>
+						</FontString>
+					</Layer>
+				</Layers>
+				<Frames>
+					<Frame name="$parentBidEachFrame" inherits="SmallMoneyFrameTemplate">
+						<Anchors>
+							<Anchor point="RIGHT">
+								<Offset>
+									<AbsDimension x="-395" y="2"/>
+								</Offset>
+							</Anchor>
+						</Anchors>
+						<Scripts>
+							<OnLoad>
+								SmallMoneyFrame_OnLoad(self);
+								MoneyFrame_SetType(self, "AUCTION");
+							</OnLoad>
+						</Scripts>
+					</Frame>
+					<Frame name="$parentBidFrame" inherits="SmallMoneyFrameTemplate">
+						<Anchors>
+							<Anchor point="RIGHT">
+								<Offset>
+									<AbsDimension x="-260" y="2"/>
+								</Offset>
+							</Anchor>
+						</Anchors>
+						<Scripts>
+							<OnLoad>
+								SmallMoneyFrame_OnLoad(self);
+								MoneyFrame_SetType(self, "AUCTION");
+							</OnLoad>
+						</Scripts>
+					</Frame>
+					<Frame name="$parentBuyoutEachFrame" inherits="SmallMoneyFrameTemplate">
+						<Anchors>
+							<Anchor point="RIGHT">
+								<Offset>
+									<AbsDimension x="-125" y="2"/>
+								</Offset>
+							</Anchor>
+						</Anchors>
+						<Scripts>
+							<OnLoad>
+								SmallMoneyFrame_OnLoad(self);
+								MoneyFrame_SetType(self, "AUCTION");
+							</OnLoad>
+						</Scripts>
+					</Frame>
+					<Frame name="$parentBuyoutFrame" inherits="SmallMoneyFrameTemplate">
+						<Anchors>
+							<Anchor point="RIGHT">
+								<Offset>
+									<AbsDimension x="10" y="2"/>
+								</Offset>
+							</Anchor>
+						</Anchors>
+						<Scripts>
+							<OnLoad>
+								SmallMoneyFrame_OnLoad(self);
+								MoneyFrame_SetType(self, "AUCTION");
+							</OnLoad>
+						</Scripts>
+					</Frame>
+				</Frames>
 			</Frame>
-			<Frame name="$parentBidFrame" inherits="SmallMoneyFrameTemplate">
+			<Frame name="$parentSummary">
+				<Size>
+					<AbsDimension x="770" y="21"/>
+				</Size>
 				<Anchors>
-					<Anchor point="RIGHT">
+					<Anchor point="TOPLEFT">
 						<Offset>
-							<AbsDimension x="-260" y="2"/>
+							<AbsDimension x="0" y="0"/>
 						</Offset>
 					</Anchor>
 				</Anchors>
-				<Scripts>
-					<OnLoad>
-						SmallMoneyFrame_OnLoad(self);
-						MoneyFrame_SetType(self, "AUCTION");
-					</OnLoad>
-				</Scripts>
-			</Frame>
-			<Frame name="$parentBuyoutEachFrame" inherits="SmallMoneyFrameTemplate">
-				<Anchors>
-					<Anchor point="RIGHT">
-						<Offset>
-							<AbsDimension x="-125" y="2"/>
-						</Offset>
-					</Anchor>
-				</Anchors>
-				<Scripts>
-					<OnLoad>
-						SmallMoneyFrame_OnLoad(self);
-						MoneyFrame_SetType(self, "AUCTION");
-					</OnLoad>
-				</Scripts>
-			</Frame>
-			<Frame name="$parentBuyoutFrame" inherits="SmallMoneyFrameTemplate">
-				<Anchors>
-					<Anchor point="RIGHT">
-						<Offset>
-							<AbsDimension x="10" y="2"/>
-						</Offset>
-					</Anchor>
-				</Anchors>
-				<Scripts>
-					<OnLoad>
-						SmallMoneyFrame_OnLoad(self);
-						MoneyFrame_SetType(self, "AUCTION");
-					</OnLoad>
-				</Scripts>
+				<Layers>
+					<Layer level="BACKGROUND">
+						<FontString name="$parentName" inherits="GameFontNormal" justifyH="LEFT">
+							<Size>
+								<AbsDimension x="300" y="18"/>
+							</Size>
+							<Anchors>
+								<Anchor point="TOPLEFT">
+									<Offset>
+										<AbsDimension x="0" y="0"/>
+									</Offset>
+								</Anchor>
+							</Anchors>
+						</FontString>
+						<FontString name="$parentListings" inherits="GameFontNormal" justifyH="RIGHT">
+							<Size>
+								<AbsDimension x="60" y="18"/>
+							</Size>
+							<Anchors>
+								<Anchor point="TOPRIGHT">
+									<Offset>
+										<AbsDimension x="-275" y="0"/>
+									</Offset>
+								</Anchor>
+							</Anchors>
+						</FontString>
+						<FontString name="$parentItems" inherits="GameFontNormal" justifyH="RIGHT">
+							<Size>
+								<AbsDimension x="60" y="18"/>
+							</Size>
+							<Anchors>
+								<Anchor point="TOPRIGHT">
+									<Offset>
+										<AbsDimension x="-180" y="0"/>
+									</Offset>
+								</Anchor>
+							</Anchors>
+						</FontString>
+					</Layer>
+				</Layers>
+				<Frames>
+					<Frame name="$parentMarketPriceFrame" inherits="SmallMoneyFrameTemplate">
+						<Anchors>
+							<Anchor point="RIGHT">
+								<Offset>
+									<AbsDimension x="10" y="2"/>
+								</Offset>
+							</Anchor>
+						</Anchors>
+						<Scripts>
+							<OnLoad>
+								SmallMoneyFrame_OnLoad(self);
+								MoneyFrame_SetType(self, "AUCTION");
+							</OnLoad>
+						</Scripts>
+					</Frame>
+				</Frames>
 			</Frame>
 		</Frames>
 		<Scripts>
@@ -137,7 +220,7 @@
           <Anchors>
             <Anchor point="TOPLEFT">
               <Offset>
-                <AbsDimension x="80" y="-38"/>
+                <AbsDimension x="80" y="-39"/>
               </Offset>
             </Anchor>
           </Anchors>
@@ -145,6 +228,58 @@
 			</Layer>
 		</Layers>
     <Frames>
+			<Frame name="BuySummaryHeader">
+        <Size>
+          <AbsDimension x="750" y="447"/>
+        </Size>
+				<Anchors>
+					<Anchor point="TOPLEFT">
+						<Offset>
+							<AbsDimension x="0" y="0"/>
+						</Offset>
+					</Anchor>
+				</Anchors>
+				<Layers>
+					<Layer level="ARTWORK">
+						<FontString name="BuyItemSummaryText" inherits="GameFontNormalSmall" text="Item Summary">
+							<Anchors>
+								<Anchor point="TOPLEFT">
+									<Offset>
+										<AbsDimension x="27" y="-80"/>
+									</Offset>
+								</Anchor>
+							</Anchors>
+						</FontString>
+						<FontString name="BuyMarketPriceText" inherits="GameFontNormalSmall" text="Market Price">
+							<Anchors>
+								<Anchor point="TOPRIGHT">
+									<Offset>
+										<AbsDimension x="43" y="-80"/>
+									</Offset>
+								</Anchor>
+							</Anchors>
+						</FontString>
+						<FontString name="BuyItemsText" inherits="GameFontNormalSmall" text="Items">
+							<Anchors>
+								<Anchor point="TOPRIGHT" relativeTo="BuyMarketPriceText">
+									<Offset>
+										<AbsDimension x="-175" y="0"/>
+									</Offset>
+								</Anchor>
+							</Anchors>
+						</FontString>
+						<FontString name="BuyListingsText" inherits="GameFontNormalSmall" text="Listings">
+							<Anchors>
+								<Anchor point="TOPRIGHT" relativeTo="BuyItemsText">
+									<Offset>
+										<AbsDimension x="-95" y="0"/>
+									</Offset>
+								</Anchor>
+							</Anchors>
+						</FontString>
+					</Layer>
+				</Layers>
+			</Frame>
 			<Frame name="BuyHeader">
         <Size>
           <AbsDimension x="750" y="447"/>
@@ -158,7 +293,7 @@
 				</Anchors>
 				<Layers>
 					<Layer level="ARTWORK">
-						<FontString name="BuyItemText" inherits="GameFontHighlightSmall" text="Item">
+						<FontString name="BuyItemText" inherits="GameFontNormalSmall" text="Item">
 							<Anchors>
 								<Anchor point="TOPLEFT">
 									<Offset>
@@ -167,7 +302,7 @@
 								</Anchor>
 							</Anchors>
 						</FontString>
-						<FontString name="BuyBuyoutAllText" inherits="GameFontHighlightSmall" text="Buyout Total">
+						<FontString name="BuyBuyoutAllText" inherits="GameFontNormalSmall" text="Buyout Total">
 							<Anchors>
 								<Anchor point="TOPRIGHT">
 									<Offset>
@@ -176,7 +311,7 @@
 								</Anchor>
 							</Anchors>
 						</FontString>
-						<FontString name="BuyBuyoutEachText" inherits="GameFontHighlightSmall" text="Buyout Per Item">
+						<FontString name="BuyBuyoutEachText" inherits="GameFontNormalSmall" text="Buyout Per Item">
 							<Anchors>
 								<Anchor point="TOPRIGHT" relativeTo="BuyBuyoutAllText">
 									<Offset>
@@ -185,7 +320,7 @@
 								</Anchor>
 							</Anchors>
 						</FontString>
-						<FontString name="BuyBidAllText" inherits="GameFontHighlightSmall" text="Bid Total">
+						<FontString name="BuyBidAllText" inherits="GameFontNormalSmall" text="Bid Total">
 							<Anchors>
 								<Anchor point="TOPRIGHT" relativeTo="BuyBuyoutEachText">
 									<Offset>
@@ -194,7 +329,7 @@
 								</Anchor>
 							</Anchors>
 						</FontString>
-						<FontString name="BuyBidEachText" inherits="GameFontHighlightSmall" text="Bid Per Item">
+						<FontString name="BuyBidEachText" inherits="GameFontNormalSmall" text="Bid Per Item">
 							<Anchors>
 								<Anchor point="TOPRIGHT" relativeTo="BuyBidAllText">
 									<Offset>
@@ -205,6 +340,29 @@
 						</FontString>
 					</Layer>
 				</Layers>
+				<Frames>
+					<Button name="BuySummaryButton" inherits="UIPanelButtonTemplate">
+						<Size>
+							<AbsDimension x="22" y="22"/>
+						</Size>
+						<Anchors>
+							<Anchor point="TOPLEFT">
+								<Offset>
+									<AbsDimension x="23" y="-75"/>
+								</Offset>
+							</Anchor>
+						</Anchors>
+						<Scripts>
+							<OnClick>
+								AuctionLite:BuySummaryButton_OnClick();
+							</OnClick>
+						</Scripts>
+						<NormalTexture file="Interface\Buttons\UI-SpellbookIcon-PrevPage-Up"/>
+						<PushedTexture file="Interface\Buttons\UI-SpellbookIcon-PrevPage-Down"/>
+						<DisabledTexture file="Interface\Buttons\UI-SpellbookIcon-PrevPage-Disabled"/>
+						<HighlightTexture file="Interface\Buttons\UI-Common-MouseHilight" alphaMode="ADD"/>
+					</Button>
+				</Frames>
 			</Frame>
       <EditBox name="BuyName" autoFocus="false" inherits="InputBoxTemplate">
         <Size>
@@ -227,7 +385,7 @@
         </Scripts>
         <FontString inherits="ChatFontNormal" bytes="64"/>
       </EditBox>
-      <Button name="BrowseSearchButton" inherits="UIPanelButtonTemplate" text="Search">
+      <Button name="BuySearchButton" inherits="UIPanelButtonTemplate" text="Search">
         <Size>
           <AbsDimension x="80" y="22"/>
         </Size>

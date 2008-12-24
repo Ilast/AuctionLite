@@ -261,7 +261,8 @@ function AuctionLite:AnalyzeData(rawData)
     end
 
     -- We've converged.  Compute our min price and other stats.
-    local result = { price = 100000000, items = 0, listings = 0 };
+    local result = { price = 100000000, items = 0, listings = 0,
+                     itemsAll = 0, listingsAll = 0 };
     for i = 1, table.getn(data) do
       if data[i].keep then
         result.items = result.items + data[i].count;
@@ -270,6 +271,8 @@ function AuctionLite:AnalyzeData(rawData)
           result.price = data[i].price;
         end
       end
+      result.itemsAll = result.itemsAll + data[i].count;
+      result.listingsAll = result.listingsAll + 1;
     end
 
     result.data = data;
@@ -284,10 +287,7 @@ function AuctionLite:QueryFinished()
   local results = self:AnalyzeData(QueryData);
   -- Get the info for the item we really care about.
   if QueryType == QUERY_TYPE_SEARCH then
-    for link, result in pairs(results) do
-      local name = self:SplitLink(link);
-      self:SetBuyScrollData(name, result.data);
-    end
+    self:SetBuyData(results);
     self:AuctionFrameBuy_Update();
   elseif QueryType == QUERY_TYPE_SELL then
     local result = results[QueryLink];
