@@ -8,17 +8,17 @@
 local AUCTIONS_PER_PAGE = 50;
 
 -- State of our current auction query.
-local QUERY_STATE_IDLE = 1;  -- no query running
-local QUERY_STATE_SEND = 2;  -- ready to request a new page
-local QUERY_STATE_WAIT = 3;  -- waiting for results of previous request
+local QUERY_STATE_IDLE    = 1; -- no query running
+local QUERY_STATE_SEND    = 2; -- ready to request a new page
+local QUERY_STATE_WAIT    = 3; -- waiting for results of previous request
+local QUERY_STATE_APPROVE = 4; -- waiting for approval of a purchase
 
 -- Type of the current query.
-local QUERY_TYPE_NONE = 1;   -- no query running
-local QUERY_TYPE_SCAN = 2;   -- auction scan
-local QUERY_TYPE_SEARCH = 3; -- search for buy tab (by name)
-local QUERY_TYPE_BID = 4;    -- place a bid
-local QUERY_TYPE_BUY = 5;    -- place a buyout
-local QUERY_TYPE_SELL = 6;   -- search for sell tab (by link)
+local QUERY_TYPE_NONE     = 1; -- no query running
+local QUERY_TYPE_SCAN     = 2; -- auction scan
+local QUERY_TYPE_SEARCH   = 3; -- search for buy tab (by name)
+local QUERY_TYPE_BUY      = 4; -- place a buyout
+local QUERY_TYPE_SELL     = 5; -- search for sell tab (by link)
 
 -- Time to wait (in seconds) after incomplete results are returned.
 local QUERY_DELAY = 5;
@@ -31,54 +31,11 @@ local QueryLink = nil;
 local QueryPage = nil;
 local QueryTime = nil;
 local QueryData = nil;
+local QueryIsBuyout = nil;
 
--- Popup dialog for bidding on auctions.
-StaticPopupDialogs["AUCTIONLITE_BID"] = {
-	text = "Bid on auction at:",
-	button1 = ACCEPT,
-	button2 = CANCEL,
-	OnAccept = function(self)
-    -- Place the buyout.
-		PlaceAuctionBid("list", TargetIndex, TargetPrice);
-    -- Update the scroll frame.
-    AuctionLite:BidPlaced(TargetPrice);
-    -- Clean up.
-    TargetIndex = nil;
-    TargetPrice = nil;
-	end,
-	OnShow = function(self)
-		MoneyFrame_Update(self.moneyFrame, TargetPrice);
-	end,
-	hasMoneyFrame = 1,
-	showAlert = 1,
-	timeout = 0,
-	exclusive = 1,
-	hideOnEscape = 1
-};
-
--- Popup dialog for buying out auctions.
-StaticPopupDialogs["AUCTIONLITE_BUYOUT"] = {
-	text = BUYOUT_AUCTION_CONFIRMATION,
-	button1 = ACCEPT,
-	button2 = CANCEL,
-	OnAccept = function(self)
-    -- Place the buyout.
-		PlaceAuctionBid("list", TargetIndex, TargetPrice);
-    -- Update the scroll frame.
-    AuctionLite:BuyoutPlaced();
-    -- Clean up.
-    TargetIndex = nil;
-    TargetPrice = nil;
-	end,
-	OnShow = function(self)
-		MoneyFrame_Update(self.moneyFrame, TargetPrice);
-	end,
-	hasMoneyFrame = 1,
-	showAlert = 1,
-	timeout = 0,
-	exclusive = 1,
-	hideOnEscape = 1
-};
+-- Info about a purchase request.
+local ShoppingList = nil;  -- list of all items to be purchased
+local ShoppingCart = nil;  -- list of items to be purchased on current page
 
 -- Reset the state of the auction query.
 function AuctionLite:ResetQuery()
@@ -87,16 +44,24 @@ function AuctionLite:ResetQuery()
 
   QueryName = nil;
   QueryLink = nil;
+  QueryPage = nil;
+  QueryTime = nil;
   QueryData = nil;
+  QueryIsBuyout = nil;
+
+  ShoppingList = nil;
+  ShoppingCart = nil;
 end
 
 -- Start an auction query.
-function AuctionLite:StartQuery(queryType, name, link)
+function AuctionLite:StartQuery(queryType)
+  if QueryState == QUERY_STATE_APPROVE then
+    self:QueryCancel();
+  end
   if QueryState == QUERY_STATE_IDLE then
+    self:ResetQuery();
     QueryState = QUERY_STATE_SEND;
     QueryType = queryType;
-    QueryName = name;
-    QueryLink = link;
     QueryPage = 0;
     QueryData = {};
     return true;
@@ -107,29 +72,33 @@ end
 
 -- Query for an item dropped in the sell tab.
 function AuctionLite:QuerySell(link)
-  if self:StartQuery(QUERY_TYPE_SELL, nil, link) then
+  if self:StartQuery(QUERY_TYPE_SELL) then
+    QueryLink = link;
     self:SetStatus("|cffffff00Scanning...|r");
   end
 end
 
--- Query to bid on an item.
-function AuctionLite:QueryBid(name)
-  self:StartQuery(QUERY_TYPE_BID, name, nil);
+-- Query to bid or buy out an item.
+function AuctionLite:QueryBuy(name, list, isBuyout)
+  local result = self:StartQuery(QUERY_TYPE_BUY);
+  if result then
+    QueryName = name;
+    ShoppingList = list;
+    QueryIsBuyout = isBuyout;
+  end
+  return result;
 end
 
--- Query to buyout an item.
-function AuctionLite:QueryBuy(name)
-  self:StartQuery(QUERY_TYPE_BUY, name, nil);
-end
-
--- Query for the buy tab.
+-- Query by name for the buy tab.
 function AuctionLite:QuerySearch(name)
-  self:StartQuery(QUERY_TYPE_SEARCH, name, nil);
+  if self:StartQuery(QUERY_TYPE_SEARCH) then
+    QueryName = name;
+  end
 end
 
 -- Query all items in the AH.
 function AuctionLite:QueryScan()
-  if self:StartQuery(QUERY_TYPE_SCAN, nil, nil) then
+  if self:StartQuery(QUERY_TYPE_SCAN) then
     BrowseScanText:SetText("0%");
   end
 end
@@ -141,9 +110,7 @@ function AuctionLite:QueryUpdate()
     local name = nil;
     if QueryType == QUERY_TYPE_SCAN then
       name = "";
-    elseif QueryType == QUERY_TYPE_SEARCH or
-           QueryType == QUERY_TYPE_BID or
-           QueryType == QUERY_TYPE_BUY then
+    elseif QueryType == QUERY_TYPE_SEARCH or QueryType == QUERY_TYPE_BUY then
       name = QueryName;
     elseif QueryType == QUERY_TYPE_SELL then
       name = self:SplitLink(QueryLink);
@@ -152,7 +119,7 @@ function AuctionLite:QueryUpdate()
       QueryAuctionItems(name, 0, 0, 0, 0, 0, QueryPage, 0, 0);
       QueryState = QUERY_STATE_WAIT;
     else
-      QueryState = QUERY_STATE_IDLE;
+      self:ResetQuery();
     end
   end
 
@@ -162,25 +129,28 @@ function AuctionLite:QueryUpdate()
   end
 end
 
+-- Wait for purchase approval.
+function AuctionLite:QueryRequestApproval()
+  assert(QueryState == QUERY_STATE_WAIT);
+  QueryState = QUERY_STATE_APPROVE;
+end
+
 -- Get the next page.
 function AuctionLite:QueryNext()
-  assert(QueryState == QUERY_STATE_WAIT);
+  assert(QueryState == QUERY_STATE_WAIT or QueryState == QUERY_STATE_APPROVE);
   QueryState = QUERY_STATE_SEND;
   QueryPage = QueryPage + 1;
 end
 
 -- End the current query.
 function AuctionLite:QueryEnd()
-  assert(QueryState == QUERY_STATE_WAIT);
-  QueryState = QUERY_STATE_IDLE;
-  QueryType = QUERY_TYPE_NONE;
-  QueryData = nil;
-  QueryTime = nil;
+  assert(QueryState == QUERY_STATE_WAIT or QueryState == QUERY_STATE_APPROVE);
+  self:ResetQuery();
 end
 
 -- Is there currently a query pending?
 function AuctionLite:QueryInProgress()
-  return (QueryState ~= QUERY_STATE_IDLE);
+  return (QueryState ~= QUERY_STATE_IDLE and QueryState ~= QUERY_STATE_APPROVE);
 end
 
 -- Compute the average and standard deviation of the points in data.
@@ -213,16 +183,12 @@ function AuctionLite:AnalyzeData(rawData)
   for i = 1, table.getn(rawData) do
     local link = rawData[i].link;
     local count = rawData[i].count;
-    local buyout = rawData[i].buyoutPrice
+    local bid = rawData[i].bid;
+    local buyout = rawData[i].buyout
     local owner = rawData[i].owner;
     local bidder = rawData[i].highBidder;
 
     if link ~= nil then
-      local bid = rawData[i].bidAmount;
-      if bid <= 0 then
-        bid = rawData[i].minBid;
-      end
-
       local price = buyout / count;
       if price <= 0 then
         price = bid / count;
@@ -297,7 +263,8 @@ function AuctionLite:QueryFinished()
       itemValue = result.price;
       self:SetScrollData(name, result.data);
       self:ShowPriceData(QueryLink, itemValue, SellSize:GetNumber());
-      self:SetStatus("|cff00ff00Scanned " .. result.listings ..  " listings.|r");
+      self:SetStatus("|cff00ff00Scanned " ..
+                     self:MakePlural(result.listings,  "listing") .. "|r");
     else
       local hist = self:GetHistoricalPrice(QueryLink);
       if hist ~= nil then
@@ -320,42 +287,116 @@ function AuctionLite:QueryFinished()
   end
 end
 
--- Handle a completed auction query.
-function AuctionLite:AUCTION_ITEM_LIST_UPDATE()
-  if QueryState == QUERY_STATE_WAIT then
-    Batch, Total = GetNumAuctionItems("list");
+-- Get the current shopping cart info for approval.
+function AuctionLite:GetCart()
+  return ShoppingCart;
+end
 
-    local incomplete = 0;
-    local i;
+-- Approve purchase of a pending shopping cart.
+function AuctionLite:QueryApprove()
+  assert(ShoppingCart ~= nil);
 
-    for i = 1, Batch do
-      -- There has *got* to be a better way to do this...
-      local link = self:RemoveUniqueId(GetAuctionItemLink("list", i));
-      local name, texture, count, quality, canUse, level,
-            minBid, minIncrement, buyoutPrice, bidAmount,
-            highBidder, owner = GetAuctionItemInfo("list", i);
-      local listing = {
-        link = link, name = name, texture = texture, count = count,
-        quality = quality, canUse = canUse, level = level,
-        minBid = minBid, minIncrement = minIncrement,
-        buyoutPrice = buyoutPrice, bidAmount = bidAmount,
-        highBidder = highBidder, owner = owner
-      };
-      QueryData[QueryPage * AUCTIONS_PER_PAGE + i] = listing;
-      if owner == nil then
-        incomplete = incomplete + 1;
-      end
-    end
-
-    if incomplete > 0 then
-      QueryTime = time();
+  -- Place the request bid or buyout.
+  local i;
+  for i = 1, table.getn(ShoppingCart) do
+    local listing = ShoppingCart[i];
+    local price;
+    if QueryIsBuyout then
+      price = listing.buyout;
     else
-      if QueryTime ~= nil then
-        QueryTime = nil;
-      end
-      self:QueryNewData();
+      price = listing.bid;
+    end
+    PlaceAuctionBid("list", listing.index, price);
+    listing.target.purchased = true;
+  end
+
+  -- Clean up.
+  ShoppingCart = nil;
+
+  -- Figure out whether we've purchased everything on our list.
+  local done = true;
+  for i = 1, table.getn(ShoppingList) do
+    if not ShoppingList[i].purchased then
+      done = false;
+      break;
     end
   end
+
+  -- If we're done, cleanup.  If not, request the next page.
+  if done then
+    self:ShowReceipt();
+    self:QueryEnd();
+  else
+    self:QueryNext();
+  end
+end
+
+-- Cancel purchase of a shopping cart.
+function AuctionLite:QueryCancel()
+  self:ShowReceipt(true);
+  self:QueryEnd();
+end
+
+-- Print out a summary of the items purchased.
+function AuctionLite:ShowReceipt(cancelled)
+  local listingsBought = 0;
+  local itemsBought = 0;
+
+  local listingsNotFound = 0;
+  local itemsNotFound = 0;
+
+  local price = 0;
+
+  -- Figure out what we bought.
+  local i;
+  for i = 1, table.getn(ShoppingList) do
+    local target = ShoppingList[i];
+    if target.purchased then
+      listingsBought = listingsBought + 1;
+      itemsBought = itemsBought + target.count;
+      if QueryIsBuyout then
+        price = price + target.buyout;
+      else
+        price = price + target.bid;
+      end
+    else
+      listingsNotFound = listingsNotFound + 1;
+      itemsNotFound = itemsNotFound + target.count;
+    end
+  end
+
+  -- Print a summary.
+  local action;
+  if QueryIsBuyout then
+    action = "Bought";
+  else
+    action = "Bid on";
+  end
+
+  if not cancelled or listingsBought > 0 then
+    self:Print(action .. " " .. itemsBought .. "x " .. QueryName ..
+               " (" .. self:MakePlural(listingsBought, "listing") ..
+               " at " ..  self:PrintMoney(price) .. ").");
+
+    if itemsNotFound > 0 then
+      self:Print("Note: " .. self:MakePlural(listingsNotFound, "listing") ..
+                 " of " .. self:MakePlural(itemsNotFound, "item") ..
+                 " were not purchased.");
+    end
+  end
+
+  -- Notify the buy tab that we're done.
+  self:PurchaseComplete();
+end
+
+-- Does a target from the shopping list match a listing?
+function AuctionLite:ListingMatch(targetName, target, listing)
+  return targetName == listing.name and
+         target.count == listing.count and
+         target.bid == listing.bid and
+         target.buyout == listing.buyout and
+         (target.owner == nil or listing.owner == nil or
+          target.owner == listing.owner);
 end
 
 -- We've got new data.
@@ -379,56 +420,105 @@ function AuctionLite:QueryNewData()
       -- Request the next page.
       self:QueryNext();
     else
+      local oldQueryType = QueryType;
       -- We're done.  Analyze the data and end the query.
       self:QueryFinished();
       self:QueryEnd();
+      -- Start a mass buyout, if desired.
+      if oldQueryType == QUERY_TYPE_SEARCH then
+        self:StartMassBuyout();
+      end
     end
-  elseif QueryType == QUERY_TYPE_BID or QueryType == QUERY_TYPE_BUY then
-    local targetName, target = self:GetBuyItem();
-    if targetName ~= nil and target ~= nil then
-      local success = false;
+  elseif QueryType == QUERY_TYPE_BUY then
+    ShoppingCart = {};
 
-      -- See if we've found the auction we're looking for.
-      for i = 1, Batch do
-        local listing = QueryData[QueryPage * AUCTIONS_PER_PAGE + i];
-        local bid = listing.bidAmount;
-        if bid <= 0 then
-          bid = listing.minBid;
-        end
-        if targetName == listing.name and
-           target.count == listing.count and
-           target.bid == bid and
-           target.buyout == listing.buyoutPrice and
-           (target.owner == nil or listing.owner == nil or
-            target.owner == listing.owner) then
-          -- Place our bid/buyout.
-          if QueryType == QUERY_TYPE_BID then
-            TargetIndex = i;
-            TargetPrice = bid;
-            if TargetPrice == listing.bidAmount then
-              TargetPrice = TargetPrice + listing.minIncrement;
-            end
-            StaticPopup_Show("AUCTIONLITE_BID");
-          elseif QueryType == QUERY_TYPE_BUY then
-            TargetIndex = i;
-            TargetPrice = listing.buyoutPrice;
-            StaticPopup_Show("AUCTIONLITE_BUYOUT");
-          end
-          -- Indicate that we succeeded.
-          success = true;
+    -- See if we've found the auction we're looking for.
+    local i, j;
+    for i = 1, Batch do
+      local listing = QueryData[QueryPage * AUCTIONS_PER_PAGE + i];
+      for j = 1, table.getn(ShoppingList) do
+        local target = ShoppingList[j];
+        if not target.found and
+           self:ListingMatch(QueryName, target, listing) then
+          target.found = true;
+          listing.index = i;
+          listing.target = target;
+          table.insert(ShoppingCart, listing);
           break;
         end
       end
+    end
 
-      -- If we succeded, stop.  If we didn't, get the next page.
-      if success then
-        self:QueryEnd();
-      elseif seen < Total then
-        self:QueryNext();
+    -- Clear the shopping cart if we found nothing.
+    if table.getn(ShoppingCart) == 0 then
+      ShoppingCart = nil;
+    end
+
+    -- If we found something, request approval.
+    -- Otherwise, get the next page or end the query.
+    if ShoppingCart ~= nil then
+      self:QueryRequestApproval();
+    elseif seen < Total then
+      self:QueryNext();
+    else
+      self:ShowReceipt();
+      self:QueryEnd();
+    end
+
+    self:AuctionFrameBuy_Update();
+  end
+end
+
+-- Handle a completed auction query.
+function AuctionLite:AUCTION_ITEM_LIST_UPDATE(x)
+  if QueryState == QUERY_STATE_WAIT then
+    Batch, Total = GetNumAuctionItems("list");
+
+    local incomplete = 0;
+    local i;
+
+    for i = 1, Batch do
+      -- There has *got* to be a better way to do this...
+      local link = self:RemoveUniqueId(GetAuctionItemLink("list", i));
+      local name, texture, count, quality, canUse, level,
+            minBid, minIncrement, buyout, bidAmount,
+            highBidder, owner = GetAuctionItemInfo("list", i);
+
+      -- Figure out the true minimum bid.
+      local bid;
+      if bidAmount <= 0 then
+        bid = minBid;
       else
-        self:QueryEnd();
-        self:Print("Could not find the selected listing in the auction house.");
+        bid = bidAmount + minIncrement;
+        if bid > buyout and buyout > 0 then
+          bid = buyout;
+        end
       end
+
+      -- Craete a listing object with all this data.
+      local listing = {
+        link = link, name = name, texture = texture, count = count,
+        quality = quality, canUse = canUse, level = level,
+        bid = bid, minBid = minBid, minIncrement = minIncrement,
+        buyout = buyout, bidAmount = bidAmount,
+        highBidder = highBidder, owner = owner
+      };
+
+      -- Sometimes we get incomplete records.  Is this one of them?
+      if owner == nil then
+        incomplete = incomplete + 1;
+      end
+
+      -- Record the data.
+      QueryData[QueryPage * AUCTIONS_PER_PAGE + i] = listing;
+    end
+
+    -- If we got an incomplete record, wait.  Otherwise, process the data.
+    if incomplete > 0 then
+      QueryTime = time();
+    else
+      QueryTime = nil;
+      self:QueryNewData();
     end
   end
 end

@@ -97,4 +97,35 @@ function AuctionLite:GetAuctionSellItemInfoAndLink()
 
   -- Return all the original item info plus our three results.
   return name, texture, count, quality, canUse, price, link, container, slot;
-end 
+end
+
+-- Create a string with an "s" on the end if need be.
+function AuctionLite:MakePlural(count, name)
+  local base = tostring(count) .. " " .. name;
+  if count ~= 1 then
+    base = base .. "s";
+  end
+  return base;
+end
+
+-- Make a money frame value negative.
+function AuctionLite:MakeNegative(frameName)
+  local adjust = function(button)
+    local current = button:GetText();
+    if button:IsShown() then
+      button:SetText("-" .. current);
+      return true;
+    else
+      return false;
+    end
+  end
+
+	local goldButton = getglobal(frameName .. "GoldButton");
+  if not adjust(goldButton) then
+    local silverButton = getglobal(frameName .. "SilverButton");
+    if not adjust(silverButton) then
+      local copperButton = getglobal(frameName .. "CopperButton");
+      adjust(copperButton);
+    end
+  end
+end
