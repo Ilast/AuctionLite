@@ -79,6 +79,7 @@ end
 function AuctionLite:AUCTION_HOUSE_CLOSED()
   self:ClearBuyFrame();
   self:ClearSellFrame();
+  self:ClearSavedPrices();
   self:ResetAuctionCreation();
 end
 

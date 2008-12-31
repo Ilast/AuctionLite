@@ -6,16 +6,32 @@
 
 local SELL_DISPLAY_SIZE = 16;
 
+-- Pricing methods.
+local METHOD_PER_ITEM = 1;
+local METHOD_PER_STACK = 2;
+
+-- Durations.
+local DURATION_SHORT = 1;
+local DURATION_MEDIUM = 2;
+local DURATION_LONG = 3;
+
 -- Info about data to be shown in scrolling pane.
 local ScrollName = nil;
 local ScrollData = {};
 
 -- Value of item currently in "Sell" tab.
-local ItemValue = 0;
+local ItemValue = nil;
+
+-- User-specified bid and buyout values for current item.
+local ItemBid = nil;
+local ItemBuyout = nil;
 
 -- Status shown in auction posting frame.
 local StatusMessage = "";
 local StatusError = false;
+
+-- Previous prices set by the user.
+local SavedPrices = {};
 
 -- Add a money type that updates the deposit correctly.
 MoneyTypeInfo["AUCTIONLITE_DEPOSIT"] = {
@@ -83,24 +99,42 @@ function AuctionLite:ShowPriceData(itemLink, itemValue, stackSize)
   return bid, buyout;
 end
 
+-- Set the market value for the current item.
+function AuctionLite:SetItemValue(value)
+  ItemValue = value;
+  ItemBid = nil;
+  ItemBuyout = nil;
+end
+
+-- Set the user-specified bid and buyout.
+function AuctionLite:SetItemBidBuyout(bid, buyout)
+  ItemBid = bid;
+  ItemBuyout = buyout;
+end
+
 -- Fill in suggested prices based on a query result or a change in the
 -- stack size.
-function AuctionLite:UpdatePrices(itemValue)
-  if itemValue ~= nil then
-    ItemValue = itemValue;
-  end
-  if ItemValue > 0 then
-    local bid, buyout = self:GeneratePrice(ItemValue);
+function AuctionLite:UpdatePrices()
+  if ItemValue ~= nil then
+    local bid, buyout;
+    if ItemBid ~= nil and ItemBuyout ~= nil then
+      bid, buyout = ItemBid, ItemBuyout;
+    else
+      bid, buyout = self:GeneratePrice(ItemValue);
+    end
 
     -- If we're pricing by stack, multiply by our stack size.
-    if self.db.profile.method == 2 then
+    if self.db.profile.method == METHOD_PER_STACK then
       local stackSize = SellSize:GetNumber();
       bid = bid * stackSize;
       buyout = buyout * stackSize;
     end
     
-    MoneyInputFrame_SetCopper(SellBidPrice, bid);
-    MoneyInputFrame_SetCopper(SellBuyoutPrice, buyout);
+    MoneyInputFrame_SetCopper(SellBidPrice, math.floor(bid + 0.5));
+    SellBidPrice.expectChanges = SellBidPrice.expectChanges + 1;
+
+    MoneyInputFrame_SetCopper(SellBuyoutPrice, math.floor(buyout + 0.5));
+    SellBuyoutPrice.expectChanges = SellBuyoutPrice.expectChanges + 1;
   end
 end
 
@@ -117,7 +151,7 @@ function AuctionLite:ValidateAuction()
     local size = SellSize:GetNumber();
 
     -- If we're pricing by item, get the full stack price.
-    if self.db.profile.method == 1 then
+    if self.db.profile.method == METHOD_PER_ITEM then
       bid = bid * size;
       buyout = buyout * size;
     end
@@ -158,7 +192,7 @@ end
 -- There's been a click on the auction sell item slot.
 function AuctionLite:ClickAuctionSellItemButton_Hook()
   -- Ignore clicks that we generated ourselves.
-  if not self:CreateInProgress() then
+  if AuctionFrameSell:IsShown() and not self:CreateInProgress() then
     -- Clear everything first.
     self:ClearSellFrame();
 
@@ -184,9 +218,16 @@ function AuctionLite:ClickAuctionSellItemButton_Hook()
       SellStackText:SetText("Number of Items |cff808080(max " .. total .. ")|r");
 
       self:UpdateDeposit();
-      self:QuerySell(link);
+      if self:QuerySell(link) then
+        self:UpdateProgressSell(0);
+      end
     end
   end
+end
+
+-- Forget all our saved prices.
+function AuctionLite:ClearSavedPrices()
+  SavedPrices = {};
 end
 
 -- Clean up the "Sell" tab.
@@ -195,6 +236,10 @@ function AuctionLite:ClearSellFrame()
 
   ScrollName = nil;
   ScrollData = {};
+
+  ItemValue = nil;
+  ItemBid = nil;
+  ItemBuyout = nil;
 
   SellItemButton:SetNormalTexture(nil);
   SellItemButtonName:SetText("");
@@ -242,6 +287,53 @@ function AuctionLite:SetScrollData(name, data)
   ScrollData = filtered;
 end
 
+-- Get our query results.
+function AuctionLite:SetSellData(results, link)
+  -- Get our recommended item value.
+  local result = results[link];
+  local itemValue = 0;
+  if result ~= nil and result.listings > 0 then
+    itemValue = result.price;
+    local name = self:SplitLink(link);
+    self:SetScrollData(name, result.data);
+    self:ShowPriceData(link, itemValue, SellSize:GetNumber());
+    self:SetStatus("|cff00ff00Scanned " ..
+                   self:MakePlural(result.listings,  "listing") .. ".|r");
+  else
+    local hist = self:GetHistoricalPrice(link);
+    if hist ~= nil then
+      itemValue = hist.price;
+      self:SetStatus("|cffff0000Using historical data.|r");
+    else
+      local _, _, count, _, _, vendor = GetAuctionSellItemInfo();
+      itemValue = 3 * vendor / count;
+      self:SetStatus("|cffff0000Using 3x vendor price.|r");
+    end
+  end
+  self:SetItemValue(itemValue);
+
+  -- Load the user's saved price, if it exists.
+  local saved = SavedPrices[link];
+  if saved ~= nil then
+    self:SetStatus("|cff00ff00Using previous price.|r");
+    self:SetItemBidBuyout(saved.bid, saved.buyout);
+  end
+
+  -- Update the UI.
+  self:UpdatePrices();
+  self:AuctionFrameSell_Update();
+end
+
+-- Save the current prices for later use.
+function AuctionLite:RecordSellPrices()
+  if ItemBid ~= nil and ItemBuyout ~= nil then
+    local _, _, _, _, _, _, link = self:GetAuctionSellItemInfoAndLink();
+    if link then
+      SavedPrices[link] = { bid = ItemBid, buyout = ItemBuyout };
+    end
+  end
+end
+
 -- Handles clicks on buttons in the "Competing Auctions" display.
 -- Get the appropriate auction and undercut it!
 function AuctionLite:SellButton_OnClick(id)
@@ -249,7 +341,13 @@ function AuctionLite:SellButton_OnClick(id)
   local item = ScrollData[offset + id];
 
   if item ~= nil then
-    self:UpdatePrices(math.floor(item.price));
+    if item.owner == UnitName("player") then
+      self:SetItemBidBuyout(item.bid / item.count, item.buyout / item.count);
+    else
+      self:SetItemValue(item.price);
+    end
+
+    self:UpdatePrices();
   end
 end
 
@@ -268,7 +366,7 @@ function AuctionLite:GetDuration()
   return time;
 end
 
--- Handle updates to the auction duration (1 = 12h, 2 = 24h, 3 = 48h).
+-- Handle updates to the auction duration.
 function AuctionLite:ChangeAuctionDuration(value)
   self.db.profile.duration = value;
 
@@ -276,18 +374,18 @@ function AuctionLite:ChangeAuctionDuration(value)
   SellMediumAuctionButton:SetChecked(nil);
   SellLongAuctionButton:SetChecked(nil);
 
-  if value == 1 then
+  if value == DURATION_SHORT then
     SellShortAuctionButton:SetChecked(true);
-  elseif value == 2 then
+  elseif value == DURATION_MEDIUM then
     SellMediumAuctionButton:SetChecked(true);
-  elseif value == 3 then
+  elseif value == DURATION_LONG then
     SellLongAuctionButton:SetChecked(true);
   end
 
   self:UpdateDeposit();
 end
 
--- Handle updates to the pricing method (1 = per item, 2 = per stack).
+-- Handle updates to the pricing method.
 function AuctionLite:ChangePricingMethod(value)
   local prevValue = self.db.profile.method;
   self.db.profile.method = value;
@@ -299,37 +397,42 @@ function AuctionLite:ChangePricingMethod(value)
   SellPerStackButton:SetChecked(nil);
 
   -- Now update the UI based on the new value.
-  if value == 1 then
-    -- We're now per-item.
+  if value == METHOD_PER_ITEM then
     SellPerItemButton:SetChecked(true);
 
     SellBidStackText:SetText("|cff808080(per item)|r");
     SellBuyoutStackText:SetText("|cff808080(per item)|r");
-
-    -- Adjust prices if we just came from per-stack.
-    if prevValue == 2 and stackSize > 0 then
-      local oldBid = MoneyInputFrame_GetCopper(SellBidPrice);
-      MoneyInputFrame_SetCopper(SellBidPrice, oldBid / stackSize);
-
-      local oldBuyout = MoneyInputFrame_GetCopper(SellBuyoutPrice);
-      MoneyInputFrame_SetCopper(SellBuyoutPrice, oldBuyout / stackSize);
-    end
-  elseif value == 2 then
-    -- We're not per-stack.
+  elseif value == METHOD_PER_STACK then
     SellPerStackButton:SetChecked(true);
 
     SellBidStackText:SetText("|cff808080(per stack)|r");
     SellBuyoutStackText:SetText("|cff808080(per stack)|r");
-
-    -- Adjust prices if we just came from per-item.
-    if prevValue == 1 and stackSize > 0 then
-      local oldBid = MoneyInputFrame_GetCopper(SellBidPrice);
-      MoneyInputFrame_SetCopper(SellBidPrice, oldBid * stackSize);
-
-      local oldBuyout = MoneyInputFrame_GetCopper(SellBuyoutPrice);
-      MoneyInputFrame_SetCopper(SellBuyoutPrice, oldBuyout * stackSize);
-    end
   end
+
+  -- Update the listed prices based on the new pricing method.
+  self:UpdatePrices();
+end
+
+-- User changed the prices manually.
+function AuctionLite:UserChangedPrices()
+  -- Get the user's values.
+  local bid = MoneyInputFrame_GetCopper(SellBidPrice);
+  local buyout = MoneyInputFrame_GetCopper(SellBuyoutPrice);
+
+  -- If we're pricing by stack, divide by our stack size.
+  if self.db.profile.method == METHOD_PER_STACK then
+    local stackSize = SellSize:GetNumber();
+    bid = bid / stackSize;
+    buyout = buyout / stackSize;
+  end
+
+  -- Set our new state.
+  self:SetItemBidBuyout(bid, buyout);
+end
+
+-- Update query progress.
+function AuctionLite:UpdateProgressSell(pct)
+  self:SetStatus("|cffffff00Scanning: " .. pct .. "%|r");
 end
 
 -- Paint the scroll frame on the right-hand side with competing auctions.
@@ -364,10 +467,10 @@ function AuctionLite:AuctionFrameSell_Update()
       itemName:SetVertexColor(r, g, b);
       itemName:SetAlpha(a);
 
-      MoneyFrame_Update(buyoutEachFrame, math.floor(item.buyout / item.count));
+      MoneyFrame_Update(buyoutEachFrame, math.floor(item.buyout / item.count + 0.5));
       buyoutEachFrame:SetAlpha(a);
 
-      MoneyFrame_Update(buyoutFrame, math.floor(item.buyout));
+      MoneyFrame_Update(buyoutFrame, math.floor(item.buyout + 0.5));
       buyoutFrame:SetAlpha(a);
 
       button:Show();
@@ -391,6 +494,14 @@ end
 function AuctionLite:CreateSellFrame()
   -- Create our tab.
   local index = self:CreateTab("AuctionLite - Sell", AuctionFrameSell);
+
+  -- Set our constants.
+  SellPerItemButton:SetID(METHOD_PER_ITEM);
+  SellPerStackButton:SetID(METHOD_PER_STACK);
+
+  SellShortAuctionButton:SetID(DURATION_SHORT);
+  SellMediumAuctionButton:SetID(DURATION_MEDIUM);
+  SellLongAuctionButton:SetID(DURATION_LONG);
 
   -- Set up tabbing between fields.
   MoneyInputFrame_SetNextFocus(SellBidPrice, SellBuyoutPriceGold);

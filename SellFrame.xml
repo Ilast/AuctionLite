@@ -562,7 +562,10 @@
 				</Anchors>
 				<Scripts>
 					<OnLoad>
-						MoneyInputFrame_SetOnValueChangedFunc(self, function() AuctionLite:ValidateAuction() end);
+						MoneyInputFrame_SetOnValueChangedFunc(self, function()
+							AuctionLite:UserChangedPrices();
+							AuctionLite:ValidateAuction();
+						end);
 						SellBidPriceGold:SetMaxLetters(6);
 					</OnLoad>
 				</Scripts>
@@ -577,11 +580,14 @@
 				</Anchors>
 				<Scripts>
 					<OnLoad>
-						MoneyInputFrame_SetOnValueChangedFunc(self, function() AuctionLite:ValidateAuction() end);
+						MoneyInputFrame_SetOnValueChangedFunc(self, function()
+							AuctionLite:UserChangedPrices();
+							AuctionLite:ValidateAuction();
+						end);
 					</OnLoad>
 				</Scripts>
 			</Frame>
-			<CheckButton name="SellShortAuctionButton" inherits="UIRadioButtonTemplate" id="1">
+			<CheckButton name="SellShortAuctionButton" inherits="UIRadioButtonTemplate">
 				<Anchors>
 					<Anchor point="TOPLEFT" relativeTo="SellDurationText" relativePoint="BOTTOMLEFT">
 						<Offset>
@@ -598,7 +604,7 @@
 					</OnClick>
 				</Scripts>
 			</CheckButton>
-			<CheckButton name="SellMediumAuctionButton" inherits="UIRadioButtonTemplate" id="2">
+			<CheckButton name="SellMediumAuctionButton" inherits="UIRadioButtonTemplate">
 				<Anchors>
 					<Anchor point="TOPLEFT" relativeTo="SellShortAuctionButton">
 						<Offset>
@@ -615,7 +621,7 @@
 					</OnClick>
 				</Scripts>
 			</CheckButton>
-			<CheckButton name="SellLongAuctionButton" inherits="UIRadioButtonTemplate" id="3">
+			<CheckButton name="SellLongAuctionButton" inherits="UIRadioButtonTemplate">
 				<Anchors>
 					<Anchor point="TOPLEFT" relativeTo="SellMediumAuctionButton">
 						<Offset>
@@ -632,7 +638,7 @@
 					</OnClick>
 				</Scripts>
 			</CheckButton>
-			<CheckButton name="SellPerItemButton" inherits="UIRadioButtonTemplate" id="1">
+			<CheckButton name="SellPerItemButton" inherits="UIRadioButtonTemplate">
 				<Anchors>
 					<Anchor point="TOPLEFT" relativeTo="SellMethodText" relativePoint="BOTTOMLEFT">
 						<Offset>
@@ -649,7 +655,7 @@
 					</OnClick>
 				</Scripts>
 			</CheckButton>
-			<CheckButton name="SellPerStackButton" inherits="UIRadioButtonTemplate" id="2">
+			<CheckButton name="SellPerStackButton" inherits="UIRadioButtonTemplate">
 				<Anchors>
 					<Anchor point="TOPLEFT" relativeTo="SellPerItemButton">
 						<Offset>
@@ -710,6 +716,7 @@
 				</Anchors>
 				<Scripts>
 					<OnClick>
+						AuctionLite:RecordSellPrices();
 						AuctionLite:CreateAuctions();
 					</OnClick>
 				</Scripts>

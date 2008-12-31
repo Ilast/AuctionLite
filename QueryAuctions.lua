@@ -72,10 +72,11 @@ end
 
 -- Query for an item dropped in the sell tab.
 function AuctionLite:QuerySell(link)
-  if self:StartQuery(QUERY_TYPE_SELL) then
+  local result = self:StartQuery(QUERY_TYPE_SELL);
+  if result then
     QueryLink = link;
-    self:SetStatus("|cffffff00Scanning...|r");
   end
+  return result;
 end
 
 -- Query to bid or buy out an item.
@@ -91,16 +92,16 @@ end
 
 -- Query by name for the buy tab.
 function AuctionLite:QuerySearch(name)
-  if self:StartQuery(QUERY_TYPE_SEARCH) then
+  local result = self:StartQuery(QUERY_TYPE_SEARCH);
+  if result then
     QueryName = name;
   end
+  return result;
 end
 
 -- Query all items in the AH.
 function AuctionLite:QueryScan()
-  if self:StartQuery(QUERY_TYPE_SCAN) then
-    BrowseScanText:SetText("0%");
-  end
+  return self:StartQuery(QUERY_TYPE_SCAN);
 end
 
 -- Called periodically to check whether a new query should be sent.
@@ -254,32 +255,8 @@ function AuctionLite:QueryFinished()
   -- Get the info for the item we really care about.
   if QueryType == QUERY_TYPE_SEARCH then
     self:SetBuyData(results);
-    self:AuctionFrameBuy_Update();
   elseif QueryType == QUERY_TYPE_SELL then
-    local result = results[QueryLink];
-    local itemValue = 0;
-    if result ~= nil and result.listings > 0 then
-      local name = self:SplitLink(QueryLink);
-      itemValue = result.price;
-      self:SetScrollData(name, result.data);
-      self:ShowPriceData(QueryLink, itemValue, SellSize:GetNumber());
-      self:SetStatus("|cff00ff00Scanned " ..
-                     self:MakePlural(result.listings,  "listing") .. "|r");
-    else
-      local hist = self:GetHistoricalPrice(QueryLink);
-      if hist ~= nil then
-        itemValue = hist.price;
-        self:ShowPriceData(QueryLink, itemValue, SellSize:GetNumber());
-        self:SetStatus("|cffff0000Using historical data.|r");
-      else
-        local _, _, count, _, _, vendor = GetAuctionSellItemInfo();
-        itemValue = 3 * vendor / count;
-        self:SetStatus("|cffff0000Using 3x vendor price.|r");
-      end
-    end
-    -- Update the suggested prices.
-    self:UpdatePrices(itemValue);
-    self:AuctionFrameSell_Update();
+    self:SetSellData(results, QueryLink);
   end
   -- Update our price info.
   for link, result in pairs(results) do 
@@ -300,14 +277,16 @@ function AuctionLite:QueryApprove()
   local i;
   for i = 1, table.getn(ShoppingCart) do
     local listing = ShoppingCart[i];
-    local price;
-    if QueryIsBuyout then
-      price = listing.buyout;
-    else
-      price = listing.bid;
+    if not listing.target.purchased then
+      local price;
+      if QueryIsBuyout then
+        price = listing.buyout;
+      else
+        price = listing.bid;
+      end
+      PlaceAuctionBid("list", listing.index, price);
+      listing.target.purchased = true;
     end
-    PlaceAuctionBid("list", listing.index, price);
-    listing.target.purchased = true;
   end
 
   -- Clean up.
@@ -404,13 +383,13 @@ function AuctionLite:QueryNewData()
   -- We've completed one of our own queries.
   local seen = QueryPage * AUCTIONS_PER_PAGE + Batch;
   -- Update status.
+  local pct = math.floor(seen * 100 / Total);
   if QueryType == QUERY_TYPE_SCAN then
-    local pct = math.floor(seen * 100 / Total);
-    if pct == 100 then
-      BrowseScanText:SetText("");
-    else
-      BrowseScanText:SetText(tostring(pct) .. "%");
-    end
+    self:UpdateProgressScan(pct);
+  elseif QueryType == QUERY_TYPE_SEARCH then
+    self:UpdateProgressSearch(pct);
+  elseif QueryType == QUERY_TYPE_SELL then
+    self:UpdateProgressSell(pct);
   end
   -- Record results.
   if QueryType == QUERY_TYPE_SCAN or
@@ -457,6 +436,7 @@ function AuctionLite:QueryNewData()
     -- If we found something, request approval.
     -- Otherwise, get the next page or end the query.
     if ShoppingCart ~= nil then
+      self:RequestApproval();
       self:QueryRequestApproval();
     elseif seen < Total then
       self:QueryNext();
@@ -464,8 +444,6 @@ function AuctionLite:QueryNewData()
       self:ShowReceipt();
       self:QueryEnd();
     end
-
-    self:AuctionFrameBuy_Update();
   end
 end
 
@@ -514,7 +492,8 @@ function AuctionLite:AUCTION_ITEM_LIST_UPDATE(x)
     end
 
     -- If we got an incomplete record, wait.  Otherwise, process the data.
-    if incomplete > 0 then
+    if (QueryType == QUERY_TYPE_SEARCH or QueryType == QUERY_TYPE_BUY) and
+       incomplete > 0 then
       QueryTime = time();
     else
       QueryTime = nil;

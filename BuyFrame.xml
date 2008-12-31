@@ -278,6 +278,15 @@
 						</Anchor>
 					</Anchors>
 				</FontString>
+				<FontString name="BuyStatusText" inherits="GameFontNormal">
+					<Anchors>
+						<Anchor point="TOPLEFT">
+							<Offset>
+								<AbsDimension x="375" y="-150"/>
+							</Offset>
+						</Anchor>
+					</Anchors>
+				</FontString>
 			</Layer>
 		</Layers>
 		<Frames>

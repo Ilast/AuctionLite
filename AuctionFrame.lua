@@ -61,6 +61,15 @@ function AuctionLite:HookAuctionFrameUpdate()
   end);
 end
 
+-- Updates our scan progress.
+function AuctionLite:UpdateProgressScan(pct)
+  if pct == 100 then
+    BrowseScanText:SetText("");
+  else
+    BrowseScanText:SetText(tostring(pct) .. "%");
+  end
+end
+
 -- Adds our scan button to the "Browse" tab.
 function AuctionLite:ModifyBrowseTab()
   -- Create the scan button.
@@ -69,7 +78,11 @@ function AuctionLite:ModifyBrowseTab()
   scan:SetHeight(22);
   scan:SetText("Scan");
   scan:SetPoint("TOPLEFT", AuctionFrameBrowse, "TOPLEFT", 185, -410);
-  scan:SetScript("OnClick", function() AuctionLite:QueryScan() end);
+  scan:SetScript("OnClick", function()
+    if AuctionLite:QueryScan() then
+      AuctionLite:UpdateProgressScan(0);
+    end
+  end);
 
   -- Create the status text next to it.
   local scanText = AuctionFrameBrowse:CreateFontString("BrowseScanText", "BACKGROUND", "GameFontNormal");

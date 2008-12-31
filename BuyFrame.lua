@@ -71,6 +71,10 @@ function AuctionLite:SetBuyData(results)
 
   SearchData = results;
   self:SetDetailLink(last);
+
+  BuyStatusText:Hide();
+
+  self:AuctionFrameBuy_Update();
 end
 
 -- Create a purchase order for the selected item in detail view.
@@ -162,6 +166,13 @@ function AuctionLite:StartMassBuyout()
   end
 end
 
+-- The query system needs us to approve purchases.
+function AuctionLite:RequestApproval()
+  -- Just update the display!
+  -- TODO: Process shopping cart here.
+  self:AuctionFrameBuy_Update();
+end
+
 -- Notification that a purchase has completed.
 function AuctionLite:PurchaseComplete()
   -- Update our display according to the purchase.
@@ -197,6 +208,11 @@ function AuctionLite:PurchaseComplete()
 
   -- Update the display.
   self:AuctionFrameBuy_Update();
+end
+
+-- Update search progress display.
+function AuctionLite:UpdateProgressSearch(pct)
+  BuyStatusText:SetText("Searching: " .. pct .. "%");
 end
 
 -- Handles clicks on the buttons in the "Buy" scroll frame.
@@ -251,7 +267,11 @@ end
 
 -- Submit a search query.
 function AuctionLite:AuctionFrameBuy_Search()
-  self:QuerySearch(BuyName:GetText());
+  if self:QuerySearch(BuyName:GetText()) then
+    self:ClearBuyFrame(true);
+    self:UpdateProgressSearch(0);
+    BuyStatusText:Show();
+  end
 end
 
 -- Adjust frame buttons for repaint.
@@ -557,7 +577,7 @@ function AuctionLite:AuctionFrameBuy_UpdateSummary()
 end
 
 -- Clean up the "Buy" tab.
-function AuctionLite:ClearBuyFrame()
+function AuctionLite:ClearBuyFrame(partial)
   DetailLink = nil;
   DetailName = nil;
   DetailData = {};
@@ -570,10 +590,13 @@ function AuctionLite:ClearBuyFrame()
   ExpandHeight = 0;
   PurchaseOrder = nil;
 
-  BuyName:SetText("");
-  BuyQuantity:SetText("");
+  if not partial then
+    BuyName:SetText("");
+    BuyQuantity:SetText("");
+    BuyName:SetFocus();
+  end
 
-  BuyName:SetFocus();
+  BuyStatusText:Hide();
 
   FauxScrollFrame_SetOffset(BuyScrollFrame, 0);
 
