@@ -69,11 +69,17 @@ function AuctionLite:SetBuyData(results)
   table.sort(SummaryData,
     function(a, b) return self:SplitLink(a) < self:SplitLink(b) end);
 
+  -- Save our data and set our detail link, if we only got one kind of item.
   SearchData = results;
   self:SetDetailLink(last);
 
+  -- Clean up the display.
   BuyStatusText:Hide();
 
+  -- Start a mass buyout, if necessary.
+  self:StartMassBuyout();
+
+  -- Repaint.
   self:AuctionFrameBuy_Update();
 end
 
@@ -157,12 +163,9 @@ function AuctionLite:StartMassBuyout()
     end
 
     -- Submit the query.  If it goes through, save it here too.
-    if self:QueryBuy(DetailName, order.list) then
+    if self:QueryBuy(DetailName, order.list, true) then
       PurchaseOrder = order;
     end
-
-    -- Update the display.
-    self:AuctionFrameBuy_Update();
   end
 end
 
@@ -229,6 +232,43 @@ function AuctionLite:BuyButton_OnClick(id)
   end
 
   self:AuctionFrameBuy_Update();
+end
+
+-- Mouse has entered a row in the scrolling frame.
+function AuctionLite:BuyButton_OnEnter(widget)
+  -- Get our index into the current display data.
+  local offset = FauxScrollFrame_GetOffset(BuyScrollFrame);
+  local id = widget:GetID();
+
+  -- Get a link and count for the item we're currently hovering over.
+  -- The "shift" is used to move the tooltip to the right in detail view
+  -- so that it doesn't obscure item quantities.
+  local link = nil;
+  local count = 1;
+  local shift = 0;
+
+  if DetailLink ~= nil then
+    local item = DetailData[offset + id];
+    if item ~= nil then
+      link = DetailLink;
+      count = item.count;
+      shift = BuyButton1DetailName:GetLeft() - BuyButton1DetailCount:GetLeft();
+    end
+  else
+    link = SummaryData[offset + id];
+  end
+
+  -- If we have an item, show the tooltip.
+  if link ~= nil then
+    GameTooltip:SetOwner(widget, "ANCHOR_TOPLEFT", shift);
+    GameTooltip:SetHyperlink(link);
+    self:AddTooltipData(GameTooltip, link, count);
+  end
+end
+
+-- Mouse has left a row in the scrolling frame.
+function AuctionLite:BuyButton_OnLeave(widget)
+  GameTooltip:Hide();
 end
 
 -- Returns to the summary page.
@@ -573,6 +613,17 @@ function AuctionLite:AuctionFrameBuy_UpdateSummary()
 
   if table.getn(SummaryData) > 0 then
     BuySummaryHeader:Show();
+  end
+end
+
+-- Handle bag item clicks by searching for the item.
+function AuctionLite:BagClickBuy(container, slot)
+  local link = GetContainerItemLink(container, slot);
+  if link ~= nil then
+    local name = self:SplitLink(link);
+    BuyName:SetText(name);
+    BuyQuantity:SetFocus();
+    AuctionLite:AuctionFrameBuy_Search();
   end
 end
 

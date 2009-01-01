@@ -65,6 +65,12 @@
 			</Frame>
 		</Frames>
 		<Scripts>
+			<OnEnter>
+				AuctionLite:SellButton_OnEnter(self);
+			</OnEnter>
+			<OnLeave>
+				AuctionLite:SellButton_OnLeave(self);
+			</OnLeave>
 			<OnClick>
 				AuctionLite:SellButton_OnClick(self:GetID());
 			</OnClick>
@@ -524,6 +530,11 @@
 							SellSize:SetFocus();
 						end
 					</OnTabPressed>
+					<OnEnterPressed>
+						AuctionLite:RecordSellPrices();
+						AuctionLite:CreateAuctions();
+						self:ClearFocus();
+					</OnEnterPressed>
 				</Scripts>
 			</EditBox>
 			<EditBox name="SellSize" numeric="true" autoFocus="false" inherits="InputBoxTemplate">
@@ -550,6 +561,11 @@
 							SellBidPriceGold:SetFocus();
 						end
 					</OnTabPressed>
+					<OnEnterPressed>
+						AuctionLite:RecordSellPrices();
+						AuctionLite:CreateAuctions();
+						self:ClearFocus();
+					</OnEnterPressed>
 				</Scripts>
 			</EditBox>
 			<Frame name="SellBidPrice" inherits="MoneyInputFrameTemplate">

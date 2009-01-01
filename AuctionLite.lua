@@ -87,6 +87,7 @@ end
 function AuctionLite:ADDON_LOADED(name)
   if name == "Blizzard_AuctionUI" then
     self:SecureHook("AuctionFrameTab_OnClick", "AuctionFrameTab_OnClick_Hook");
+    self:SecureHook("ContainerFrameItemButton_OnModifiedClick", "ContainerFrameItemButton_OnModifiedClick_Hook");
     self:SecureHook("ClickAuctionSellItemButton", "ClickAuctionSellItemButton_Hook");
     self:HookAuctionFrameUpdate();
     self:AddAuctionFrameTabs();

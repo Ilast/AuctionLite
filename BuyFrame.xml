@@ -213,6 +213,12 @@
 			</Frame>
 		</Frames>
 		<Scripts>
+			<OnEnter>
+				AuctionLite:BuyButton_OnEnter(self);
+			</OnEnter>
+			<OnLeave>
+				AuctionLite:BuyButton_OnLeave(self);
+			</OnLeave>
 			<OnClick>
 				AuctionLite:BuyButton_OnClick(self:GetID());
 			</OnClick>

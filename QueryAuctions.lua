@@ -250,13 +250,13 @@ function AuctionLite:AnalyzeData(rawData)
 end
 
 -- Our query has completed.  Analyze the data!
-function AuctionLite:QueryFinished()
-  local results = self:AnalyzeData(QueryData);
+function AuctionLite:QueryFinished(queryType, queryLink, queryData)
+  local results = self:AnalyzeData(queryData);
   -- Get the info for the item we really care about.
-  if QueryType == QUERY_TYPE_SEARCH then
+  if queryType == QUERY_TYPE_SEARCH then
     self:SetBuyData(results);
-  elseif QueryType == QUERY_TYPE_SELL then
-    self:SetSellData(results, QueryLink);
+  elseif queryType == QUERY_TYPE_SELL then
+    self:SetSellData(results, queryLink);
   end
   -- Update our price info.
   for link, result in pairs(results) do 
@@ -399,14 +399,12 @@ function AuctionLite:QueryNewData()
       -- Request the next page.
       self:QueryNext();
     else
-      local oldQueryType = QueryType;
-      -- We're done.  Analyze the data and end the query.
-      self:QueryFinished();
+      local queryType = QueryType;
+      local queryLink = QueryLink;
+      local queryData = QueryData;
+      -- We're done.  End the query and return the results.
       self:QueryEnd();
-      -- Start a mass buyout, if desired.
-      if oldQueryType == QUERY_TYPE_SEARCH then
-        self:StartMassBuyout();
-      end
+      self:QueryFinished(queryType, queryLink, queryData);
     end
   elseif QueryType == QUERY_TYPE_BUY then
     ShoppingCart = {};

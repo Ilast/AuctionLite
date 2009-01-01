@@ -135,6 +135,9 @@ function AuctionLite:UpdatePrices()
 
     MoneyInputFrame_SetCopper(SellBuyoutPrice, math.floor(buyout + 0.5));
     SellBuyoutPrice.expectChanges = SellBuyoutPrice.expectChanges + 1;
+
+    -- Validate auction and enable create button.
+    self:ValidateAuction();
   end
 end
 
@@ -213,6 +216,8 @@ function AuctionLite:ClickAuctionSellItemButton_Hook()
 
       SellStacks:SetText(1);
       SellSize:SetText(count);
+
+      SellStacks:SetFocus();
 
       local total = self:CountItems(link);
       SellStackText:SetText("Number of Items |cff808080(max " .. total .. ")|r");
@@ -349,6 +354,29 @@ function AuctionLite:SellButton_OnClick(id)
 
     self:UpdatePrices();
   end
+end
+
+-- Mouse has entered a row in the scrolling frame.
+function AuctionLite:SellButton_OnEnter(widget)
+  -- Get our index into the current display data.
+  local offset = FauxScrollFrame_GetOffset(SellScrollFrame);
+  local id = widget:GetID();
+
+  -- If there's an item at this location, create a tooltip for it.
+  local item = ScrollData[offset + id];
+  if item ~= nil then
+    local _, _, _, _, _, _, link = self:GetAuctionSellItemInfoAndLink();
+    local shift = SellButton1Name:GetLeft() - SellButton1Count:GetLeft();
+
+    GameTooltip:SetOwner(widget, "ANCHOR_TOPLEFT", shift);
+    GameTooltip:SetHyperlink(link);
+    self:AddTooltipData(GameTooltip, link, item.count);
+  end
+end
+
+-- Mouse has left a row in the scrolling frame.
+function AuctionLite:SellButton_OnLeave(widget)
+  GameTooltip:Hide();
 end
 
 -- Get the auction duration.
@@ -490,6 +518,17 @@ function AuctionLite:SellScrollFrame_OnVerticalScroll(offset)
     function() AuctionLite:AuctionFrameSell_Update() end);
 end
 
+-- Handle bag item clicks by dropping the item into the sell tab.
+function AuctionLite:BagClickSell(container, slot)
+  if GetContainerItemLink(container, slot) ~= nil then
+    ClearCursor();
+    ClickAuctionSellItemButton();
+    ClearCursor();
+    PickupContainerItem(container, slot);
+    ClickAuctionSellItemButton();
+  end
+end
+
 -- Create the "Sell" tab.
 function AuctionLite:CreateSellFrame()
   -- Create our tab.
@@ -505,9 +544,9 @@ function AuctionLite:CreateSellFrame()
 
   -- Set up tabbing between fields.
   MoneyInputFrame_SetNextFocus(SellBidPrice, SellBuyoutPriceGold);
-  MoneyInputFrame_SetPreviousFocus(SellBidPrice, size);
+  MoneyInputFrame_SetPreviousFocus(SellBidPrice, SellSize);
 
-  MoneyInputFrame_SetNextFocus(SellBuyoutPrice, stacks);
+  MoneyInputFrame_SetNextFocus(SellBuyoutPrice, SellStacks);
   MoneyInputFrame_SetPreviousFocus(SellBuyoutPrice, SellBidPriceCopper);
 
 	-- Miscellaneous additional setup.
