@@ -376,7 +376,7 @@
 					</Anchor>
 				</Anchors>
 			</Button>
-			<Button name="SellButton10" inherits="SellButtonTemplate" id="9">
+			<Button name="SellButton10" inherits="SellButtonTemplate" id="10">
 				<Anchors>
 					<Anchor point="TOPLEFT" relativeTo="SellButton9" relativePoint="BOTTOMLEFT">
 						<Offset>
@@ -385,7 +385,7 @@
 					</Anchor>
 				</Anchors>
 			</Button>
-			<Button name="SellButton11" inherits="SellButtonTemplate" id="9">
+			<Button name="SellButton11" inherits="SellButtonTemplate" id="11">
 				<Anchors>
 					<Anchor point="TOPLEFT" relativeTo="SellButton10" relativePoint="BOTTOMLEFT">
 						<Offset>
@@ -394,7 +394,7 @@
 					</Anchor>
 				</Anchors>
 			</Button>
-			<Button name="SellButton12" inherits="SellButtonTemplate" id="9">
+			<Button name="SellButton12" inherits="SellButtonTemplate" id="12">
 				<Anchors>
 					<Anchor point="TOPLEFT" relativeTo="SellButton11" relativePoint="BOTTOMLEFT">
 						<Offset>
@@ -403,7 +403,7 @@
 					</Anchor>
 				</Anchors>
 			</Button>
-			<Button name="SellButton13" inherits="SellButtonTemplate" id="9">
+			<Button name="SellButton13" inherits="SellButtonTemplate" id="13">
 				<Anchors>
 					<Anchor point="TOPLEFT" relativeTo="SellButton12" relativePoint="BOTTOMLEFT">
 						<Offset>
@@ -412,7 +412,7 @@
 					</Anchor>
 				</Anchors>
 			</Button>
-			<Button name="SellButton14" inherits="SellButtonTemplate" id="9">
+			<Button name="SellButton14" inherits="SellButtonTemplate" id="14">
 				<Anchors>
 					<Anchor point="TOPLEFT" relativeTo="SellButton13" relativePoint="BOTTOMLEFT">
 						<Offset>
@@ -421,7 +421,7 @@
 					</Anchor>
 				</Anchors>
 			</Button>
-			<Button name="SellButton15" inherits="SellButtonTemplate" id="9">
+			<Button name="SellButton15" inherits="SellButtonTemplate" id="15">
 				<Anchors>
 					<Anchor point="TOPLEFT" relativeTo="SellButton14" relativePoint="BOTTOMLEFT">
 						<Offset>
@@ -430,7 +430,7 @@
 					</Anchor>
 				</Anchors>
 			</Button>
-			<Button name="SellButton16" inherits="SellButtonTemplate" id="9">
+			<Button name="SellButton16" inherits="SellButtonTemplate" id="16">
 				<Anchors>
 					<Anchor point="TOPLEFT" relativeTo="SellButton15" relativePoint="BOTTOMLEFT">
 						<Offset>
