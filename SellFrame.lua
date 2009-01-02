@@ -17,6 +17,7 @@ local DURATION_LONG = 3;
 
 -- Info about data to be shown in scrolling pane.
 local ScrollName = nil;
+local ScrollColor = nil;
 local ScrollData = {};
 
 -- Value of item currently in "Sell" tab.
@@ -240,6 +241,7 @@ function AuctionLite:ClearSellFrame()
   self:ResetQuery();
 
   ScrollName = nil;
+  ScrollColor = nil;
   ScrollData = {};
 
   ItemValue = nil;
@@ -276,7 +278,7 @@ function AuctionLite:SetStatus(message)
 end
 
 -- Set the data for the scrolling frame.
-function AuctionLite:SetScrollData(name, data)
+function AuctionLite:SetScrollData(name, color, data)
   local filtered = {};
   
   local i;
@@ -289,6 +291,7 @@ function AuctionLite:SetScrollData(name, data)
   table.sort(filtered, function(a, b) return a.price < b.price end);
 
   ScrollName = name;
+  ScrollColor = color;
   ScrollData = filtered;
 end
 
@@ -299,8 +302,8 @@ function AuctionLite:SetSellData(results, link)
   local itemValue = 0;
   if result ~= nil and result.listings > 0 then
     itemValue = result.price;
-    local name = self:SplitLink(link);
-    self:SetScrollData(name, result.data);
+    local name, _, _, color = self:SplitLink(link);
+    self:SetScrollData(name, color, result.data);
     self:ShowPriceData(link, itemValue, SellSize:GetNumber());
     self:SetStatus("|cff00ff00Scanned " ..
                    self:MakePlural(result.listings,  "listing") .. ".|r");
@@ -364,10 +367,9 @@ function AuctionLite:SellButton_OnEnter(widget)
 
   -- If there's an item at this location, create a tooltip for it.
   local item = ScrollData[offset + id];
-  if item ~= nil then
-    local _, _, _, _, _, _, link = self:GetAuctionSellItemInfoAndLink();
+  local _, _, _, _, _, _, link = self:GetAuctionSellItemInfoAndLink();
+  if item ~= nil and link ~= nil then
     local shift = SellButton1Name:GetLeft() - SellButton1Count:GetLeft();
-
     GameTooltip:SetOwner(widget, "ANCHOR_TOPLEFT", shift);
     GameTooltip:SetHyperlink(link);
     self:AddTooltipData(GameTooltip, link, item.count);
@@ -480,26 +482,34 @@ function AuctionLite:AuctionFrameSell_Update()
       local buyoutEachFrame = _G[buttonName .. "BuyoutEachFrame"];
       local buyoutFrame = _G[buttonName .. "BuyoutFrame"];
 
-      local r, g, b, a = 1.0, 1.0, 1.0, 1.0;
-      if item.owner == UnitName("player") then
-        b = 0.0;
-      elseif not item.keep then
-        a = 0.5;
+      local alpha;
+      if item.owner ~= UnitName("player") and not item.keep then
+        alpha = 0.5;
+      else
+        alpha = 1.0;
       end
 
-      itemCount:SetText(tostring(item.count) .. "x");
-      itemCount:SetVertexColor(r, g, b);
-      itemCount:SetAlpha(a);
+      local countColor;
+      local nameColor;
+      if item.owner == UnitName("player") then
+        countColor = "ffffff00";
+        nameColor = "ffffff00";
+      else
+        countColor = "ffffffff";
+        nameColor = ScrollColor;
+      end
 
-      itemName:SetText(ScrollName);
-      itemName:SetVertexColor(r, g, b);
-      itemName:SetAlpha(a);
+      itemCount:SetText("|c" .. countColor .. item.count .. "x|r");
+      itemCount:SetAlpha(alpha);
+
+      itemName:SetText("|c" .. nameColor .. ScrollName .. "|r");
+      itemName:SetAlpha(alpha);
 
       MoneyFrame_Update(buyoutEachFrame, math.floor(item.buyout / item.count + 0.5));
-      buyoutEachFrame:SetAlpha(a);
+      buyoutEachFrame:SetAlpha(alpha);
 
       MoneyFrame_Update(buyoutFrame, math.floor(item.buyout + 0.5));
-      buyoutFrame:SetAlpha(a);
+      buyoutFrame:SetAlpha(alpha);
 
       button:Show();
     else

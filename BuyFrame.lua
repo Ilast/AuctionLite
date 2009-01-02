@@ -14,7 +14,11 @@ local ExpandHeight = 0;
 -- Data to be shown in detail view.
 local DetailLink = nil;
 local DetailName = nil;
+local DetailColor = nil;
 local DetailData = {};
+
+-- Save the last selected item.
+local DetailLinkPrev = nil;
 
 -- Selected item in detail view.
 local SelectedItem = nil;
@@ -33,10 +37,11 @@ function AuctionLite:SetDetailLink(link)
   DetailLink = link;
 
   if DetailLink ~= nil then
-    DetailName = self:SplitLink(DetailLink);
+    DetailName, _, _, DetailColor = self:SplitLink(DetailLink);
     DetailData = SearchData[DetailLink].data;
   else
     DetailName = nil;
+    DetailColor = nil;
     DetailData = {};
   end
 
@@ -49,6 +54,7 @@ function AuctionLite:SetBuyData(results)
 
   local count = 0;
   local last = nil;
+  local foundPrev = false;
 
   -- Sort everything and assemble the summary data.
   for link, result in pairs(results) do
@@ -58,20 +64,29 @@ function AuctionLite:SetBuyData(results)
 
     count = count + 1;
     last = link;
+
+    if DetailLinkPrev == link then
+      foundPrev = true;
+    end
   end
 
-  -- If we found more than one item, just stay at the summary screen.
-  -- If we have one item, we'll jump to the detail frame.
-  if count > 1 then
-    last = nil;
-  end
-
+  -- Sort our data by name.
   table.sort(SummaryData,
     function(a, b) return self:SplitLink(a) < self:SplitLink(b) end);
 
+  -- If we found our last-selected item, then select it again.
+  -- If we found only one item, select it.  Otherwise, select nothing.
+  local newLink = nil;
+  if foundPrev then
+    newLink = DetailLinkPrev;
+  elseif count == 1 then
+    newLink = last;
+  end
+  DetailLinkPrev = nil;
+
   -- Save our data and set our detail link, if we only got one kind of item.
   SearchData = results;
-  self:SetDetailLink(last);
+  self:SetDetailLink(newLink);
 
   -- Clean up the display.
   BuyStatusText:Hide();
@@ -308,6 +323,7 @@ end
 -- Submit a search query.
 function AuctionLite:AuctionFrameBuy_Search()
   if self:QuerySearch(BuyName:GetText()) then
+    DetailLinkPrev = DetailLink;
     self:ClearBuyFrame(true);
     self:UpdateProgressSearch(0);
     BuyStatusText:Show();
@@ -503,18 +519,19 @@ function AuctionLite:AuctionFrameBuy_UpdateDetail()
       local buyoutEachFrame  = _G[buttonDetailName .. "BuyoutEachFrame"];
       local buyoutFrame      = _G[buttonDetailName .. "BuyoutFrame"];
 
-      local r, g, b, a = 1.0, 1.0, 1.0, 1.0;
+      local countColor;
+      local nameColor;
       if item.owner == UnitName("player") then
-        b = 0.0;
+        countColor = "ffffff00";
+        nameColor = "ffffff00";
+      else
+        countColor = "ffffffff";
+        nameColor = DetailColor;
       end
 
-      countText:SetText(tostring(item.count) .. "x");
-      countText:SetVertexColor(r, g, b);
-      countText:SetAlpha(a);
+      countText:SetText("|c" .. countColor .. item.count .. "x|r");
 
-      nameText:SetText(DetailName);
-      nameText:SetVertexColor(r, g, b);
-      nameText:SetAlpha(a);
+      nameText:SetText("|c" .. nameColor .. DetailName .. "|r");
 
       MoneyFrame_Update(bidEachFrame, math.floor(item.bid / item.count));
       bidEachFrame:SetAlpha(0.5);
@@ -534,11 +551,9 @@ function AuctionLite:AuctionFrameBuy_UpdateDetail()
 
       if item.buyout > 0 then
         MoneyFrame_Update(buyoutEachFrame, math.floor(item.buyout / item.count));
-        buyoutEachFrame:SetAlpha(a);
         buyoutEachFrame:Show();
 
         MoneyFrame_Update(buyoutFrame, math.floor(item.buyout));
-        buyoutFrame:SetAlpha(a);
         buyoutFrame:Show();
       else
         buyoutEachFrame:Hide();
@@ -586,20 +601,12 @@ function AuctionLite:AuctionFrameBuy_UpdateSummary()
       local itemsText         = _G[buttonSummaryName .. "Items"];
       local priceFrame        = _G[buttonSummaryName .. "MarketPriceFrame"];
 
-      nameText:SetText(self:SplitLink(link));
-      nameText:SetVertexColor(1.0, 1.0, 1.0);
-      nameText:SetAlpha(1.0);
+      local name, _, _, color = self:SplitLink(link);
 
-      listingsText:SetText(tostring(result.listingsAll));
-      listingsText:SetVertexColor(1.0, 1.0, 1.0);
-      listingsText:SetAlpha(1.0);
-
-      itemsText:SetText(tostring(result.itemsAll));
-      itemsText:SetVertexColor(1.0, 1.0, 1.0);
-      itemsText:SetAlpha(1.0);
-
+      nameText:SetText("|c" .. color .. name .. "|r");
+      listingsText:SetText("|cffffffff" .. result.listingsAll .. "|r");
+      itemsText:SetText("|cffffffff" .. result.itemsAll .. "|r");
       MoneyFrame_Update(priceFrame, math.floor(result.price));
-      priceFrame:SetAlpha(1.0);
 
       button:UnlockHighlight();
 
@@ -631,7 +638,13 @@ end
 function AuctionLite:ClearBuyFrame(partial)
   DetailLink = nil;
   DetailName = nil;
+  DetailColor = nil;
   DetailData = {};
+
+  if not partial then
+    DetailLinkPrev = nil;
+  end
+
   SelectedItem = nil;
 
   SummaryData = {};

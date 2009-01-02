@@ -95,3 +95,45 @@ function AuctionLite:UpdateHistoricalPrice(link, data)
   end
 end
 
+-- External interface for vendor values.
+function AuctionLite:GetVendorValue(arg1)
+  local result = nil;
+
+  local id = nil;
+  if type(arg1) == "number" then
+    id = arg1;
+  elseif type(arg1) == "string" then
+    _, id = self:SplitLink(arg1);
+  end
+
+  if id ~= nil then
+    result = self.VendorData[id];
+  end
+
+  return result;
+end
+
+-- External interface for auction values.
+function AuctionLite:GetAuctionValue(arg1, arg2)
+  local result = nil;
+
+  local link = nil;
+  if type(arg1) == "number" then
+    if arg2 == nil then
+      arg2 = 0;
+    end
+    link = "|cffffffff|Hitem:" .. arg1 .. ":0:0:0:0:0:" .. arg2 ..
+           ":0:0|h[Unknown]|h|r";
+  elseif type(arg1) == "string" then
+    link = self:RemoveUniqueId(arg1);
+  end
+
+  if link ~= nil then
+    local hist = self:GetHistoricalPrice(link);
+    if hist ~= nil then
+      result = hist.price;
+    end
+  end
+
+  return result;
+end

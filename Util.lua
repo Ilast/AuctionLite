@@ -41,10 +41,10 @@ end
 
 -- Retrieve the item id and suffix id from an item link.
 function AuctionLite:SplitLink(link)
-  local _, _, str, name = link:find("|H(.*)|h%[(.*)%]");
+  local _, _, color, str, name = link:find("|c(.*)|H(.*)|h%[(.*)%]");
   local _, id, enchant, jewel1, jewel2, jewel3, jewel4, suffix, unique =
         strsplit(":", str);
-  return name, tonumber(id), tonumber(suffix);
+  return name, tonumber(id), tonumber(suffix), color;
 end
 
 -- Zero out the uniqueId field from an item link.

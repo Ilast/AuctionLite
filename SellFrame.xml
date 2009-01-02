@@ -20,7 +20,7 @@
 				</FontString>
 				<FontString name="$parentName" inherits="GameFontNormal" justifyH="LEFT">
 					<Size>
-						<AbsDimension x="142" y="18"/>
+						<AbsDimension x="175" y="18"/>
 					</Size>
 					<Anchors>
 						<Anchor point="TOPLEFT">
@@ -291,7 +291,7 @@
 						FauxScrollFrame_SetOffset(self, 0);
 					</OnLoad>
 					<OnVerticalScroll>
-					  AuctionLite:SellScrollFrame_OnVerticalScroll(offset);
+						AuctionLite:SellScrollFrame_OnVerticalScroll(offset);
 					</OnVerticalScroll>
 				</Scripts>
 			</ScrollFrame>
