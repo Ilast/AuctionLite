@@ -90,12 +90,23 @@ end
 
 -- Adds our scan button to the "Browse" tab.
 function AuctionLite:ModifyBrowseTab()
+  local buttonText = "Scan";
+  local scanOffset = 185;
+  local pctOffset = 4;
+
+  -- If Auctioneer is around, move our button out of the way.
+  if AucAdvanced ~= nil then
+    buttonText = "AL Scan";
+    scanOffset = 485;
+    pctOffset = 2;
+  end
+
   -- Create the scan button.
   local scan = CreateFrame("Button", "BrowseScanButton", AuctionFrameBrowse, "UIPanelButtonTemplate");
-  scan:SetWidth(60);
+  scan:SetWidth(65);
   scan:SetHeight(22);
-  scan:SetText("Scan");
-  scan:SetPoint("TOPLEFT", AuctionFrameBrowse, "TOPLEFT", 185, -410);
+  scan:SetText(buttonText);
+  scan:SetPoint("TOPLEFT", AuctionFrameBrowse, "TOPLEFT", scanOffset, -410);
   scan:SetScript("OnClick", function()
     if AuctionLite:QueryScan() then
       AuctionLite:UpdateProgressScan(0);
@@ -104,7 +115,7 @@ function AuctionLite:ModifyBrowseTab()
 
   -- Create the status text next to it.
   local scanText = AuctionFrameBrowse:CreateFontString("BrowseScanText", "BACKGROUND", "GameFontNormal");
-  scanText:SetPoint("TOPLEFT", scan, "TOPRIGHT", 5, -5);
+  scanText:SetPoint("TOPLEFT", scan, "TOPRIGHT", pctOffset, -5);
 end
 
 -- Create a new tab on the auction frame.  Caller provides the name of the
