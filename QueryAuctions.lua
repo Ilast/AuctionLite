@@ -124,7 +124,8 @@ function AuctionLite:QueryUpdate()
     end
   end
 
-  if QueryTime ~= nil and QueryTime + QUERY_DELAY < time() then
+  if QueryState == QUERY_STATE_WAIT and
+     QueryTime ~= nil and QueryTime + QUERY_DELAY < time() then
     QueryTime = nil;
     self:QueryNewData();
   end
@@ -271,6 +272,7 @@ end
 
 -- Approve purchase of a pending shopping cart.
 function AuctionLite:QueryApprove()
+  assert(QueryState == QUERY_STATE_APPROVE);
   assert(ShoppingCart ~= nil);
 
   -- Place the request bid or buyout.
@@ -312,6 +314,13 @@ end
 
 -- Cancel purchase of a shopping cart.
 function AuctionLite:QueryCancel()
+  assert(QueryState == QUERY_STATE_APPROVE);
+  assert(ShoppingCart ~= nil);
+
+  -- Clean up.
+  ShoppingCart = nil;
+
+  -- End the purchase.
   self:ShowReceipt(true);
   self:QueryEnd();
 end
@@ -380,6 +389,8 @@ end
 
 -- We've got new data.
 function AuctionLite:QueryNewData()
+  assert(QueryState == QUERY_STATE_WAIT);
+
   -- We've completed one of our own queries.
   local seen = QueryPage * AUCTIONS_PER_PAGE + Batch;
   -- Update status.

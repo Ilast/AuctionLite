@@ -288,7 +288,7 @@ end
 
 -- Returns to the summary page.
 function AuctionLite:BuySummaryButton_OnClick()
-  if PurchaseOrder ~= nil then
+  if PurchaseOrder ~= nil and self:GetCart() ~= nil then
     self:QueryCancel();
   end
 
