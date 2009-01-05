@@ -41,9 +41,18 @@ end
 
 -- Retrieve the item id and suffix id from an item link.
 function AuctionLite:SplitLink(link)
+  -- Parse the link.
   local _, _, color, str, name = link:find("|c(.*)|H(.*)|h%[(.*)%]");
+
+  -- If we failed, then assume it's actually an item string.
+  if str == nil then
+    str = link;
+  end
+
+  -- Split the item string.
   local _, id, enchant, jewel1, jewel2, jewel3, jewel4, suffix, unique =
         strsplit(":", str);
+
   return name, tonumber(id), tonumber(suffix), color;
 end
 

@@ -275,9 +275,11 @@ function AuctionLite:BuyButton_OnEnter(widget)
 
   -- If we have an item, show the tooltip.
   if link ~= nil then
+    self:SetHyperlinkTooltips(false);
     GameTooltip:SetOwner(widget, "ANCHOR_TOPLEFT", shift);
     GameTooltip:SetHyperlink(link);
     self:AddTooltipData(GameTooltip, link, count);
+    self:SetHyperlinkTooltips(true);
   end
 end
 

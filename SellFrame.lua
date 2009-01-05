@@ -370,9 +370,11 @@ function AuctionLite:SellButton_OnEnter(widget)
   local _, _, _, _, _, _, link = self:GetAuctionSellItemInfoAndLink();
   if item ~= nil and link ~= nil then
     local shift = SellButton1Name:GetLeft() - SellButton1Count:GetLeft();
+    self:SetHyperlinkTooltips(false);
     GameTooltip:SetOwner(widget, "ANCHOR_TOPLEFT", shift);
     GameTooltip:SetHyperlink(link);
     self:AddTooltipData(GameTooltip, link, item.count);
+    self:SetHyperlinkTooltips(true);
   end
 end
 

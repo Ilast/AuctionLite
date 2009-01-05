@@ -17,17 +17,24 @@ local options = {
   args = {
     showvendor = {
       type = "toggle",
-      desc = "Show vendor sell price in tooltips",
+      desc = "Show vendor sell price in tooltips.",
       name = "Show Vendor Price",
       get = "ShowVendor",
       set = "ToggleShowVendor",
     },
     showauction = {
       type = "toggle",
-      desc = "Show auction house value in tooltips",
+      desc = "Show auction house value in tooltips.",
       name = "Show Auction Value",
       get = "ShowAuction",
       set = "ToggleShowAuction",
+    },
+    showstackprice = {
+      type = "toggle",
+      desc = "Show full stack prices in tooltips (shift toggles on the fly).",
+      name = "Show Stack Price",
+      get = "ShowStackPrice",
+      set = "ToggleShowStackPrice",
     },
   },
 }
@@ -41,6 +48,7 @@ AuctionLite:RegisterDefaults("realm", {
 AuctionLite:RegisterDefaults("profile", {
   showVendor = true,
   showAuction = true,
+  showStackPrice = true,
   duration = 3,
   method = 1,
 });
@@ -69,6 +77,16 @@ end
 -- Toggle auction value in tooltips.
 function AuctionLite:ToggleShowAuction()
   self.db.profile.showAuction = not self.db.profile.showAuction;
+end
+
+-- Show full stack price in tooltips?
+function AuctionLite:ShowStackPrice()
+  return self.db.profile.showStackPrice;
+end
+
+-- Toggle stack price in tooltips.
+function AuctionLite:ToggleShowStackPrice()
+  self.db.profile.showStackPrice = not self.db.profile.showStackPrice;
 end
 
 -------------------------------------------------------------------------------

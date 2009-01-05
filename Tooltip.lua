@@ -4,10 +4,28 @@
 -- Displays tooltips with vendor and auction prices.
 -------------------------------------------------------------------------------
 
+local LinkTooltips = true;
+
 -- Add vendor and auction data to a tooltip.  We have count1 and count2
 -- for the upper and lower bound on the number of items; count2 may be nil.
 function AuctionLite:AddTooltipData(tooltip, link, count1, count2)
   if link ~= nil and count1 ~= nil then
+    -- Do we multiply by the stack size?
+    local stackPrice = self.db.profile.showStackPrice;
+    if (stackPrice and IsShiftKeyDown()) or
+       (not stackPrice and not IsShiftKeyDown()) then
+      count1 = 1;
+      count2 = nil;
+    end
+
+    -- Figure out how to display the multiplier.
+    local suffix;
+    if count2 == nil then
+      suffix = " |cffb09000(x" .. count1 .. ")|r";
+    else
+      suffix = " |cffb09000(x" .. count1 .. "-" .. count2 .. ")|r";
+    end
+
     -- First add vendor info.  Always print a line for the vendor price.
     if self.db.profile.showVendor then
       local _, id = self:SplitLink(link);
@@ -22,7 +40,7 @@ function AuctionLite:AddTooltipData(tooltip, link, count1, count2)
       else
         vendorInfo = "|cffffffffn/a|r";
       end
-      tooltip:AddDoubleLine("Vendor", vendorInfo);
+      tooltip:AddDoubleLine("Vendor" .. suffix, vendorInfo);
     end
 
     -- Next show the auction price, if any exists.
@@ -34,7 +52,7 @@ function AuctionLite:AddTooltipData(tooltip, link, count1, count2)
           auctionInfo = auctionInfo .. " |cffffffff-|r " ..
                         self:PrintMoney(hist.price * count2);
         end
-        tooltip:AddDoubleLine("Auction", auctionInfo);
+        tooltip:AddDoubleLine("Auction" .. suffix, auctionInfo);
       end
     end
 
@@ -130,14 +148,33 @@ function AuctionLite:AuctionSellTooltip(tooltip)
   end
 end
 
+-- Add data to item link tooltips.
+function AuctionLite:HyperlinkTooltip(tooltip, link)
+  if tooltip:NumLines() > 0 and LinkTooltips then
+    self:AddTooltipData(tooltip, link, 1);
+  end
+end
+
+-- Enable/disable hyperlink tooltips.
+function AuctionLite:SetHyperlinkTooltips(enabled)
+  LinkTooltips = enabled;
+end
+
+-- Hook a given tooltip.
+function AuctionLite:AddHooksToTooltip(tooltip)
+  self:SecureHook(tooltip, "SetBagItem", "BagTooltip");
+  self:SecureHook(tooltip, "SetInventoryItem", "InventoryTooltip");
+  self:SecureHook(tooltip, "SetGuildBankItem", "GuildBankTooltip");
+  self:SecureHook(tooltip, "SetTradeSkillItem", "TradeSkillTooltip");
+  self:SecureHook(tooltip, "SetQuestItem", "QuestTooltip");
+  self:SecureHook(tooltip, "SetQuestLogItem", "QuestLogTooltip");
+  self:SecureHook(tooltip, "SetAuctionItem", "AuctionTooltip");
+  self:SecureHook(tooltip, "SetAuctionSellItem", "AuctionSellTooltip");
+  self:SecureHook(tooltip, "SetHyperlink", "HyperlinkTooltip");
+end
+
 -- Add all of our tooltip hooks.
 function AuctionLite:HookTooltips()
-  self:SecureHook(GameTooltip, "SetBagItem", "BagTooltip");
-  self:SecureHook(GameTooltip, "SetInventoryItem", "InventoryTooltip");
-  self:SecureHook(GameTooltip, "SetGuildBankItem", "GuildBankTooltip");
-  self:SecureHook(GameTooltip, "SetTradeSkillItem", "TradeSkillTooltip");
-  self:SecureHook(GameTooltip, "SetQuestItem", "QuestTooltip");
-  self:SecureHook(GameTooltip, "SetQuestLogItem", "QuestLogTooltip");
-  self:SecureHook(GameTooltip, "SetAuctionItem", "AuctionTooltip");
-  self:SecureHook(GameTooltip, "SetAuctionSellItem", "AuctionSellTooltip");
+  self:AddHooksToTooltip(GameTooltip);
+  self:AddHooksToTooltip(ItemRefTooltip);
 end
