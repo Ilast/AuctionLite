@@ -213,6 +213,10 @@
 			</Frame>
 		</Frames>
 		<Scripts>
+			<OnLoad>
+				self.UpdateTooltip =
+				  function() AuctionLite:BuyButton_OnEnter(self) end;
+			</OnLoad>
 			<OnEnter>
 				AuctionLite:BuyButton_OnEnter(self);
 			</OnEnter>

@@ -65,6 +65,10 @@
 			</Frame>
 		</Frames>
 		<Scripts>
+			<OnLoad>
+				self.UpdateTooltip =
+				  function() AuctionLite:SellButton_OnEnter(self) end;
+			</OnLoad>
 			<OnEnter>
 				AuctionLite:SellButton_OnEnter(self);
 			</OnEnter>

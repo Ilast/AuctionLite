@@ -150,7 +150,7 @@ end
 
 -- Add data to item link tooltips.
 function AuctionLite:HyperlinkTooltip(tooltip, link)
-  if tooltip:NumLines() > 0 and LinkTooltips then
+  if tooltip:NumLines() > 0 and link:find("item") and LinkTooltips then
     self:AddTooltipData(tooltip, link, 1);
   end
 end
