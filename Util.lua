@@ -138,3 +138,18 @@ function AuctionLite:MakeNegative(frameName)
     end
   end
 end
+
+-- Truncates a UTF-8 string to a fixed number of bytes.
+function AuctionLite:Truncate(str, bytes)
+  -- We need to make sure that we don't truncate mid-character, and in
+  -- UTF-8, all mid-character bytes start with bits 10.  So, reduce bytes
+  -- until the first character we're dropping does not start with 10.
+
+  if str:len() > bytes then
+    while bytes > 0 and bit.band(str:byte(bytes + 1), 0xc0) == 0x80 do
+      bytes = bytes - 1;
+    end
+  end
+
+  return str:sub(1, bytes);
+end

@@ -7,6 +7,9 @@
 -- Number of results returned per query.
 local AUCTIONS_PER_PAGE = 50;
 
+-- Maximum number of bytes in the first argument of QueryAuctionItems().
+local MAX_QUERY_BYTES = 63;
+
 -- State of our current auction query.
 local QUERY_STATE_IDLE    = 1; -- no query running
 local QUERY_STATE_SEND    = 2; -- ready to request a new page
@@ -117,6 +120,7 @@ function AuctionLite:QueryUpdate()
       name = self:SplitLink(QueryLink);
     end
     if name ~= nil then
+      name = self:Truncate(name, MAX_QUERY_BYTES);
       QueryAuctionItems(name, 0, 0, 0, 0, 0, QueryPage, 0, 0);
       QueryState = QUERY_STATE_WAIT;
     else

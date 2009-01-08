@@ -561,8 +561,8 @@ function AuctionLite:CreateSellFrame()
   MoneyInputFrame_SetNextFocus(SellBuyoutPrice, SellStacks);
   MoneyInputFrame_SetPreviousFocus(SellBuyoutPrice, SellBidPriceCopper);
 
-	-- Miscellaneous additional setup.
-	MoneyFrame_SetType(SellDepositMoneyFrame, "AUCTIONLITE_DEPOSIT");
+  -- Miscellaneous additional setup.
+  MoneyFrame_SetType(SellDepositMoneyFrame, "AUCTIONLITE_DEPOSIT");
 
   -- Make sure it's pristine.
   self:ClearSellFrame();
