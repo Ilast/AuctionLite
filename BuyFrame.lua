@@ -20,8 +20,9 @@ local DetailData = {};
 -- Save the last selected item.
 local DetailLinkPrev = nil;
 
--- Selected item in detail view.
-local SelectedItem = nil;
+-- Selected item in detail view and index of last item clicked.
+local SelectedItems = {};
+local LastClick = nil;
 
 -- Data to be shown in summary view.
 local SummaryData = {};
@@ -45,7 +46,8 @@ function AuctionLite:SetDetailLink(link)
     DetailData = {};
   end
 
-  SelectedItem = nil;
+  SelectedItems = {};
+  LastClick = nil;
 end
 
 -- Set the data for the scrolling frame.
@@ -98,37 +100,88 @@ function AuctionLite:SetBuyData(results)
   self:AuctionFrameBuy_Update();
 end
 
--- Create a purchase order for the selected item in detail view.
-function AuctionLite:CreateSingleOrder(isBuyout)
-  if DetailLink ~= nil and SelectedItem ~= nil then
-    local listing = DetailData[SelectedItem];
+-- Determine whether the selected items are biddable/buyable.
+function AuctionLite:GetSelectionStatus()
+  local biddable = true;
+  local buyable = true;
+  local found = false;
 
-    -- Create a purchase order.
-    local order = { list = { listing }, price = 0, count = listing.count,
+  if DetailLink ~= nil then
+    for i, _ in pairs(SelectedItems) do
+      -- We can't bid/buy our own auctions.
+      if DetailData[i].owner == UnitName("player") then
+        biddable = false;
+        buyable = false;
+      end
+      -- To buy, we must have a buyout price listed.
+      if DetailData[i].buyout == 0 then
+        buyable = false;
+      end
+      -- We must find at least one selected item.
+      found = true;
+    end
+  end
+
+  return (found and biddable), (found and buyable);
+end
+
+-- Create a purchase order based on the current selection.  The first
+-- argument indicates whether we're bidding or buying, and the second
+-- argument (optional) indicates the actual number of items the user wants.
+function AuctionLite:CreateOrder(isBuyout, requested)
+  if DetailLink ~= nil then
+    -- Create purchase order object to be filled out.
+    local order = { list = {}, price = 0, count = 0,
                     batch = 1, isBuyout = isBuyout };
 
-    -- Set the bid/buyout price.
-    if isBuyout then
-      order.price = listing.buyout;
-    else
-      order.price = listing.bid;
+    -- Add information about each selected item.
+    local i;
+    for i, _ in pairs(SelectedItems) do
+      assert(DetailData[i].owner ~= UnitName("player"));
+
+      local price;
+      if isBuyout then
+        price = DetailData[i].buyout;
+      else
+        price = DetailData[i].bid;
+      end
+
+      table.insert(order.list, DetailData[i]);
+      order.count = order.count + DetailData[i].count;
+      order.price = order.price + price;
     end
 
-    -- Compare with historical prices.
-    local hist = self:GetHistoricalPrice(DetailLink);
-    if hist ~= nil then
-      order.histPrice = math.floor(order.count * hist.price);
-    else
-      order.histPrice = 0;
-    end
+    -- If we found any selected items, proceed.
+    if order.count > 0 then
+      -- If the second argument wasn't specified, the user wants exactly
+      -- the number of items selected.
+      if requested == nil then
+        requested = order.count;
+      end
 
-    -- Submit the query.
-    if self:QueryBuy(DetailName, order.list, isBuyout) then
-      PurchaseOrder = order;
-    end
+      -- If we overshot, figure out how much we can resell the excess for.
+      if order.count > requested then
+        order.resell = order.count - requested;
 
-    -- Update the display.
-    self:AuctionFrameBuy_Update();
+        local price = SearchData[DetailLink].price;
+        order.resellPrice = math.floor(order.resell * price);
+
+        order.netPrice = order.price - order.resellPrice;
+      end
+
+      -- Get a historical comparison.
+      local hist = self:GetHistoricalPrice(DetailLink);
+      if hist ~= nil then
+        order.histPrice = math.floor(requested * hist.price);
+      else
+        order.histPrice = 0;
+      end
+
+      -- Submit the query.  If it goes through, save it here too.
+      if self:QueryBuy(DetailName, order.list, isBuyout) then
+        PurchaseOrder = order;
+      end
+    end
   end
 end
 
@@ -137,20 +190,19 @@ function AuctionLite:StartMassBuyout()
   -- See if the user requested a specific quantity.
   local requested = BuyQuantity:GetNumber();
   if DetailLink ~= nil and requested > 0 then
-    -- Create purchase order object to be filled out.
-    local order = { list = {}, price = 0, count = 0,
-                    batch = 1, isBuyout = true };
+    -- Clear our selected items.  (Should already be done, but what the hey.)
+    SelectedItems = {};
 
     -- Pick the listings with the lowest per-item prices.
     -- Note that DetailData is sorted!
     local i = 1;
+    local count = 0;
     local warned = false;
-    while i <= table.getn(DetailData) and order.count < requested do
+    while i <= table.getn(DetailData) and count < requested do
       if DetailData[i].buyout > 0 then
         if DetailData[i].owner ~= UnitName("player") then
-          table.insert(order.list, DetailData[i]);
-          order.price = order.price + DetailData[i].buyout;
-          order.count = order.count + DetailData[i].count;
+          SelectedItems[i] = true;
+          count = count + DetailData[i].count;
         elseif not warned then
           warned = true;
           self:Print("|cffff0000[Warning]|r Skipping your own auctions. You might want to cancel them instead.");
@@ -159,28 +211,8 @@ function AuctionLite:StartMassBuyout()
       i = i + 1;
     end
 
-    -- If we overshot, figure out how much we can resell the excess for.
-    if order.count > requested then
-      order.resell = order.count - requested;
-
-      local price = SearchData[DetailLink].price;
-      order.resellPrice = math.floor(order.resell * price);
-
-      order.netPrice = order.price - order.resellPrice;
-    end
-
-    -- Get a historical comparison.
-    local hist = self:GetHistoricalPrice(DetailLink);
-    if hist ~= nil then
-      order.histPrice = math.floor(requested * hist.price);
-    else
-      order.histPrice = 0;
-    end
-
-    -- Submit the query.  If it goes through, save it here too.
-    if self:QueryBuy(DetailName, order.list, true) then
-      PurchaseOrder = order;
-    end
+    -- Now create our buyout order.
+    self:CreateOrder(true, requested);
   end
 end
 
@@ -202,8 +234,8 @@ function AuctionLite:PurchaseComplete()
         if PurchaseOrder.isBuyout then
           -- If we bought an item, remove it.
           table.remove(DetailData, i);
-          if SelectedItem == i then
-            SelectedItem = nil;
+          if SelectedItems[i] then
+            SelectedItems[i] = nil;
           end
         else
           -- If we bid on an item, update the minimum bid.
@@ -239,7 +271,38 @@ function AuctionLite:BuyButton_OnClick(id)
 
   if DetailLink ~= nil then
     -- We're in detail view, so select the item.
-    SelectedItem = offset + id;
+
+    -- Unless we're holding control, this is a new selection.
+    if not IsControlKeyDown() then
+      SelectedItems = {};
+    end
+
+    if LastClick ~= nil and IsShiftKeyDown() then
+      -- Shift is down and we have a previous click.
+      -- Add all items in this range to the selection.
+      local lower = offset + id;
+      local upper = offset + id;
+
+      if LastClick < offset + id then
+        lower = LastClick;
+      else
+        upper = LastClick;
+      end
+
+      local i;
+      for i = lower, upper do
+        SelectedItems[i] = true;
+      end
+    else
+      -- No shift, or first click; add only the current item to the selection.
+      -- If control is down, toggle the item.
+      LastClick = offset + id;
+      if IsControlKeyDown() and SelectedItems[offset + id] then
+        SelectedItems[offset + id] = nil;
+      else
+        SelectedItems[offset + id] = true;
+      end
+    end
   else
     -- We're in summary view, so switch to detail view.
     self:SetDetailLink(SummaryData[offset + id]);
@@ -314,12 +377,14 @@ end
 
 -- Bid on the currently-selected item.
 function AuctionLite:BuyBidButton_OnClick()
-  self:CreateSingleOrder(false);
+  self:CreateOrder(false);
+  self:AuctionFrameBuy_Update();
 end
 
 -- Buy out the currently-selected item.
 function AuctionLite:BuyBuyoutButton_OnClick()
-  self:CreateSingleOrder(true);
+  self:CreateOrder(true);
+  self:AuctionFrameBuy_Update();
 end
 
 -- Submit a search query.
@@ -334,26 +399,22 @@ end
 
 -- Adjust frame buttons for repaint.
 function AuctionLite:AuctionFrameBuy_OnUpdate()
-  local canSend = CanSendAuctionQuery("list");
+  local canSend = CanSendAuctionQuery("list") and not self:QueryInProgress();
+  local biddable, buyable = self:GetSelectionStatus();
 
-  if canSend and not self:QueryInProgress() then
+  if canSend then
     BuySearchButton:Enable();
   else
     BuySearchButton:Disable();
   end
 
-  if canSend and not self:QueryInProgress() and DetailLink ~= nil and
-     SelectedItem ~= nil and
-     DetailData[SelectedItem].owner ~= UnitName("player") then
+  if canSend and biddable then
     BuyBidButton:Enable();
   else
     BuyBidButton:Disable();
   end
 
-  if canSend and not self:QueryInProgress() and DetailLink ~= nil and
-     SelectedItem ~= nil and
-     DetailData[SelectedItem].buyout > 0 and
-     DetailData[SelectedItem].owner ~= UnitName("player") then
+  if canSend and buyable then
     BuyBuyoutButton:Enable();
   else
     BuyBuyoutButton:Disable();
@@ -562,7 +623,7 @@ function AuctionLite:AuctionFrameBuy_UpdateDetail()
         buyoutFrame:Hide();
       end
 
-      if offset + i == SelectedItem then
+      if SelectedItems[offset + i] then
         button:LockHighlight();
       else
         button:UnlockHighlight();
@@ -647,7 +708,8 @@ function AuctionLite:ClearBuyFrame(partial)
     DetailLinkPrev = nil;
   end
 
-  SelectedItem = nil;
+  SelectedItems = {};
+  LastClick = nil;
 
   SummaryData = {};
 
