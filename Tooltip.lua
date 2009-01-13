@@ -4,6 +4,9 @@
 -- Displays tooltips with vendor and auction prices.
 -------------------------------------------------------------------------------
 
+local MAX_BANK_COLUMNS = 7;
+local MAX_BANK_ROWS = 14;
+
 local LinkTooltips = true;
 
 -- Add vendor and auction data to a tooltip.  We have count1 and count2
@@ -158,6 +161,26 @@ end
 -- Enable/disable hyperlink tooltips.
 function AuctionLite:SetHyperlinkTooltips(enabled)
   LinkTooltips = enabled;
+end
+
+-- Guild bank buttons don't have an update function for their tooltips.
+-- Add one of our own so that they change when you hit shift!
+function AuctionLite:HookBankTooltips()
+  local i, j;
+  for i = 1, MAX_BANK_COLUMNS do
+    for j = 1, MAX_BANK_ROWS do
+      local button = _G["GuildBankColumn" .. i .. "Button" .. j];
+      if button ~= nil then
+        button.UpdateTooltipOrigAL = button.UpdateTooltip;
+        button.UpdateTooltip = function(button)
+          if button.UpdateTooltipOrigAL ~= nil then
+            button:UpdateTooltipOrigAL();
+          end
+          GuildBankItemButton_OnEnter(button);
+        end
+      end
+    end
+  end
 end
 
 -- Hook a given tooltip.

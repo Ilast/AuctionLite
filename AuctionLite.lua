@@ -109,6 +109,8 @@ function AuctionLite:ADDON_LOADED(name)
     self:SecureHook("ClickAuctionSellItemButton", "ClickAuctionSellItemButton_Hook");
     self:HookAuctionFrameUpdate();
     self:AddAuctionFrameTabs();
+  elseif name == "Blizzard_GuildBankUI" then
+    self:HookBankTooltips();
   end
 end
 
