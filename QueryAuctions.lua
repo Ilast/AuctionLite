@@ -233,18 +233,27 @@ function AuctionLite:AnalyzeData(rawData)
     end
 
     -- We've converged.  Compute our min price and other stats.
-    local result = { price = 100000000, items = 0, listings = 0,
+    local result = { price = 1000000000, items = 0, listings = 0,
                      itemsAll = 0, listingsAll = 0 };
+    local setPrice = false;
+
     for i = 1, table.getn(data) do
       if data[i].keep then
         result.items = result.items + data[i].count;
         result.listings = result.listings + 1;
         if data[i].price < result.price then
           result.price = data[i].price;
+          setPrice = true;
         end
       end
       result.itemsAll = result.itemsAll + data[i].count;
       result.listingsAll = result.listingsAll + 1;
+    end
+
+    -- If we kept no data (e.g., all auctions are ours), pick the first
+    -- price.  By construction of itemData, there is at least one entry.
+    if not setPrice then
+      result.price = data[1].price;
     end
 
     result.data = data;

@@ -55,15 +55,23 @@ function AuctionLite:UpdateDeposit()
   MoneyFrame_Update("SellDepositMoneyFrame", self:CalculateDeposit());
 end
 
--- Generate a suggested bid and buyout from the market value.  These
--- are 98% and 80% of the market value, respectively, rounded down to
--- a reasonably "pretty" number.
+-- Generate a suggested bid and buyout from the market value.  We undercut
+-- and round prices according to the user's settings.
 function AuctionLite:GeneratePrice(value)
-  local digits = math.floor(math.log10(value));
-  local granularity = math.pow(10, math.max(0, digits - 2)) * 5;
+  -- Find out how to round prices.
+  local granularity = 1;
+  if self.db.profile.roundPrices > 0 then
+    granularity = math.pow(10, math.floor(math.log10(value))) *
+                  self.db.profile.roundPrices;
+  end
 
-  local bid = math.floor((value * 0.80) / granularity) * granularity;
-  local buyout = math.floor((value * 0.98) / granularity) * granularity;
+  -- Undercut bid and buyout as specified.
+  local generate = function(value, undercut, granularity)
+    return math.floor((value * (1 - undercut)) / granularity) * granularity;
+  end
+
+  local bid    = generate(value, self.db.profile.bidUndercut,    granularity);
+  local buyout = generate(value, self.db.profile.buyoutUndercut, granularity);
 
   return bid, buyout;
 end
@@ -304,7 +312,9 @@ function AuctionLite:SetSellData(results, link)
     itemValue = result.price;
     local name, _, _, color = self:SplitLink(link);
     self:SetScrollData(name, color, result.data);
-    self:ShowPriceData(link, itemValue, SellSize:GetNumber());
+    if self.db.profile.printPriceData then
+      self:ShowPriceData(link, itemValue, SellSize:GetNumber());
+    end
     self:SetStatus("|cff00ff00Scanned " ..
                    self:MakePlural(result.listings,  "listing") .. ".|r");
   else

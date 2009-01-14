@@ -15,12 +15,39 @@ AuctionLite = AceLibrary("AceAddon-2.0"):new("AceConsole-2.0", "AceEvent-2.0",
 local options = {
   type = 'group',
   args = {
+    bidundercut = {
+      type = "range",
+      desc = "Percent to undercut market value for bid prices (0-100).",
+      name = "Bid Undercut",
+      isPercent = true,
+      get = "GetBidUndercut",
+      set = "SetBidUndercut",
+      order = 1,
+    },
+    buyoutundercut = {
+      type = "range",
+      desc = "Percent to undercut market value for buyout prices (0-100).",
+      name = "Buyout Undercut",
+      isPercent = true,
+      get = "GetBuyoutUndercut",
+      set = "SetBuyoutUndercut",
+      order = 2,
+    },
+    roundprices = {
+      type = "range",
+      desc = "Round all prices to this granularity, or zero to disable (0-1).",
+      name = "Round Prices",
+      get = "GetRoundPrices",
+      set = "SetRoundPrices",
+      order = 3,
+    },
     showvendor = {
       type = "toggle",
       desc = "Show vendor sell price in tooltips.",
       name = "Show Vendor Price",
       get = "ShowVendor",
       set = "ToggleShowVendor",
+      order = 4,
     },
     showauction = {
       type = "toggle",
@@ -28,6 +55,7 @@ local options = {
       name = "Show Auction Value",
       get = "ShowAuction",
       set = "ToggleShowAuction",
+      order = 5,
     },
     showstackprice = {
       type = "toggle",
@@ -35,6 +63,15 @@ local options = {
       name = "Show Stack Price",
       get = "ShowStackPrice",
       set = "ToggleShowStackPrice",
+      order = 6,
+    },
+    printpricedata = {
+      type = "toggle",
+      desc = "Print detailed price data when selling an item.",
+      name = "Print Price Data",
+      get = "PrintPriceData",
+      set = "TogglePrintPriceData",
+      order = 7,
     },
   },
 }
@@ -49,6 +86,10 @@ AuctionLite:RegisterDefaults("profile", {
   showVendor = true,
   showAuction = true,
   showStackPrice = true,
+  printPriceData = false,
+  bidUndercut = 0.25,
+  buyoutUndercut = 0.02,
+  roundPrices = 0.05,
   duration = 3,
   method = 1,
 });
@@ -58,6 +99,36 @@ local AUCTIONLITE_VERSION = 0.4;
 -------------------------------------------------------------------------------
 -- Settings
 -------------------------------------------------------------------------------
+
+-- Get bid undercut.
+function AuctionLite:GetBidUndercut()
+  return self.db.profile.bidUndercut;
+end
+
+-- Set bid undercut.
+function AuctionLite:SetBidUndercut(value)
+  self.db.profile.bidUndercut = value;
+end
+
+-- Get buyout undercut.
+function AuctionLite:GetBuyoutUndercut()
+  return self.db.profile.buyoutUndercut;
+end
+
+-- Set buyout undercut.
+function AuctionLite:SetBuyoutUndercut(value)
+  self.db.profile.buyoutUndercut = value;
+end
+
+-- Get round price granularity.
+function AuctionLite:GetRoundPrices()
+  return self.db.profile.roundPrices;
+end
+
+-- Set round price granularity.
+function AuctionLite:SetRoundPrices(value)
+  self.db.profile.roundPrices = value;
+end
 
 -- Show vendor data in tooltips?
 function AuctionLite:ShowVendor()
@@ -87,6 +158,16 @@ end
 -- Toggle stack price in tooltips.
 function AuctionLite:ToggleShowStackPrice()
   self.db.profile.showStackPrice = not self.db.profile.showStackPrice;
+end
+
+-- Print detailed price data to chat window when selling?
+function AuctionLite:PrintPriceData()
+  return self.db.profile.printPriceData;
+end
+
+-- Toggle detailed price data.
+function AuctionLite:TogglePrintPriceData()
+  self.db.profile.printPriceData = not self.db.profile.printPriceData;
 end
 
 -------------------------------------------------------------------------------
