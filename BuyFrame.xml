@@ -290,9 +290,18 @@
 				</FontString>
 				<FontString name="BuyStatusText" inherits="GameFontNormal">
 					<Anchors>
-						<Anchor point="TOPLEFT">
+						<Anchor point="LEFT" relativePoint="TOPLEFT">
 							<Offset>
 								<AbsDimension x="375" y="-150"/>
+							</Offset>
+						</Anchor>
+					</Anchors>
+				</FontString>
+				<FontString name="BuyIntroText" inherits="GameFontNormal">
+					<Anchors>
+						<Anchor point="CENTER" relativePoint="TOPLEFT">
+							<Offset>
+								<AbsDimension x="425" y="-150"/>
 							</Offset>
 						</Anchor>
 					</Anchors>

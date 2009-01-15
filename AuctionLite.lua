@@ -1,5 +1,5 @@
 -------------------------------------------------------------------------------
--- AuctionLite 0.4
+-- AuctionLite 0.5
 --
 -- Lightweight addon to determine accurate market prices and to simplify
 -- the process of posting auctions.
@@ -94,7 +94,7 @@ AuctionLite:RegisterDefaults("profile", {
   method = 1,
 });
 
-local AUCTIONLITE_VERSION = 0.4;
+local AUCTIONLITE_VERSION = 0.5;
 
 -------------------------------------------------------------------------------
 -- Settings

@@ -32,6 +32,7 @@ local PurchaseOrder = nil;
 
 -- Overall data returned from search.
 local SearchData = nil;
+local NoResults = false;
 
 -- Set current item to be shown in detail view, and update dependent data.
 function AuctionLite:SetDetailLink(link)
@@ -88,9 +89,11 @@ function AuctionLite:SetBuyData(results)
 
   -- Save our data and set our detail link, if we only got one kind of item.
   SearchData = results;
+  NoResults = (count == 0);
   self:SetDetailLink(newLink);
 
   -- Clean up the display.
+  BuyIntroText:Hide();
   BuyStatusText:Hide();
 
   -- Start a mass buyout, if necessary.
@@ -440,6 +443,14 @@ function AuctionLite:AuctionFrameBuy_Update()
   BuyHeader:Hide();
   BuySummaryHeader:Hide();
 
+  -- If we have no items, say so.
+  if NoResults then
+    BuyStatusText:SetText("No items found");
+    BuyStatusText:Show();
+  else
+    BuyStatusText:Hide();
+  end
+
   -- Update the expandable header.
   self:AuctionFrameBuy_UpdateExpand();
 
@@ -714,6 +725,7 @@ function AuctionLite:ClearBuyFrame(partial)
   SummaryData = {};
 
   SearchData = nil;
+  NoResults = false;
 
   ExpandHeight = 0;
   PurchaseOrder = nil;
@@ -724,7 +736,11 @@ function AuctionLite:ClearBuyFrame(partial)
     BuyName:SetFocus();
   end
 
-  BuyStatusText:Hide();
+  if not partial then
+    BuyIntroText:Show();
+  else
+    BuyIntroText:Hide();
+  end
 
   FauxScrollFrame_SetOffset(BuyScrollFrame, 0);
 
@@ -735,6 +751,9 @@ end
 function AuctionLite:CreateBuyFrame()
   -- Create our tab.
   local index = self:CreateTab("AuctionLite - Buy", AuctionFrameBuy);
+
+  -- Set the intro text.
+  BuyIntroText:SetText("Enter item name and click \"Search\"");
 
   -- Make sure it's pristine.
   self:ClearBuyFrame();
