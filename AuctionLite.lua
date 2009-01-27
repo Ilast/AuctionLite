@@ -179,7 +179,10 @@ function AuctionLite:AUCTION_HOUSE_CLOSED()
   self:ClearBuyFrame();
   self:ClearSellFrame();
   self:ClearSavedPrices();
+
   self:ResetAuctionCreation();
+
+  collectgarbage("collect");
 end
 
 -- Hook some AH functions and UI widgets when the AH gets loaded.

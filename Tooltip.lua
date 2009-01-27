@@ -116,6 +116,24 @@ function AuctionLite:TradeSkillTooltip(tooltip, recipe, reagent)
   end
 end
 
+-- Add data to merchant tooltips.
+function AuctionLite:MerchantTooltip(tooltip, id)
+  if tooltip:NumLines() > 0 then
+    local link = GetMerchantItemLink(id);
+    local _, _, _, count = GetMerchantItemInfo(id);
+    self:AddTooltipData(tooltip, link, count);
+  end
+end
+
+-- Add data to buyback tooltips.
+function AuctionLite:BuybackTooltip(tooltip, id)
+  if tooltip:NumLines() > 0 then
+    local link = GetBuybackItemLink(id);
+    local _, _, _, count = GetBuybackItemInfo(id);
+    self:AddTooltipData(tooltip, link, count);
+  end
+end
+
 -- Add data to quest item tooltips.
 function AuctionLite:QuestTooltip(tooltip, itemType, id)
   if tooltip:NumLines() > 0 then
@@ -130,6 +148,24 @@ function AuctionLite:QuestLogTooltip(tooltip, itemType, id)
   if tooltip:NumLines() > 0 then
     local link = GetQuestLogItemLink(itemType, id);
     local _, _, count = GetQuestLogRewardInfo(id);
+    self:AddTooltipData(tooltip, link, count);
+  end
+end
+
+-- Add data to loot item tooltips.
+function AuctionLite:LootTooltip(tooltip, id)
+  if tooltip:NumLines() > 0 and LootSlotIsItem(id) then
+    local link = GetLootSlotLink(id);
+    local _, _, count = GetLootSlotInfo(id);
+    self:AddTooltipData(tooltip, link, count);
+  end
+end
+
+-- Add data to loot roll item tooltips.
+function AuctionLite:LootRollTooltip(tooltip, id)
+  if tooltip:NumLines() > 0 then
+    local link = GetLootRollItemLink(id);
+    local _, _, count = GetLootRollItemInfo(id);
     self:AddTooltipData(tooltip, link, count);
   end
 end
@@ -189,8 +225,12 @@ function AuctionLite:AddHooksToTooltip(tooltip)
   self:SecureHook(tooltip, "SetInventoryItem", "InventoryTooltip");
   self:SecureHook(tooltip, "SetGuildBankItem", "GuildBankTooltip");
   self:SecureHook(tooltip, "SetTradeSkillItem", "TradeSkillTooltip");
+  self:SecureHook(tooltip, "SetMerchantItem", "MerchantTooltip");
+  self:SecureHook(tooltip, "SetBuybackItem", "BuybackTooltip");
   self:SecureHook(tooltip, "SetQuestItem", "QuestTooltip");
   self:SecureHook(tooltip, "SetQuestLogItem", "QuestLogTooltip");
+  self:SecureHook(tooltip, "SetLootItem", "LootTooltip");
+  self:SecureHook(tooltip, "SetLootRollItem", "LootRollTooltip");
   self:SecureHook(tooltip, "SetAuctionItem", "AuctionTooltip");
   self:SecureHook(tooltip, "SetAuctionSellItem", "AuctionSellTooltip");
   self:SecureHook(tooltip, "SetHyperlink", "HyperlinkTooltip");
