@@ -324,8 +324,9 @@ function AuctionLite:SetSellData(results, link)
       self:SetStatus("|cffff0000Using historical data.|r");
     else
       local _, _, count, _, _, vendor = GetAuctionSellItemInfo();
-      itemValue = 3 * vendor / count;
-      self:SetStatus("|cffff0000Using 3x vendor price.|r");
+      local mult = self.db.profile.vendorMultiplier;
+      itemValue = mult * vendor / count;
+      self:SetStatus("|cffff0000Using " .. mult .. "x vendor price.|r");
     end
   end
   self:SetItemValue(itemValue);

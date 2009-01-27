@@ -33,13 +33,24 @@ local options = {
       set = "SetBuyoutUndercut",
       order = 2,
     },
+    vendormultiplier = {
+      type = "range",
+      desc = "Amount to multiply by vendor price to get default sell price.",
+      name = "Vendor Multiplier",
+      get = "GetVendorMultiplier",
+      set = "SetVendorMultiplier",
+      min = 0,
+      max = 100,
+      step = 0.1,
+      order = 3,
+    },
     roundprices = {
       type = "range",
       desc = "Round all prices to this granularity, or zero to disable (0-1).",
       name = "Round Prices",
       get = "GetRoundPrices",
       set = "SetRoundPrices",
-      order = 3,
+      order = 4,
     },
     showvendor = {
       type = "toggle",
@@ -47,7 +58,7 @@ local options = {
       name = "Show Vendor Price",
       get = "ShowVendor",
       set = "ToggleShowVendor",
-      order = 4,
+      order = 5,
     },
     showauction = {
       type = "toggle",
@@ -55,7 +66,7 @@ local options = {
       name = "Show Auction Value",
       get = "ShowAuction",
       set = "ToggleShowAuction",
-      order = 5,
+      order = 6,
     },
     showstackprice = {
       type = "toggle",
@@ -63,7 +74,7 @@ local options = {
       name = "Show Stack Price",
       get = "ShowStackPrice",
       set = "ToggleShowStackPrice",
-      order = 6,
+      order = 7,
     },
     printpricedata = {
       type = "toggle",
@@ -71,7 +82,7 @@ local options = {
       name = "Print Price Data",
       get = "PrintPriceData",
       set = "TogglePrintPriceData",
-      order = 7,
+      order = 8,
     },
   },
 }
@@ -89,6 +100,7 @@ AuctionLite:RegisterDefaults("profile", {
   printPriceData = false,
   bidUndercut = 0.25,
   buyoutUndercut = 0.02,
+  vendorMultiplier = 3,
   roundPrices = 0.05,
   duration = 3,
   method = 1,
@@ -118,6 +130,16 @@ end
 -- Set buyout undercut.
 function AuctionLite:SetBuyoutUndercut(value)
   self.db.profile.buyoutUndercut = value;
+end
+
+-- Get vendor multiplier.
+function AuctionLite:GetVendorMultiplier()
+  return self.db.profile.vendorMultiplier;
+end
+
+-- Set vendor multiplier.
+function AuctionLite:SetVendorMultiplier(value)
+  self.db.profile.vendorMultiplier = value;
 end
 
 -- Get round price granularity.
