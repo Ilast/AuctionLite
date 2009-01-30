@@ -39,7 +39,7 @@ function AuctionLite:PrintMoney(money)
   return result;
 end
 
--- Retrieve the item id and suffix id from an item link.
+-- Dissect an item link or item string.
 function AuctionLite:SplitLink(link)
   -- Parse the link.
   local _, _, color, str, name = link:find("|c(.*)|H(.*)|h%[(.*)%]");
@@ -53,7 +53,11 @@ function AuctionLite:SplitLink(link)
   local _, id, enchant, jewel1, jewel2, jewel3, jewel4, suffix, unique =
         strsplit(":", str);
 
-  return name, tonumber(id), tonumber(suffix), color;
+  return name, color,
+         tonumber(id), tonumber(suffix), tonumber(enchant),
+         tonumber(jewel1), tonumber(jewel2),
+         tonumber(jewel3), tonumber(jewel4),
+         tonumber(unique);
 end
 
 -- Zero out the uniqueId field from an item link.

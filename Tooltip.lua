@@ -31,7 +31,7 @@ function AuctionLite:AddTooltipData(tooltip, link, count1, count2)
 
     -- First add vendor info.  Always print a line for the vendor price.
     if self.db.profile.showVendor then
-      local _, id = self:SplitLink(link);
+      local _, _, id = self:SplitLink(link);
       local vendor = self.VendorData[id];
       local vendorInfo;
       if vendor ~= nil then

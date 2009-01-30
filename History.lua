@@ -10,7 +10,7 @@ local INDEPENDENT_SCANS = 172800; -- 2 days
 
 -- Retrieve historical price data for an item.
 function AuctionLite:GetHistoricalPrice(link)
-  local name, id, suffix = self:SplitLink(link);
+  local name, _, id, suffix = self:SplitLink(link);
   local info = self.db.realm.prices[id];
 
   if info == nil then
@@ -40,7 +40,7 @@ end
 
 -- Set historical price data for an item.
 function AuctionLite:SetHistoricalPrice(link, info)
-  local _, id, suffix = self:SplitLink(link);
+  local _, _, id, suffix = self:SplitLink(link);
 
   if suffix == 0 then
     -- This item has no suffix, so just use the id.
@@ -103,7 +103,7 @@ function AuctionLite:GetVendorValue(arg1)
   if type(arg1) == "number" then
     id = arg1;
   elseif type(arg1) == "string" then
-    _, id = self:SplitLink(arg1);
+    _, _, id = self:SplitLink(arg1);
   end
 
   if id ~= nil then

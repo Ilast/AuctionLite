@@ -299,18 +299,21 @@ function AuctionLite:QueryApprove()
       else
         price = listing.bid;
       end
-      PlaceAuctionBid("list", listing.index, price);
-      listing.target.purchased = true;
+      if price <= GetMoney() then
+        PlaceAuctionBid("list", listing.index, price);
+        listing.target.purchased = true;
+      end
     end
   end
 
   -- Clean up.
   ShoppingCart = nil;
 
-  -- Figure out whether we've purchased everything on our list.
+  -- Figure out whether we've found everything on our list.
+  -- If so, we don't need to look any further.
   local done = true;
   for i = 1, table.getn(ShoppingList) do
-    if not ShoppingList[i].purchased then
+    if not ShoppingList[i].found then
       done = false;
       break;
     end
@@ -380,9 +383,15 @@ function AuctionLite:ShowReceipt(cancelled)
                " at " ..  self:PrintMoney(price) .. ").");
 
     if itemsNotFound > 0 then
+      local verb;
+      if listingsNotFound == 1 then
+        verb = "was";
+      else
+        verb = "were";
+      end
       self:Print("Note: " .. self:MakePlural(listingsNotFound, "listing") ..
                  " of " .. self:MakePlural(itemsNotFound, "item") ..
-                 " were not purchased.");
+                 " " .. verb .. " not purchased.");
     end
   end
 

@@ -310,7 +310,7 @@ function AuctionLite:SetSellData(results, link)
   local itemValue = 0;
   if result ~= nil and result.listings > 0 then
     itemValue = result.price;
-    local name, _, _, color = self:SplitLink(link);
+    local name, color = self:SplitLink(link);
     self:SetScrollData(name, color, result.data);
     if self.db.profile.printPriceData then
       self:ShowPriceData(link, itemValue, SellSize:GetNumber());

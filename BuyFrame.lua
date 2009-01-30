@@ -39,7 +39,7 @@ function AuctionLite:SetDetailLink(link)
   DetailLink = link;
 
   if DetailLink ~= nil then
-    DetailName, _, _, DetailColor = self:SplitLink(DetailLink);
+    DetailName, DetailColor = self:SplitLink(DetailLink);
     DetailData = SearchData[DetailLink].data;
   else
     DetailName = nil;
@@ -154,8 +154,10 @@ function AuctionLite:CreateOrder(isBuyout, requested)
       order.price = order.price + price;
     end
 
-    -- If we found any selected items, proceed.
-    if order.count > 0 then
+    -- If we found any selected items and we have enough money, proceed.
+    if order.price > GetMoney() then
+      self:Print("|cffff0000[Error]|r Insufficient funds.");
+    elseif order.count > 0 then
       -- If the second argument wasn't specified, the user wants exactly
       -- the number of items selected.
       if requested == nil then
@@ -335,8 +337,10 @@ function AuctionLite:BuyButton_OnEnter(widget)
       count = item.count;
       shift = BuyButton1DetailName:GetLeft() - BuyButton1DetailCount:GetLeft();
     end
+    shift = shift + 200;
   else
     link = SummaryData[offset + id];
+    shift = shift + 250;
   end
 
   -- If we have an item, show the tooltip.
@@ -576,6 +580,13 @@ function AuctionLite:AuctionFrameBuy_UpdateDetail()
   local offset = FauxScrollFrame_GetOffset(BuyScrollFrame);
   local displaySize = BUY_DISPLAY_SIZE - ExpandHeight;
 
+  local _, _, _, _, enchant, jewel1, jewel2, jewel3, jewel4 =
+    self:SplitLink(DetailLink);
+
+  local showPlus = enchant ~= 0 or
+                   jewel1 ~= 0 or jewel2 ~= 0 or
+                   jewel3 ~= 0 or jewel4 ~= 0;
+
   local i;
   for i = 1, displaySize do
     local item = DetailData[offset + i];
@@ -588,6 +599,7 @@ function AuctionLite:AuctionFrameBuy_UpdateDetail()
 
       local countText        = _G[buttonDetailName .. "Count"];
       local nameText         = _G[buttonDetailName .. "Name"];
+      local plusText         = _G[buttonDetailName .. "Plus"];
       local bidEachFrame     = _G[buttonDetailName .. "BidEachFrame"];
       local bidFrame         = _G[buttonDetailName .. "BidFrame"];
       local buyoutEachFrame  = _G[buttonDetailName .. "BuyoutEachFrame"];
@@ -606,6 +618,14 @@ function AuctionLite:AuctionFrameBuy_UpdateDetail()
       countText:SetText("|c" .. countColor .. item.count .. "x|r");
 
       nameText:SetText("|c" .. nameColor .. DetailName .. "|r");
+
+      if showPlus then
+        plusText:SetPoint("LEFT", nameText, "LEFT",
+                          nameText:GetStringWidth(), 0);
+        plusText:Show();
+      else
+        plusText:Hide();
+      end
 
       MoneyFrame_Update(bidEachFrame, math.floor(item.bid / item.count));
       bidEachFrame:SetAlpha(0.5);
@@ -671,16 +691,28 @@ function AuctionLite:AuctionFrameBuy_UpdateSummary()
       local buttonSummary     = _G[buttonSummaryName];
 
       local nameText          = _G[buttonSummaryName .. "Name"];
+      local plusText          = _G[buttonSummaryName .. "Plus"];
       local listingsText      = _G[buttonSummaryName .. "Listings"];
       local itemsText         = _G[buttonSummaryName .. "Items"];
       local priceFrame        = _G[buttonSummaryName .. "MarketPriceFrame"];
 
-      local name, _, _, color = self:SplitLink(link);
+      local name, color, _, _, enchant, jewel1, jewel2, jewel3, jewel4 =
+        self:SplitLink(link);
 
       nameText:SetText("|c" .. color .. name .. "|r");
       listingsText:SetText("|cffffffff" .. result.listingsAll .. "|r");
       itemsText:SetText("|cffffffff" .. result.itemsAll .. "|r");
       MoneyFrame_Update(priceFrame, math.floor(result.price));
+
+      if enchant ~= 0 or
+         jewel1 ~= 0 or jewel2 ~= 0 or
+         jewel3 ~= 0 or jewel4 ~= 0 then
+        plusText:SetPoint("LEFT", nameText, "LEFT",
+                          nameText:GetStringWidth(), 0);
+        plusText:Show();
+      else
+        plusText:Hide();
+      end
 
       button:UnlockHighlight();
 
