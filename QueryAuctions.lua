@@ -148,6 +148,12 @@ function AuctionLite:QueryNext()
   QueryPage = QueryPage + 1;
 end
 
+-- Get the current page again.
+function AuctionLite:QueryCurrent()
+  assert(QueryState == QUERY_STATE_WAIT or QueryState == QUERY_STATE_APPROVE);
+  QueryState = QUERY_STATE_SEND;
+end
+
 -- End the current query.
 function AuctionLite:QueryEnd()
   assert(QueryState == QUERY_STATE_WAIT or QueryState == QUERY_STATE_APPROVE);
@@ -319,12 +325,14 @@ function AuctionLite:QueryApprove()
     end
   end
 
-  -- If we're done, cleanup.  If not, request the next page.
+  -- If we're done, cleanup.  If not, make the next request.
+  -- Note that we request the same page again, since our purchase may
+  -- have caused some auctions from the next page to move onto this one.
   if done then
     self:ShowReceipt();
     self:QueryEnd();
   else
-    self:QueryNext();
+    self:QueryCurrent();
   end
 end
 
