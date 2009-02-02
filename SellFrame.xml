@@ -30,6 +30,19 @@
 						</Anchor>
 					</Anchors>
 				</FontString>
+        <FontString name="$parentPlus" inherits="GameFontNormal" justifyH="LEFT" text="+">
+          <Size>
+            <AbsDimension x="0" y="18"/>
+          </Size>
+          <Anchors>
+            <Anchor point="LEFT" relativeTo="$parentName">
+              <Offset>
+                <AbsDimension x="0" y="0"/>
+              </Offset>
+            </Anchor>
+          </Anchors>
+          <Color r="1.0" g="0.0" b="0.0" a="1.0"/>
+        </FontString>
 			</Layer>
 		</Layers>
 		<Frames>

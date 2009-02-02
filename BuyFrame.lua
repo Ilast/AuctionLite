@@ -239,9 +239,9 @@ function AuctionLite:PurchaseComplete()
         if PurchaseOrder.isBuyout then
           -- If we bought an item, remove it.
           table.remove(DetailData, i);
-          if SelectedItems[i] then
-            SelectedItems[i] = nil;
-          end
+          -- The selected items map is going to get all screwed up, so
+          -- just nuke it.  (TODO: Do a better job here!)
+          SelectedItems = {};
         else
           -- If we bid on an item, update the minimum bid.
           local increment = math.floor(DetailData[i].bid / 100) * 5;

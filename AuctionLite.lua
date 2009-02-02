@@ -207,7 +207,7 @@ function AuctionLite:AUCTION_HOUSE_CLOSED()
   collectgarbage("collect");
 end
 
--- Hook some AH functions and UI widgets when the AH gets loaded.
+-- Hook some AH/GB functions and UI widgets when the AH/GB gets loaded.
 function AuctionLite:ADDON_LOADED(name)
   if name == "Blizzard_AuctionUI" then
     self:SecureHook("AuctionFrameTab_OnClick", "AuctionFrameTab_OnClick_Hook");
@@ -220,14 +220,24 @@ function AuctionLite:ADDON_LOADED(name)
   end
 end
 
--- We're alive!  Register our event handlers.
+-- We're alive!
 function AuctionLite:OnEnable()
   self:Print("AuctionLite v" .. AUCTIONLITE_VERSION .. " loaded!");
 
+  -- Register for events.
   self:RegisterEvent("ADDON_LOADED");
   self:RegisterEvent("AUCTION_ITEM_LIST_UPDATE");
   self:RegisterEvent("AUCTION_HOUSE_CLOSED");
 
+  -- Another addon may have forced the Blizzard addons to load early.
+  -- If so, just run the init code now.
+  if IsAddOnLoaded("Blizzard_AuctionUI") then
+    self:ADDON_LOADED("Blizzard_AuctionUI");
+  elseif IsAddOnLoaded("Blizzard_GuildBankUI") then
+    self:ADDON_LOADED("Blizzard_GuildBankUI");
+  end
+
+  -- Add any hooks that don't depend upon Blizzard addons.
   self:HookCoroutines();
   self:HookTooltips();
 end

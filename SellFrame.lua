@@ -16,8 +16,7 @@ local DURATION_MEDIUM = 2;
 local DURATION_LONG = 3;
 
 -- Info about data to be shown in scrolling pane.
-local ScrollName = nil;
-local ScrollColor = nil;
+local ScrollLink = nil;
 local ScrollData = {};
 
 -- Value of item currently in "Sell" tab.
@@ -248,8 +247,7 @@ end
 function AuctionLite:ClearSellFrame()
   self:ResetQuery();
 
-  ScrollName = nil;
-  ScrollColor = nil;
+  ScrollLink = nil;
   ScrollData = {};
 
   ItemValue = nil;
@@ -286,7 +284,7 @@ function AuctionLite:SetStatus(message)
 end
 
 -- Set the data for the scrolling frame.
-function AuctionLite:SetScrollData(name, color, data)
+function AuctionLite:SetScrollData(link, data)
   local filtered = {};
   
   local i;
@@ -298,28 +296,30 @@ function AuctionLite:SetScrollData(name, color, data)
 
   table.sort(filtered, function(a, b) return a.price < b.price end);
 
-  ScrollName = name;
-  ScrollColor = color;
+  ScrollLink = link;
   ScrollData = filtered;
 end
 
 -- Get our query results.
 function AuctionLite:SetSellData(results, link)
-  -- Get our recommended item value.
+  -- Set the competing auction display.
   local result = results[link];
+  if result ~= nil then
+    self:SetScrollData(link, result.data);
+  end
+
+  -- Get our recommended item value.
   local itemValue = 0;
-  if result ~= nil and result.listings > 0 then
+  if result ~= nil and result.price > 0 then
     itemValue = result.price;
-    local name, color = self:SplitLink(link);
-    self:SetScrollData(name, color, result.data);
     if self.db.profile.printPriceData then
       self:ShowPriceData(link, itemValue, SellSize:GetNumber());
     end
     self:SetStatus("|cff00ff00Scanned " ..
-                   self:MakePlural(result.listings,  "listing") .. ".|r");
+                   self:MakePlural(result.listings, "listing") .. ".|r");
   else
     local hist = self:GetHistoricalPrice(link);
-    if hist ~= nil then
+    if hist ~= nil and hist.price > 0 then
       itemValue = hist.price;
       self:SetStatus("|cffff0000Using historical data.|r");
     else
@@ -482,6 +482,18 @@ end
 function AuctionLite:AuctionFrameSell_Update()
   local offset = FauxScrollFrame_GetOffset(SellScrollFrame);
 
+  local name, color, enchant, jewel1, jewel2, jewel3, jewel4;
+  local showPlus;
+
+  if ScrollLink ~= nil then
+    name, color, _, _, enchant, jewel1, jewel2, jewel3, jewel4 =
+      self:SplitLink(ScrollLink);
+
+    showPlus = enchant ~= 0 or
+               jewel1 ~= 0 or jewel2 ~= 0 or
+               jewel3 ~= 0 or jewel4 ~= 0;
+  end
+
   local i;
   for i = 1, SELL_DISPLAY_SIZE do
     local item = ScrollData[offset + i];
@@ -490,8 +502,9 @@ function AuctionLite:AuctionFrameSell_Update()
     local button = _G[buttonName];
 
     if item ~= nil then
-      local itemCount = _G[buttonName .. "Count"];
-      local itemName = _G[buttonName .. "Name"];
+      local countText = _G[buttonName .. "Count"];
+      local nameText = _G[buttonName .. "Name"];
+      local plusText = _G[buttonName .. "Plus"];
       local buyoutEachFrame = _G[buttonName .. "BuyoutEachFrame"];
       local buyoutFrame = _G[buttonName .. "BuyoutFrame"];
 
@@ -509,14 +522,22 @@ function AuctionLite:AuctionFrameSell_Update()
         nameColor = "ffffff00";
       else
         countColor = "ffffffff";
-        nameColor = ScrollColor;
+        nameColor = color;
       end
 
-      itemCount:SetText("|c" .. countColor .. item.count .. "x|r");
-      itemCount:SetAlpha(alpha);
+      countText:SetText("|c" .. countColor .. item.count .. "x|r");
+      countText:SetAlpha(alpha);
 
-      itemName:SetText("|c" .. nameColor .. ScrollName .. "|r");
-      itemName:SetAlpha(alpha);
+      nameText:SetText("|c" .. nameColor .. name .. "|r");
+      nameText:SetAlpha(alpha);
+
+      if showPlus then
+        plusText:SetPoint("LEFT", nameText, "LEFT",
+                          nameText:GetStringWidth(), 0);
+        plusText:Show();
+      else
+        plusText:Hide();
+      end
 
       MoneyFrame_Update(buyoutEachFrame, math.floor(item.buyout / item.count + 0.5));
       buyoutEachFrame:SetAlpha(alpha);
