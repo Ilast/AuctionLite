@@ -8,189 +8,115 @@
 -------------------------------------------------------------------------------
 
 -- Create our addon.
-AuctionLite = AceLibrary("AceAddon-2.0"):new("AceConsole-2.0", "AceEvent-2.0",
-                                             "AceHook-2.1", "AceDB-2.0");
+AuctionLite = LibStub("AceAddon-3.0"):NewAddon("AuctionLite",
+                                               "AceConsole-3.0",
+                                               "AceEvent-3.0",
+                                               "AceHook-3.0");
 
 -- Currently no slash commands...
-local options = {
+local Options = {
   type = 'group',
+  get = function(item) return AuctionLite.db.profile[item[#item]] end,
+  set = function(item, value) AuctionLite.db.profile[item[#item]] = value end,
   args = {
-    bidundercut = {
+    bidUndercut = {
       type = "range",
       desc = "Percent to undercut market value for bid prices (0-100).",
       name = "Bid Undercut",
       isPercent = true,
-      get = "GetBidUndercut",
-      set = "SetBidUndercut",
       order = 1,
     },
-    buyoutundercut = {
+    buyoutUndercut = {
       type = "range",
       desc = "Percent to undercut market value for buyout prices (0-100).",
       name = "Buyout Undercut",
       isPercent = true,
-      get = "GetBuyoutUndercut",
-      set = "SetBuyoutUndercut",
       order = 2,
     },
-    vendormultiplier = {
+    vendorMultiplier = {
       type = "range",
       desc = "Amount to multiply by vendor price to get default sell price.",
       name = "Vendor Multiplier",
-      get = "GetVendorMultiplier",
-      set = "SetVendorMultiplier",
       min = 0,
       max = 100,
       step = 0.1,
       order = 3,
     },
-    roundprices = {
+    roundPrices = {
       type = "range",
       desc = "Round all prices to this granularity, or zero to disable (0-1).",
       name = "Round Prices",
-      get = "GetRoundPrices",
-      set = "SetRoundPrices",
       order = 4,
     },
-    showvendor = {
+    showVendor = {
       type = "toggle",
       desc = "Show vendor sell price in tooltips.",
       name = "Show Vendor Price",
-      get = "ShowVendor",
-      set = "ToggleShowVendor",
       order = 5,
     },
-    showauction = {
+    showAuction = {
       type = "toggle",
       desc = "Show auction house value in tooltips.",
       name = "Show Auction Value",
-      get = "ShowAuction",
-      set = "ToggleShowAuction",
       order = 6,
     },
-    showstackprice = {
+    showStackPrice = {
       type = "toggle",
       desc = "Show full stack prices in tooltips (shift toggles on the fly).",
       name = "Show Stack Price",
-      get = "ShowStackPrice",
-      set = "ToggleShowStackPrice",
       order = 7,
     },
-    printpricedata = {
+    printPriceData = {
       type = "toggle",
       desc = "Print detailed price data when selling an item.",
       name = "Print Price Data",
-      get = "PrintPriceData",
-      set = "TogglePrintPriceData",
       order = 8,
     },
   },
 }
 
--- Do some initial setup.
-AuctionLite:RegisterChatCommand("/al", options);
-AuctionLite:RegisterDB("AuctionLiteDB");
-AuctionLite:RegisterDefaults("realm", {
-  prices = {},
-});
-AuctionLite:RegisterDefaults("profile", {
-  showVendor = true,
-  showAuction = true,
-  showStackPrice = true,
-  printPriceData = false,
-  bidUndercut = 0.25,
-  buyoutUndercut = 0.02,
-  vendorMultiplier = 3,
-  roundPrices = 0.05,
-  duration = 3,
-  method = 1,
-});
+local SlashOptions = {
+  type = 'group',
+  handler = AuctionLite,
+  args = {
+    config = {
+      type = "execute",
+      desc = "Open configuration dialog",
+      name = "Configure",
+      func = function()
+        InterfaceOptionsFrame_OpenToCategory(AuctionLite.optionFrames.main);
+      end,
+    },
+  },
+};
+
+local SlashCmds = {
+  "al",
+  "auctionlite",
+};
+
+local Defaults = {
+  factionrealm = {
+    prices = {},
+  },
+  profile = {
+    method = 1,
+    duration = 3,
+    bidUndercut = 0.25,
+    buyoutUndercut = 0.02,
+    vendorMultiplier = 3,
+    roundPrices = 0.05,
+    showVendor = true,
+    showAuction = true,
+    showStackPrice = true,
+    printPriceData = false,
+    showGreeting = false,
+  },
+};
+
+local DBName = "AuctionLiteDB";
 
 local AUCTIONLITE_VERSION = 0.6;
-
--------------------------------------------------------------------------------
--- Settings
--------------------------------------------------------------------------------
-
--- Get bid undercut.
-function AuctionLite:GetBidUndercut()
-  return self.db.profile.bidUndercut;
-end
-
--- Set bid undercut.
-function AuctionLite:SetBidUndercut(value)
-  self.db.profile.bidUndercut = value;
-end
-
--- Get buyout undercut.
-function AuctionLite:GetBuyoutUndercut()
-  return self.db.profile.buyoutUndercut;
-end
-
--- Set buyout undercut.
-function AuctionLite:SetBuyoutUndercut(value)
-  self.db.profile.buyoutUndercut = value;
-end
-
--- Get vendor multiplier.
-function AuctionLite:GetVendorMultiplier()
-  return self.db.profile.vendorMultiplier;
-end
-
--- Set vendor multiplier.
-function AuctionLite:SetVendorMultiplier(value)
-  self.db.profile.vendorMultiplier = value;
-end
-
--- Get round price granularity.
-function AuctionLite:GetRoundPrices()
-  return self.db.profile.roundPrices;
-end
-
--- Set round price granularity.
-function AuctionLite:SetRoundPrices(value)
-  self.db.profile.roundPrices = value;
-end
-
--- Show vendor data in tooltips?
-function AuctionLite:ShowVendor()
-  return self.db.profile.showVendor;
-end
-
--- Toggle vendor data in tooltips.
-function AuctionLite:ToggleShowVendor()
-  self.db.profile.showVendor = not self.db.profile.showVendor;
-end
-
--- Show auction value in tooltips?
-function AuctionLite:ShowAuction()
-  return self.db.profile.showAuction;
-end
-
--- Toggle auction value in tooltips.
-function AuctionLite:ToggleShowAuction()
-  self.db.profile.showAuction = not self.db.profile.showAuction;
-end
-
--- Show full stack price in tooltips?
-function AuctionLite:ShowStackPrice()
-  return self.db.profile.showStackPrice;
-end
-
--- Toggle stack price in tooltips.
-function AuctionLite:ToggleShowStackPrice()
-  self.db.profile.showStackPrice = not self.db.profile.showStackPrice;
-end
-
--- Print detailed price data to chat window when selling?
-function AuctionLite:PrintPriceData()
-  return self.db.profile.printPriceData;
-end
-
--- Toggle detailed price data.
-function AuctionLite:TogglePrintPriceData()
-  self.db.profile.printPriceData = not self.db.profile.printPriceData;
-end
 
 -------------------------------------------------------------------------------
 -- Hooks and boostrap code
@@ -208,7 +134,7 @@ function AuctionLite:AUCTION_HOUSE_CLOSED()
 end
 
 -- Hook some AH/GB functions and UI widgets when the AH/GB gets loaded.
-function AuctionLite:ADDON_LOADED(name)
+function AuctionLite:ADDON_LOADED(_, name)
   if name == "Blizzard_AuctionUI" then
     self:SecureHook("AuctionFrameTab_OnClick", "AuctionFrameTab_OnClick_Hook");
     self:SecureHook("ContainerFrameItemButton_OnModifiedClick", "ContainerFrameItemButton_OnModifiedClick_Hook");
@@ -220,9 +146,45 @@ function AuctionLite:ADDON_LOADED(name)
   end
 end
 
+-- If we see an Ace2 database, convert it to Ace3.
+function AuctionLite:ConvertDB()
+  local db = _G[DBName];
+
+  -- It's Ace2 if it uses "realms" instead of "factionrealm".
+  if db ~= nil and db.realms ~= nil and db.factionrealm == nil then
+    -- Change "Realm - Faction" keys to "Faction - Realm" keys.
+    db.factionrealm = {}
+    for k, v in pairs(db.realms) do
+      db.factionrealm[k:gsub("(.*) %- (.*)", "%2 - %1")] = v;
+    end
+
+    -- Now unlink the old DB.
+    db.realms = nil;
+  end
+end
+
 -- We're alive!
-function AuctionLite:OnEnable()
-  self:Print("AuctionLite v" .. AUCTIONLITE_VERSION .. " loaded!");
+function AuctionLite:OnInitialize()
+  -- Load our database.
+  self:ConvertDB();
+  self.db = LibStub("AceDB-3.0"):New(DBName, Defaults, "Default");
+
+  -- Set up our config options.
+  local profiles = LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db);
+  
+  local config = LibStub("AceConfig-3.0");
+  config:RegisterOptionsTable("AuctionLite", SlashOptions, SlashCmds);
+
+  local registry = LibStub("AceConfigRegistry-3.0");
+  registry:RegisterOptionsTable("AuctionLite Options", Options);
+  registry:RegisterOptionsTable("AuctionLite Profiles", profiles);
+
+  local dialog = LibStub("AceConfigDialog-3.0");
+  self.optionFrames = {
+    main     = dialog:AddToBlizOptions("AuctionLite Options", "AuctionLite"),
+    profiles = dialog:AddToBlizOptions("AuctionLite Profiles", "Profiles",
+                                       "AuctionLite");
+  };
 
   -- Register for events.
   self:RegisterEvent("ADDON_LOADED");
@@ -240,4 +202,9 @@ function AuctionLite:OnEnable()
   -- Add any hooks that don't depend upon Blizzard addons.
   self:HookCoroutines();
   self:HookTooltips();
+
+  -- And print a message if we're debugging.
+  if self.db.profile.showGreeting then
+    self:Print("AuctionLite v" .. AUCTIONLITE_VERSION .. " loaded!");
+  end
 end

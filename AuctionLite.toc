@@ -3,17 +3,11 @@
 ## Notes: A lightweight addon that tracks auction house data and improves the auction posting interface.
 ## Author: merial.kilrogg@gmail.com
 ## Version: 0.6
-## OptionalDeps: Ace2
+## OptionalDeps: Ace3
 ## SavedVariables: AuctionLiteDB
 ## X-Category: Interface Enhancements
 
-Libs\AceLibrary\AceLibrary.lua
-Libs\AceOO-2.0\AceOO-2.0.lua
-Libs\AceAddon-2.0\AceAddon-2.0.lua
-Libs\AceDB-2.0\AceDB-2.0.lua
-Libs\AceConsole-2.0\AceConsole-2.0.lua
-Libs\AceEvent-2.0\AceEvent-2.0.lua
-Libs\AceHook-2.1\AceHook-2.1.lua
+embeds.xml
 
 AuctionLite.lua
 
