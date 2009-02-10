@@ -13,8 +13,6 @@ local ExpandHeight = 0;
 
 -- Data to be shown in detail view.
 local DetailLink = nil;
-local DetailName = nil;
-local DetailColor = nil;
 local DetailData = {};
 
 -- Save the last selected item.
@@ -39,11 +37,8 @@ function AuctionLite:SetDetailLink(link)
   DetailLink = link;
 
   if DetailLink ~= nil then
-    DetailName, DetailColor = self:SplitLink(DetailLink);
     DetailData = SearchData[DetailLink].data;
   else
-    DetailName = nil;
-    DetailColor = nil;
     DetailData = {};
   end
 
@@ -182,8 +177,17 @@ function AuctionLite:CreateOrder(isBuyout, requested)
         order.histPrice = 0;
       end
 
+      local name = self:SplitLink(DetailLink);
+
       -- Submit the query.  If it goes through, save it here too.
-      if self:QueryBuy(DetailName, order.list, isBuyout) then
+      local query = {
+        name = name,
+        list = order.list,
+        isBuyout = isBuyout,
+        finish = function() AuctionLite:PurchaseComplete() end,
+      };
+
+      if self:StartQuery(query) then
         PurchaseOrder = order;
       end
     end
@@ -361,7 +365,7 @@ end
 -- Returns to the summary page.
 function AuctionLite:BuySummaryButton_OnClick()
   if PurchaseOrder ~= nil and self:GetCart() ~= nil then
-    self:QueryCancel();
+    self:CancelQuery();
   end
 
   self:SetDetailLink(nil);
@@ -378,7 +382,7 @@ end
 
 -- Cancel a pending purchase.
 function AuctionLite:BuyCancelButton_OnClick()
-  self:QueryCancel();
+  self:CancelQuery();
   self:AuctionFrameBuy_Update();
 end
 
@@ -396,7 +400,14 @@ end
 
 -- Submit a search query.
 function AuctionLite:AuctionFrameBuy_Search()
-  if self:QuerySearch(BuyName:GetText()) then
+  local query = {
+    name = BuyName:GetText(),
+    wait = true,
+    update = function(pct) AuctionLite:UpdateProgressSearch(pct) end,
+    finish = function(results, link) AuctionLite:SetBuyData(results, link) end,
+  };
+
+  if self:StartQuery(query) then
     DetailLinkPrev = DetailLink;
     self:ClearBuyFrame(true);
     self:UpdateProgressSearch(0);
@@ -546,9 +557,9 @@ function AuctionLite:AuctionFrameBuy_UpdateExpand()
     local price = 0;
 
     local i;
-    for i = 1, table.getn(cart) do
-      count = count + cart[i].count;
-      price = price + cart[i].buyout;
+    for _, listing in ipairs(cart) do
+      count = count + listing.count;
+      price = price + listing.buyout;
     end
 
     if count < order.count then
@@ -605,6 +616,8 @@ function AuctionLite:AuctionFrameBuy_UpdateDetail()
       local buyoutEachFrame  = _G[buttonDetailName .. "BuyoutEachFrame"];
       local buyoutFrame      = _G[buttonDetailName .. "BuyoutFrame"];
 
+      local name, color = self:SplitLink(DetailLink);
+
       local countColor;
       local nameColor;
       if item.owner == UnitName("player") then
@@ -612,12 +625,12 @@ function AuctionLite:AuctionFrameBuy_UpdateDetail()
         nameColor = "ffffff00";
       else
         countColor = "ffffffff";
-        nameColor = DetailColor;
+        nameColor = color;
       end
 
       countText:SetText("|c" .. countColor .. item.count .. "x|r");
 
-      nameText:SetText("|c" .. nameColor .. DetailName .. "|r");
+      nameText:SetText("|c" .. nameColor .. name .. "|r");
 
       if showPlus then
         plusText:SetPoint("LEFT", nameText, "LEFT",
@@ -743,8 +756,6 @@ end
 -- Clean up the "Buy" tab.
 function AuctionLite:ClearBuyFrame(partial)
   DetailLink = nil;
-  DetailName = nil;
-  DetailColor = nil;
   DetailData = {};
 
   if not partial then

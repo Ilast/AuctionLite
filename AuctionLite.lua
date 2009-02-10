@@ -136,9 +136,14 @@ end
 -- Hook some AH/GB functions and UI widgets when the AH/GB gets loaded.
 function AuctionLite:ADDON_LOADED(_, name)
   if name == "Blizzard_AuctionUI" then
-    self:SecureHook("AuctionFrameTab_OnClick", "AuctionFrameTab_OnClick_Hook");
-    self:SecureHook("ContainerFrameItemButton_OnModifiedClick", "ContainerFrameItemButton_OnModifiedClick_Hook");
-    self:SecureHook("ClickAuctionSellItemButton", "ClickAuctionSellItemButton_Hook");
+    self:SecureHook("AuctionFrameTab_OnClick",
+                    "AuctionFrameTab_OnClick_Hook");
+    self:SecureHook("ContainerFrameItemButton_OnModifiedClick",
+                    "ContainerFrameItemButton_OnModifiedClick_Hook");
+    self:SecureHook("ClickAuctionSellItemButton",
+                    "ClickAuctionSellItemButton_Hook");
+    self:SecureHook("QueryAuctionItems",
+                    "QueryAuctionItems_Hook");
     self:HookAuctionFrameUpdate();
     self:AddAuctionFrameTabs();
   elseif name == "Blizzard_GuildBankUI" then

@@ -108,7 +108,12 @@ function AuctionLite:ModifyBrowseTab()
   scan:SetText(buttonText);
   scan:SetPoint("TOPLEFT", AuctionFrameBrowse, "TOPLEFT", scanOffset, -410);
   scan:SetScript("OnClick", function()
-    if AuctionLite:QueryScan() then
+    local query = {
+      name = "",
+      update = function(pct) AuctionLite:UpdateProgressScan(pct) end,
+    };
+
+    if AuctionLite:StartQuery(query) then
       AuctionLite:UpdateProgressScan(0);
     end
   end);

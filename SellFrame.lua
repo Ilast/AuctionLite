@@ -231,7 +231,14 @@ function AuctionLite:ClickAuctionSellItemButton_Hook()
       SellStackText:SetText("Number of Items |cff808080(max " .. total .. ")|r");
 
       self:UpdateDeposit();
-      if self:QuerySell(link) then
+
+      local query = {
+        link = link,
+        update = function(pct) AuctionLite:UpdateProgressSell(pct) end,
+        finish = function(data, link) AuctionLite:SetSellData(data, link) end,
+      };
+
+      if self:StartQuery(query) then
         self:UpdateProgressSell(0);
       end
     end
@@ -245,7 +252,7 @@ end
 
 -- Clean up the "Sell" tab.
 function AuctionLite:ClearSellFrame()
-  self:ResetQuery();
+  self:CancelQuery();
 
   ScrollLink = nil;
   ScrollData = {};
@@ -288,9 +295,9 @@ function AuctionLite:SetScrollData(link, data)
   local filtered = {};
   
   local i;
-  for i = 1, table.getn(data) do
-    if data[i].buyout > 0 then
-      table.insert(filtered, data[i]);
+  for _, listing in ipairs(data) do
+    if listing.buyout > 0 then
+      table.insert(filtered, listing);
     end
   end
 
