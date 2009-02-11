@@ -110,10 +110,11 @@ function AuctionLite:ModifyBrowseTab()
   scan:SetScript("OnClick", function()
     local query = {
       name = "",
+      getAll = self.db.profile.getAll,
       update = function(pct) AuctionLite:UpdateProgressScan(pct) end,
     };
 
-    if AuctionLite:StartQuery(query) then
+    if AuctionLite:StartQuery(query) and not query.getAll then
       AuctionLite:UpdateProgressScan(0);
     end
   end);

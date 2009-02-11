@@ -189,7 +189,8 @@ function AuctionLite:CreateAuctionsCore()
         self:ClearSellFrame();
       end
 
-      self:Print("Created " .. created .. " auctions of " .. name .. " x" .. size .. ".");
+      self:Print("Created " .. self:MakePlural(created, "auction") ..
+                 " of " ..  name .. " x" .. size .. ".");
     end
 
     Selling = false;

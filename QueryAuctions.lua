@@ -61,25 +61,51 @@ end
 
 -- Called periodically to check whether a new query should be sent.
 function AuctionLite:QueryUpdate()
-  local canSend = CanSendAuctionQuery("list");
+  -- Find out whether we can send queries.
+  local canSend, canGetAll = CanSendAuctionQuery("list");
   if canSend and Query ~= nil and Query.state == QUERY_STATE_SEND then
+    -- Determine the query string.
     local name = nil;
     if Query.name ~= nil then
       name = Query.name;
     elseif Query.link ~= nil then
       name = self:SplitLink(Query.link);
     end
-    if name ~= nil then
+
+    -- Did we get a reasonable query?  We need a name, and if it's a getAll
+    -- query, it should be on the first page with no shopping list.
+    if name ~= nil and
+       (not Query.getAll or (Query.page == 0 and Query.list == nil)) then
+
+      -- Truncate to avoid disconnects.
       name = self:Truncate(name, MAX_QUERY_BYTES);
+
+      -- Was getAll requested, and can we actually use it?
+      local getAll = false;
+      if Query.getAll then
+        if canGetAll then
+          getAll = true;
+        else
+          Query.getAll = false;
+          self:Print("|cffff0000[Warning]|r Fast queries can only be used " ..
+                     "once every 15 minutes. Using a slow query for now.");
+        end
+      end
+
+      -- Submit the query.
       OurQuery = true;
-      QueryAuctionItems(name, 0, 0, 0, 0, 0, Query.page, 0, 0);
+      QueryAuctionItems(name, 0, 0, 0, 0, 0, Query.page, 0, 0, getAll);
       OurQuery = false;
+
+      -- Wait for our result.
       Query.state = QUERY_STATE_WAIT;
     else
       self:CancelQuery();
     end
   end
 
+  -- Are we waiting for a more detailed update?  If so, check to see
+  -- whether we've timed out.
   if Query ~= nil and Query.state == QUERY_STATE_WAIT and
      Query.time ~= nil and Query.time + QUERY_DELAY < time() then
     Query.time = nil;
@@ -356,10 +382,13 @@ function AuctionLite:QueryNewData()
   assert(Query.state == QUERY_STATE_WAIT);
 
   -- We've completed one of our own queries.
-  local seen = Query.page * AUCTIONS_PER_PAGE + Batch;
+  local seen = Query.page * AUCTIONS_PER_PAGE + Query.batch;
+
+  -- If we're running a getAll query, we'd better have seen everything.
+  assert(not Query.getAll or seen == Query.total);
 
   -- Update status.
-  local pct = math.floor(seen * 100 / Total);
+  local pct = math.floor(seen * 100 / Query.total);
   if Query.update ~= nil then
     Query.update(pct);
   end
@@ -367,7 +396,7 @@ function AuctionLite:QueryNewData()
   -- Handle the new data based on the kind of query.
   if Query.list == nil then
     -- This is a search query, not a purchase.
-    if seen < Total then
+    if seen < Query.total then
       -- Request the next page.
       self:QueryNext();
     else
@@ -384,6 +413,8 @@ function AuctionLite:QueryNewData()
       end
     end
   else
+    assert(not Query.getAll);
+
     -- This is a purchase.  We're going to compare the current page
     -- against our shopping list to create a shopping cart, which is the
     -- set of items from the current page that we plan to buy.
@@ -391,7 +422,7 @@ function AuctionLite:QueryNewData()
 
     -- See if we've found the auction we're looking for.
     local i, j;
-    for i = 1, Batch do
+    for i = 1, Query.batch do
       local listing = Query.data[Query.page * AUCTIONS_PER_PAGE + i];
       for _, target in ipairs(Query.list) do
         if not target.found and
@@ -411,7 +442,7 @@ function AuctionLite:QueryNewData()
       Query.cart = cart;
       self:RequestApproval();
       self:QueryRequestApproval();
-    elseif seen < Total then
+    elseif seen < Query.total then
       self:QueryNext();
     else
       self:ShowReceipt();
@@ -423,12 +454,12 @@ end
 -- Handle a completed auction query.
 function AuctionLite:AUCTION_ITEM_LIST_UPDATE()
   if Query ~= nil and Query.state == QUERY_STATE_WAIT then
-    Batch, Total = GetNumAuctionItems("list");
+    Query.batch, Query.total = GetNumAuctionItems("list");
 
     local incomplete = 0;
     local i;
 
-    for i = 1, Batch do
+    for i = 1, Query.batch do
       -- There has *got* to be a better way to do this...
       local link = self:RemoveUniqueId(GetAuctionItemLink("list", i));
       local name, texture, count, quality, canUse, level,

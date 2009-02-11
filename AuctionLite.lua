@@ -72,6 +72,12 @@ local Options = {
       name = "Print Price Data",
       order = 8,
     },
+    getAll = {
+      type = "toggle",
+      desc = "Use fast method for full scans (may cause disconnects).",
+      name = "Fast Auction Scan",
+      order = 9,
+    },
   },
 }
 
@@ -110,6 +116,7 @@ local Defaults = {
     showAuction = true,
     showStackPrice = true,
     printPriceData = false,
+    getAll = false,
     showGreeting = false,
   },
 };
