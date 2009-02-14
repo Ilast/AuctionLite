@@ -81,6 +81,8 @@ end
 
 -- Updates our scan progress.
 function AuctionLite:UpdateProgressScan(pct)
+  self:UpdateProgressSearch(pct);
+
   if pct == 100 then
     BrowseScanText:SetText("");
   else
@@ -107,17 +109,7 @@ function AuctionLite:ModifyBrowseTab()
   scan:SetHeight(22);
   scan:SetText(buttonText);
   scan:SetPoint("TOPLEFT", AuctionFrameBrowse, "TOPLEFT", scanOffset, -410);
-  scan:SetScript("OnClick", function()
-    local query = {
-      name = "",
-      getAll = self.db.profile.getAll,
-      update = function(pct) AuctionLite:UpdateProgressScan(pct) end,
-    };
-
-    if AuctionLite:StartQuery(query) and not query.getAll then
-      AuctionLite:UpdateProgressScan(0);
-    end
-  end);
+  scan:SetScript("OnClick", function() AuctionLite:StartFullScan() end);
 
   -- Create the status text next to it.
   local scanText = AuctionFrameBrowse:CreateFontString("BrowseScanText", "BACKGROUND", "GameFontNormal");

@@ -2,7 +2,7 @@
 ..\..\FrameXML\UI.xsd">
 	<Frame name="BuyExpandTemplate" hidden="false" virtual="true">
 		<Size>
-			<AbsDimension x="770" y="21"/>
+			<AbsDimension x="777" y="21"/>
 		</Size>
 		<Layers>
 			<Layer level="ARTWORK">
@@ -37,12 +37,12 @@
 	</Frame>
 	<Button name="BuyButtonTemplate" hidden="false" virtual="true">
 		<Size>
-			<AbsDimension x="770" y="21"/>
+			<AbsDimension x="777" y="21"/>
 		</Size>
 		<Frames>
 			<Frame name="$parentDetail">
 				<Size>
-					<AbsDimension x="770" y="21"/>
+					<AbsDimension x="777" y="21"/>
 				</Size>
 				<Anchors>
 					<Anchor point="TOPLEFT">
@@ -157,7 +157,7 @@
 			</Frame>
 			<Frame name="$parentSummary">
 				<Size>
-					<AbsDimension x="770" y="21"/>
+					<AbsDimension x="777" y="21"/>
 				</Size>
 				<Anchors>
 					<Anchor point="TOPLEFT">
@@ -175,7 +175,7 @@
 							<Anchors>
 								<Anchor point="TOPLEFT">
 									<Offset>
-										<AbsDimension x="0" y="0"/>
+										<AbsDimension x="21" y="0"/>
 									</Offset>
 								</Anchor>
 							</Anchors>
@@ -200,7 +200,7 @@
 							<Anchors>
 								<Anchor point="TOPRIGHT">
 									<Offset>
-										<AbsDimension x="-275" y="0"/>
+										<AbsDimension x="-340" y="0"/>
 									</Offset>
 								</Anchor>
 							</Anchors>
@@ -212,7 +212,7 @@
 							<Anchors>
 								<Anchor point="TOPRIGHT">
 									<Offset>
-										<AbsDimension x="-180" y="0"/>
+										<AbsDimension x="-290" y="0"/>
 									</Offset>
 								</Anchor>
 							</Anchors>
@@ -220,11 +220,68 @@
 					</Layer>
 				</Layers>
 				<Frames>
+					<Button name="$parentStarButton">
+						<Size>
+							<AbsDimension x="21" y="21"/>
+						</Size>
+						<Anchors>
+							<Anchor point="TOPLEFT">
+								<Offset>
+									<AbsDimension x="0" y="2"/>
+								</Offset>
+							</Anchor>
+						</Anchors>
+						<Scripts>
+							<OnClick>
+								AuctionLite:FavoritesButton_OnClick(self:GetParent():GetParent():GetID());
+							</OnClick>
+						</Scripts>
+						<NormalTexture file="Interface\Buttons\UI-CheckBox-Check" alphaMode="ADD">
+							<Size>
+								<AbsDimension x="16" y="16"/>
+							</Size>
+							<Anchors>
+								<Anchor point="CENTER">
+									<Offset>
+										<AbsDimension x="0" y="0"/>
+									</Offset>
+								</Anchor>
+							</Anchors>
+							<Color r="1.0" g="1.0" b="1.0" a="0.2"/>
+						</NormalTexture>
+						<HighlightTexture file="Interface\Buttons\UI-CheckBox-Check" alphaMode="ADD">
+							<Size>
+								<AbsDimension x="16" y="16"/>
+							</Size>
+							<Anchors>
+								<Anchor point="CENTER">
+									<Offset>
+										<AbsDimension x="0" y="0"/>
+									</Offset>
+								</Anchor>
+							</Anchors>
+						</HighlightTexture>
+					</Button>
 					<Frame name="$parentMarketPriceFrame" inherits="SmallMoneyFrameTemplate">
 						<Anchors>
 							<Anchor point="RIGHT">
 								<Offset>
 									<AbsDimension x="10" y="2"/>
+								</Offset>
+							</Anchor>
+						</Anchors>
+						<Scripts>
+							<OnLoad>
+								SmallMoneyFrame_OnLoad(self);
+								MoneyFrame_SetType(self, "AUCTION");
+							</OnLoad>
+						</Scripts>
+					</Frame>
+					<Frame name="$parentHistPriceFrame" inherits="SmallMoneyFrameTemplate">
+						<Anchors>
+							<Anchor point="RIGHT">
+								<Offset>
+									<AbsDimension x="-125" y="2"/>
 								</Offset>
 							</Anchor>
 						</Anchors>
@@ -241,7 +298,7 @@
 		<Scripts>
 			<OnLoad>
 				self.UpdateTooltip =
-				  function() AuctionLite:BuyButton_OnEnter(self) end;
+					function() AuctionLite:BuyButton_OnEnter(self) end;
 			</OnLoad>
 			<OnEnter>
 				AuctionLite:BuyButton_OnEnter(self);
@@ -255,7 +312,7 @@
 		</Scripts>
 		<HighlightTexture name="$parentHighlight" file="Interface\HelpFrame\HelpFrameButton-Highlight" alphaMode="ADD">
 			<Size>
-				<AbsDimension x="770" y="18"/>
+				<AbsDimension x="777" y="18"/>
 			</Size>
 			<Anchors>
 				<Anchor point="TOPLEFT">
@@ -337,12 +394,12 @@
 		<Frames>
 			<Frame name="BuyExpand">
 				<Size>
-					<AbsDimension x="723" y="21"/>
+					<AbsDimension x="740" y="21"/>
 				</Size>
 				<Anchors>
 					<Anchor point="TOPLEFT">
 						<Offset>
-							<AbsDimension x="27" y="-75"/>
+							<AbsDimension x="21" y="-75"/>
 						</Offset>
 					</Anchor>
 				</Anchors>
@@ -434,7 +491,7 @@
 			</Frame>
 			<Frame name="BuySummaryHeader">
 				<Size>
-					<AbsDimension x="723" y="21"/>
+					<AbsDimension x="777" y="21"/>
 				</Size>
 				<Anchors>
 					<Anchor point="TOPLEFT" relativeTo="BuyExpand" relativePoint="BOTTOMLEFT">
@@ -449,7 +506,7 @@
 							<Anchors>
 								<Anchor point="TOPLEFT">
 									<Offset>
-										<AbsDimension x="0" y="-5"/>
+										<AbsDimension x="21" y="-5"/>
 									</Offset>
 								</Anchor>
 							</Anchors>
@@ -458,16 +515,25 @@
 							<Anchors>
 								<Anchor point="TOPRIGHT">
 									<Offset>
-										<AbsDimension x="43" y="-5"/>
+										<AbsDimension x="-5" y="-5"/>
+									</Offset>
+								</Anchor>
+							</Anchors>
+						</FontString>
+						<FontString name="BuyHistPriceText" inherits="GameFontNormalSmall" text="Historical Price">
+							<Anchors>
+								<Anchor point="TOPRIGHT" relativeTo="BuyMarketPriceText">
+									<Offset>
+										<AbsDimension x="-135" y="0"/>
 									</Offset>
 								</Anchor>
 							</Anchors>
 						</FontString>
 						<FontString name="BuyItemsText" inherits="GameFontNormalSmall" text="Items">
 							<Anchors>
-								<Anchor point="TOPRIGHT" relativeTo="BuyMarketPriceText">
+								<Anchor point="TOPRIGHT" relativeTo="BuyHistPriceText">
 									<Offset>
-										<AbsDimension x="-175" y="0"/>
+										<AbsDimension x="-150" y="0"/>
 									</Offset>
 								</Anchor>
 							</Anchors>
@@ -476,7 +542,7 @@
 							<Anchors>
 								<Anchor point="TOPRIGHT" relativeTo="BuyItemsText">
 									<Offset>
-										<AbsDimension x="-95" y="0"/>
+										<AbsDimension x="-50" y="0"/>
 									</Offset>
 								</Anchor>
 							</Anchors>
@@ -486,7 +552,7 @@
 			</Frame>
 			<Frame name="BuyHeader">
 				<Size>
-					<AbsDimension x="723" y="21"/>
+					<AbsDimension x="777" y="21"/>
 				</Size>
 				<Anchors>
 					<Anchor point="TOPLEFT" relativeTo="BuyExpand" relativePoint="BOTTOMLEFT">
@@ -510,7 +576,7 @@
 							<Anchors>
 								<Anchor point="TOPRIGHT">
 									<Offset>
-										<AbsDimension x="43" y="-5"/>
+										<AbsDimension x="-5" y="-5"/>
 									</Offset>
 								</Anchor>
 							</Anchors>
@@ -552,7 +618,7 @@
 						<Anchors>
 							<Anchor point="TOPLEFT">
 								<Offset>
-									<AbsDimension x="-4" y="0"/>
+									<AbsDimension x="0" y="0"/>
 								</Offset>
 							</Anchor>
 						</Anchors>
@@ -612,7 +678,7 @@
 				</Scripts>
 				<FontString inherits="ChatFontNormal" bytes="64"/>
 			</EditBox>
-			<Button name="BuySearchButton" inherits="UIPanelButtonTemplate" text="Search">
+			<Button name="BuyFavoritesButton" inherits="UIPanelButtonTemplate" text="Favorites">
 				<Size>
 					<AbsDimension x="80" y="22"/>
 				</Size>
@@ -625,11 +691,42 @@
 				</Anchors>
 				<Scripts>
 					<OnClick>
+						AuctionLite:AuctionFrameBuy_Favorites();
+					</OnClick>
+				</Scripts>
+			</Button>
+			<Button name="BuyDealsButton" inherits="UIPanelButtonTemplate" text="Deals">
+				<Size>
+					<AbsDimension x="80" y="22"/>
+				</Size>
+				<Anchors>
+					<Anchor point="TOPRIGHT" relativeTo="BuyFavoritesButton">
+						<Offset>
+							<AbsDimension x="-90" y="0"/>
+						</Offset>
+					</Anchor>
+				</Anchors>
+				<Scripts>
+					<OnClick>
+						AuctionLite:AuctionFrameBuy_Deals();
+					</OnClick>
+				</Scripts>
+			</Button>
+			<Button name="BuySearchButton" inherits="UIPanelButtonTemplate" text="Search">
+				<Size>
+					<AbsDimension x="80" y="22"/>
+				</Size>
+				<Anchors>
+					<Anchor point="TOPRIGHT" relativeTo="BuyDealsButton">
+						<Offset>
+							<AbsDimension x="-170" y="0"/>
+						</Offset>
+					</Anchor>
+				</Anchors>
+				<Scripts>
+					<OnClick>
 						AuctionLite:AuctionFrameBuy_Search();
 					</OnClick>
-					<OnUpdate>
-						--AuctionLite:BuySearchButton_OnUpdate(self, elapsed);
-					</OnUpdate>
 				</Scripts>
 			</Button>
 			<ScrollFrame name="BuyScrollFrame" inherits="FauxScrollFrameTemplate">

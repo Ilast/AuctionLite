@@ -32,6 +32,13 @@ local PurchaseOrder = nil;
 local SearchData = nil;
 local NoResults = false;
 
+-- Stored scan data from the latest full scan.
+local ScanData = nil;
+local DealsMode = false;
+
+-- Data for favorites as they are scanned.
+local FavoritesData = {};
+
 -- Set current item to be shown in detail view, and update dependent data.
 function AuctionLite:SetDetailLink(link)
   DetailLink = link;
@@ -47,7 +54,7 @@ function AuctionLite:SetDetailLink(link)
 end
 
 -- Set the data for the scrolling frame.
-function AuctionLite:SetBuyData(results)
+function AuctionLite:SetBuyData(results, dealsMode)
   SummaryData = {};
 
   local count = 0;
@@ -68,9 +75,20 @@ function AuctionLite:SetBuyData(results)
     end
   end
 
-  -- Sort our data by name.
-  table.sort(SummaryData,
-    function(a, b) return self:SplitLink(a) < self:SplitLink(b) end);
+  -- Sort our data by name/profit.
+  local sortByName = function(a, b)
+    return self:SplitLink(a) < self:SplitLink(b);
+  end
+
+  local sortByProfit = function(a, b)
+    return results[a].profit > results[b].profit;
+  end
+
+  if dealsMode then
+    table.sort(SummaryData, sortByProfit);
+  else
+    table.sort(SummaryData, sortByName);
+  end
 
   -- If we found our last-selected item, then select it again.
   -- If we found only one item, select it.  Otherwise, select nothing.
@@ -85,6 +103,7 @@ function AuctionLite:SetBuyData(results)
   -- Save our data and set our detail link, if we only got one kind of item.
   SearchData = results;
   NoResults = (count == 0);
+  DealsMode = dealsMode;
   self:SetDetailLink(newLink);
 
   -- Clean up the display.
@@ -96,6 +115,38 @@ function AuctionLite:SetBuyData(results)
 
   -- Repaint.
   self:AuctionFrameBuy_Update();
+end
+
+-- Handle results for a full scan.  Make a list of the deals.
+function AuctionLite:SetScanData(results)
+  ScanData = {};
+
+  -- Search through all scanned items.
+  for link, result in pairs(results) do
+    local hist = self:GetHistoricalPrice(link);
+
+    -- Find the lowest buyout.
+    local min = 0;
+    for _, listing in ipairs(result.data) do
+      if min == 0 or (0 < listing.buyout and listing.buyout < min) then
+        min = listing.buyout;
+      end
+    end
+
+    -- If it meets a bunch of conditions below, it's considered a deal.
+    if min > 0 and hist ~= nil and
+       min < hist.price - (10000 * self.db.profile.minProfit) and
+       min < hist.price * (1 - self.db.profile.minDiscount) and
+       hist.listings / hist.scans > 1.2 then
+
+      result.profit = hist.price - min;
+      ScanData[link] = result;
+    end
+  end
+
+  -- Display our list of deals.
+  DetailLinkPrev = nil;
+  self:SetBuyData(ScanData, true);
 end
 
 -- Determine whether the selected items are biddable/buyable.
@@ -274,6 +325,75 @@ function AuctionLite:UpdateProgressSearch(pct)
   BuyStatusText:SetText("Searching: " .. pct .. "%");
 end
 
+-- Show our progress for the favorites scan.  We assume each scan takes
+-- roughly the same amount of time, and then split each segment accordingly.
+function AuctionLite:UpdateProgressFavorites(pct)
+  local numDone = 0;
+  for _, _ in pairs(FavoritesData) do
+    numDone = numDone + 1;
+  end
+
+  local numFavs = 0;
+  for _, _ in pairs(self.db.profile.favorites) do
+    numFavs = numFavs + 1;
+  end
+
+  local overall = math.floor(100 * (numDone + (pct / 100)) / numFavs);
+  BuyStatusText:SetText("Searching: " .. overall .. "%");
+end
+
+-- Take the next step in a favorites scan.  If we need to scan for another
+-- item, do it; if there are no favorites left, display our results.
+function AuctionLite:FavoritesScan()
+  local request = nil;
+  local link;
+
+  -- Find an unscanned favorite.
+  for link, _ in pairs(self.db.profile.favorites) do
+    if FavoritesData[link] == nil then
+      request = link;
+      break;
+    end
+  end
+
+  if request ~= nil then
+    -- Start the scan.
+    local query = {
+      link = request,
+      update = function(pct) AuctionLite:UpdateProgressFavorites(pct) end,
+      finish = function(data, link) AuctionLite:SetFavoritesData(data, link) end,
+    };
+
+    if self:StartQuery(query) then
+      self:UpdateProgressFavorites(0);
+    end
+  else
+    -- Nothing left to scan, so show our results.
+    self:SetBuyData(FavoritesData);
+    FavoritesData = {};
+  end
+end
+
+-- Get the results for a favorites scan.
+function AuctionLite:SetFavoritesData(data, link)
+  FavoritesData[link] = data[link];
+  self:FavoritesScan();
+end
+
+-- Toggle the favorites flag for this item.
+function AuctionLite:FavoritesButton_OnClick(id)
+  local offset = FauxScrollFrame_GetOffset(BuyScrollFrame);
+  local link = SummaryData[offset + id];
+
+  if self.db.profile.favorites[link] == nil then
+    self.db.profile.favorites[link] = true;
+  else
+    self.db.profile.favorites[link] = nil;
+  end
+
+  self:AuctionFrameBuy_Update();
+end
+
 -- Handles clicks on the buttons in the "Buy" scroll frame.
 function AuctionLite:BuyButton_OnClick(id)
   local offset = FauxScrollFrame_GetOffset(BuyScrollFrame);
@@ -398,20 +518,56 @@ function AuctionLite:BuyBuyoutButton_OnClick()
   self:AuctionFrameBuy_Update();
 end
 
+-- Starts a full scan of the auction house.
+function AuctionLite:StartFullScan()
+  local query = {
+    name = "",
+    getAll = self.db.profile.getAll,
+    update = function(pct) AuctionLite:UpdateProgressScan(pct) end,
+    finish = function(data, link) AuctionLite:SetScanData(data) end,
+  };
+
+  if self:StartQuery(query) then
+    DetailLinkPrev = nil;
+    self:ClearBuyFrame(true);
+    BuyStatusText:Show();
+    self:UpdateProgressScan(0);
+  end
+end
+
+-- List current deals.  If we haven't done a full scan, do it now.
+function AuctionLite:AuctionFrameBuy_Deals()
+  if ScanData ~= nil then
+    DetailLinkPrev = nil;
+    self:SetScanData(ScanData);
+  else
+    self:StartFullScan();
+  end
+end
+
+-- Query and display favorites.
+function AuctionLite:AuctionFrameBuy_Favorites()
+  DetailLinkPrev = nil;
+  self:ClearBuyFrame(true);
+  BuyStatusText:Show();
+
+  self:FavoritesScan();
+end
+
 -- Submit a search query.
 function AuctionLite:AuctionFrameBuy_Search()
   local query = {
     name = BuyName:GetText(),
     wait = true,
     update = function(pct) AuctionLite:UpdateProgressSearch(pct) end,
-    finish = function(results, link) AuctionLite:SetBuyData(results, link) end,
+    finish = function(data) AuctionLite:SetBuyData(data) end,
   };
 
   if self:StartQuery(query) then
     DetailLinkPrev = DetailLink;
     self:ClearBuyFrame(true);
-    self:UpdateProgressSearch(0);
     BuyStatusText:Show();
+    self:UpdateProgressSearch(0);
   end
 end
 
@@ -422,8 +578,12 @@ function AuctionLite:AuctionFrameBuy_OnUpdate()
 
   if canSend then
     BuySearchButton:Enable();
+    BuyDealsButton:Enable();
+    BuyFavoritesButton:Enable();
   else
     BuySearchButton:Disable();
+    BuyDealsButton:Disable();
+    BuyFavoritesButton:Disable();
   end
 
   if canSend and biddable then
@@ -615,7 +775,7 @@ function AuctionLite:AuctionFrameBuy_UpdateDetail()
       local bidFrame         = _G[buttonDetailName .. "BidFrame"];
       local buyoutEachFrame  = _G[buttonDetailName .. "BuyoutEachFrame"];
       local buyoutFrame      = _G[buttonDetailName .. "BuyoutFrame"];
-
+      
       local name, color = self:SplitLink(DetailLink);
 
       local countColor;
@@ -695,7 +855,13 @@ function AuctionLite:AuctionFrameBuy_UpdateSummary()
   for i = 1, displaySize do
     local link = SummaryData[offset + i];
     if link ~= nil then
-      local result = SearchData[link];
+      local result;
+      
+      if DealsMode then
+        result = ScanData[link];
+      else
+        result = SearchData[link];
+      end
 
       local buttonName = "BuyButton" .. i;
       local button = _G[buttonName];
@@ -703,11 +869,19 @@ function AuctionLite:AuctionFrameBuy_UpdateSummary()
       local buttonSummaryName = buttonName .. "Summary";
       local buttonSummary     = _G[buttonSummaryName];
 
+      local starButton        = _G[buttonSummaryName .. "StarButton"];
       local nameText          = _G[buttonSummaryName .. "Name"];
       local plusText          = _G[buttonSummaryName .. "Plus"];
       local listingsText      = _G[buttonSummaryName .. "Listings"];
       local itemsText         = _G[buttonSummaryName .. "Items"];
-      local priceFrame        = _G[buttonSummaryName .. "MarketPriceFrame"];
+      local histFrame         = _G[buttonSummaryName .. "HistPriceFrame"];
+      local marketFrame       = _G[buttonSummaryName .. "MarketPriceFrame"];
+
+      if self.db.profile.favorites[link] then
+        starButton:GetNormalTexture():SetAlpha(1.0);
+      else
+        starButton:GetNormalTexture():SetAlpha(0.1);
+      end
 
       local name, color, _, _, enchant, jewel1, jewel2, jewel3, jewel4 =
         self:SplitLink(link);
@@ -715,7 +889,21 @@ function AuctionLite:AuctionFrameBuy_UpdateSummary()
       nameText:SetText("|c" .. color .. name .. "|r");
       listingsText:SetText("|cffffffff" .. result.listingsAll .. "|r");
       itemsText:SetText("|cffffffff" .. result.itemsAll .. "|r");
-      MoneyFrame_Update(priceFrame, math.floor(result.price));
+
+      if DealsMode then
+        MoneyFrame_Update(histFrame, math.floor(result.profit));
+        histFrame:Show();
+      else
+        local hist = self:GetHistoricalPrice(link);
+        if hist ~= nil then
+          MoneyFrame_Update(histFrame, math.floor(hist.price));
+          histFrame:Show();
+        else
+          histFrame:Hide();
+        end
+      end
+
+      MoneyFrame_Update(marketFrame, math.floor(result.price));
 
       if enchant ~= 0 or
          jewel1 ~= 0 or jewel2 ~= 0 or
@@ -739,6 +927,11 @@ function AuctionLite:AuctionFrameBuy_UpdateSummary()
 
   if table.getn(SummaryData) > 0 then
     BuySummaryHeader:Show();
+    if DealsMode then
+      BuyHistPriceText:SetText("Potential Profit");
+    else
+      BuyHistPriceText:SetText("Historical Price");
+    end
   end
 end
 
@@ -772,6 +965,14 @@ function AuctionLite:ClearBuyFrame(partial)
 
   ExpandHeight = 0;
   PurchaseOrder = nil;
+
+  if not partial then
+    ScanData = nil;
+  end
+
+  DealsMode = false;
+
+  FavoritesData = {};
 
   if not partial then
     BuyName:SetText("");
