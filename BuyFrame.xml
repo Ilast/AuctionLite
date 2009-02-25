@@ -262,7 +262,7 @@
 							</Anchors>
 						</HighlightTexture>
 					</Button>
-					<Frame name="$parentMarketPriceFrame" inherits="SmallMoneyFrameTemplate">
+					<Frame name="$parentHistPriceFrame" inherits="SmallMoneyFrameTemplate">
 						<Anchors>
 							<Anchor point="RIGHT">
 								<Offset>
@@ -277,7 +277,7 @@
 							</OnLoad>
 						</Scripts>
 					</Frame>
-					<Frame name="$parentHistPriceFrame" inherits="SmallMoneyFrameTemplate">
+					<Frame name="$parentMarketPriceFrame" inherits="SmallMoneyFrameTemplate">
 						<Anchors>
 							<Anchor point="RIGHT">
 								<Offset>
@@ -371,11 +371,11 @@
 						</Anchor>
 					</Anchors>
 				</FontString>
-				<FontString name="BuyStatusText" inherits="GameFontNormal">
+				<FontString name="BuyNoItemsText" inherits="GameFontNormal" text="No items found">
 					<Anchors>
-						<Anchor point="LEFT" relativePoint="TOPLEFT">
+						<Anchor point="CENTER" relativePoint="TOPLEFT">
 							<Offset>
-								<AbsDimension x="375" y="-150"/>
+								<AbsDimension x="425" y="-150"/>
 							</Offset>
 						</Anchor>
 					</Anchors>
@@ -392,6 +392,76 @@
 			</Layer>
 		</Layers>
 		<Frames>
+			<Frame name="BuyStatus">
+				<Size>
+					<AbsDimension x="250" y="350"/>
+				</Size>
+				<Anchors>
+					<Anchor point="TOPLEFT">
+						<Offset>
+							<AbsDimension x="375" y="-150"/>
+						</Offset>
+					</Anchor>
+				</Anchors>
+				<Layers>
+					<Layer level="ARTWORK">
+						<FontString name="BuyStatusText" inherits="GameFontNormal" justifyH="RIGHT" text="Searching:">
+							<Anchors>
+								<Anchor point="RIGHT" relativePoint="TOPLEFT">
+									<Offset>
+										<AbsDimension x="50" y="0"/>
+									</Offset>
+								</Anchor>
+							</Anchors>
+						</FontString>
+						<FontString name="BuyStatusData" inherits="GameFontHighlight">
+							<Anchors>
+								<Anchor point="LEFT" relativeTo="BuyStatusText" relativePoint="RIGHT">
+									<Offset>
+										<AbsDimension x="5" y="0"/>
+									</Offset>
+								</Anchor>
+							</Anchors>
+						</FontString>
+						<FontString name="BuyElapsedText" inherits="GameFontNormal" justifyH="RIGHT" text="Time Elapsed:">
+							<Anchors>
+								<Anchor point="RIGHT" relativeTo="BuyStatusText">
+									<Offset>
+										<AbsDimension x="0" y="-40"/>
+									</Offset>
+								</Anchor>
+							</Anchors>
+						</FontString>
+						<FontString name="BuyElapsedData" inherits="GameFontHighlight">
+							<Anchors>
+								<Anchor point="LEFT" relativeTo="BuyElapsedText" relativePoint="RIGHT">
+									<Offset>
+										<AbsDimension x="5" y="0"/>
+									</Offset>
+								</Anchor>
+							</Anchors>
+						</FontString>
+						<FontString name="BuyRemainingText" inherits="GameFontNormal" justifyH="RIGHT" text="Time Remaining:">
+							<Anchors>
+								<Anchor point="RIGHT" relativeTo="BuyElapsedText">
+									<Offset>
+										<AbsDimension x="0" y="-20"/>
+									</Offset>
+								</Anchor>
+							</Anchors>
+						</FontString>
+						<FontString name="BuyRemainingData" inherits="GameFontHighlight">
+							<Anchors>
+								<Anchor point="LEFT" relativeTo="BuyRemainingText" relativePoint="RIGHT">
+									<Offset>
+										<AbsDimension x="5" y="0"/>
+									</Offset>
+								</Anchor>
+							</Anchors>
+						</FontString>
+					</Layer>
+				</Layers>
+			</Frame>
 			<Frame name="BuyExpand">
 				<Size>
 					<AbsDimension x="740" y="21"/>
@@ -511,7 +581,7 @@
 								</Anchor>
 							</Anchors>
 						</FontString>
-						<FontString name="BuyMarketPriceText" inherits="GameFontNormalSmall" text="Market Price">
+						<FontString name="BuyHistPriceText" inherits="GameFontNormalSmall" text="Historical Price">
 							<Anchors>
 								<Anchor point="TOPRIGHT">
 									<Offset>
@@ -520,9 +590,9 @@
 								</Anchor>
 							</Anchors>
 						</FontString>
-						<FontString name="BuyHistPriceText" inherits="GameFontNormalSmall" text="Historical Price">
+						<FontString name="BuyMarketPriceText" inherits="GameFontNormalSmall" text="Market Price">
 							<Anchors>
-								<Anchor point="TOPRIGHT" relativeTo="BuyMarketPriceText">
+								<Anchor point="TOPRIGHT" relativeTo="BuyHistPriceText">
 									<Offset>
 										<AbsDimension x="-135" y="0"/>
 									</Offset>
@@ -531,7 +601,7 @@
 						</FontString>
 						<FontString name="BuyItemsText" inherits="GameFontNormalSmall" text="Items">
 							<Anchors>
-								<Anchor point="TOPRIGHT" relativeTo="BuyHistPriceText">
+								<Anchor point="TOPRIGHT" relativeTo="BuyMarketPriceText">
 									<Offset>
 										<AbsDimension x="-150" y="0"/>
 									</Offset>

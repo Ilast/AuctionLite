@@ -238,9 +238,7 @@ function AuctionLite:ClickAuctionSellItemButton_Hook()
         finish = function(data, link) AuctionLite:SetSellData(data, link) end,
       };
 
-      if self:StartQuery(query) then
-        self:UpdateProgressSell(0);
-      end
+      self:StartQuery(query);
     end
   end
 end

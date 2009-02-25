@@ -24,6 +24,8 @@ local Options = {
       desc = "Percent to undercut market value for bid prices (0-100).",
       name = "Bid Undercut",
       isPercent = true,
+      min = 0,
+      max = 1,
       order = 1,
     },
     buyoutUndercut = {
@@ -31,6 +33,8 @@ local Options = {
       desc = "Percent to undercut market value for buyout prices (0-100).",
       name = "Buyout Undercut",
       isPercent = true,
+      min = 0,
+      max = 1,
       order = 2,
     },
     vendorMultiplier = {
@@ -62,6 +66,8 @@ local Options = {
       desc = "Deals must be below the historical price by this percentage.",
       name = "Minimum Profit (Pct)",
       isPercent = true,
+      min = 0,
+      max = 1,
       order = 6,
     },
     showVendor = {

@@ -4,6 +4,27 @@
 -- General utility functions.
 -------------------------------------------------------------------------------
 
+-- Make a printable string for a time in seconds.
+function AuctionLite:PrintTime(sec)
+  local min = math.floor(sec / 60);
+  sec = sec % 60;
+
+  local hr = math.floor(min / 60);
+  min = min % 60;
+
+  local result = "";
+
+  if hr > 0 then
+    result = tostring(hr) .. ":" .. string.format("%02d", min) .. ":";
+  else
+    result = tostring(min) .. ":";
+  end
+
+  result = result .. string.format("%02d", sec);
+
+  return result;
+end
+
 -- Make a printable string for a given amount of money (in copper).
 function AuctionLite:PrintMoney(money)
   money = math.floor(money);

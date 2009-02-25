@@ -64,27 +64,26 @@ end
 
 -- Handle modified clicks on bag spaces.
 function AuctionLite:ContainerFrameItemButton_OnModifiedClick_Hook(widget, button)
-  if IsAltKeyDown() and button == "RightButton" then
-    local container = widget:GetParent():GetID();
-    local slot = widget:GetID();
+  local container = widget:GetParent():GetID();
+  local slot = widget:GetID();
 
-    if AuctionFrameBuy:IsVisible() then
-      self:BagClickBuy(container, slot);
-    elseif AuctionFrameSell:IsVisible() then
-      self:BagClickSell(container, slot);
-    else
-      AuctionFrameTab_OnClick(_G["AuctionFrameTab" .. SellTabIndex]);
-      self:BagClickSell(container, slot);
-    end
+  if IsAltKeyDown() and button == "RightButton" then
+    AuctionFrameTab_OnClick(_G["AuctionFrameTab" .. SellTabIndex]);
+    self:BagClickSell(container, slot);
+  elseif IsControlKeyDown() and button == "RightButton" then
+    AuctionFrameTab_OnClick(_G["AuctionFrameTab" .. BuyTabIndex]);
+    self:BagClickBuy(container, slot);
   end
 end
 
 -- Updates our scan progress.
-function AuctionLite:UpdateProgressScan(pct)
-  self:UpdateProgressSearch(pct);
+function AuctionLite:UpdateProgressScan(pct, getAll)
+  self:UpdateProgressSearch(pct, getAll);
 
   if pct == 100 then
     BrowseScanText:SetText("");
+  elseif getAll then
+    BrowseScanText:SetText("...");
   else
     BrowseScanText:SetText(tostring(pct) .. "%");
   end

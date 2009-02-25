@@ -99,6 +99,12 @@ function AuctionLite:QueryUpdate()
 
       -- Wait for our result.
       Query.state = QUERY_STATE_WAIT;
+
+      -- If this is the first query, notify the caller (mostly so that
+      -- they know whether we're doing getAll or not).
+      if Query.update ~= nil and Query.page == 0 then
+        Query.update(0, getAll);
+      end
     else
       self:CancelQuery();
     end
@@ -390,7 +396,7 @@ function AuctionLite:QueryNewData()
   -- Update status.
   local pct = math.floor(seen * 100 / Query.total);
   if Query.update ~= nil then
-    Query.update(pct);
+    Query.update(pct, Query.getAll);
   end
 
   -- Handle the new data based on the kind of query.
@@ -403,13 +409,14 @@ function AuctionLite:QueryNewData()
       local oldQuery = Query;
       -- We're done.  End the query and return the results.
       self:QueryEnd();
-      local results = self:AnalyzeData(oldQuery.data);
-      if oldQuery.finish ~= nil then
-        oldQuery.finish(results, oldQuery.link);
-      end
       -- Update our price info.
+      local results = self:AnalyzeData(oldQuery.data);
       for link, result in pairs(results) do 
         self:UpdateHistoricalPrice(link, result);
+      end
+      -- Notify our caller.
+      if oldQuery.finish ~= nil then
+        oldQuery.finish(results, oldQuery.link);
       end
     end
   else
