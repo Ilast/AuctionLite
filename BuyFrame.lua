@@ -112,7 +112,15 @@ function AuctionLite:SetBuyData(results, dealsMode)
 
   -- Sort our data by name/profit.
   local sortByName = function(a, b)
-    return self:SplitLink(a) < self:SplitLink(b);
+    local aFav = self.db.profile.favorites[a];
+    local bFav = self.db.profile.favorites[b];
+    if aFav == bFav then
+      return self:SplitLink(a) < self:SplitLink(b);
+    elseif aFav then
+      return true;
+    else
+      return false;
+    end
   end
 
   local sortByProfit = function(a, b)

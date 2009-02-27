@@ -98,7 +98,20 @@ local Options = {
       type = "toggle",
       desc = "Use fast method for full scans (may cause disconnects).",
       name = "Fast Auction Scan",
+      width = "full",
       order = 11,
+    },
+    startTab = {
+      type = "select",
+      desc = "Choose which tab is selected when opening the auction house.",
+      name = "Start Tab",
+      style = "dropdown",
+      values = {
+        a_default = "Default",
+        b_buy = "Buy Tab",
+        c_sell = "Sell Tab",
+        d_last = "Last Used Tab",
+      },
     },
   },
 }
@@ -141,6 +154,8 @@ local Defaults = {
     showStackPrice = true,
     printPriceData = false,
     getAll = false,
+    startTab = "a_default",
+    lastTab = 1,
     fastScanAd = false,
     showGreeting = false,
     favorites = {},
@@ -154,17 +169,6 @@ local AUCTIONLITE_VERSION = 0.6;
 -------------------------------------------------------------------------------
 -- Hooks and boostrap code
 -------------------------------------------------------------------------------
-
--- Clean up if the auction house is closed.
-function AuctionLite:AUCTION_HOUSE_CLOSED()
-  self:ClearBuyFrame();
-  self:ClearSellFrame();
-  self:ClearSavedPrices();
-
-  self:ResetAuctionCreation();
-
-  collectgarbage("collect");
-end
 
 -- Hook some AH/GB functions and UI widgets when the AH/GB gets loaded.
 function AuctionLite:ADDON_LOADED(_, name)
@@ -227,6 +231,7 @@ function AuctionLite:OnInitialize()
   -- Register for events.
   self:RegisterEvent("ADDON_LOADED");
   self:RegisterEvent("AUCTION_ITEM_LIST_UPDATE");
+  self:RegisterEvent("AUCTION_HOUSE_SHOW");
   self:RegisterEvent("AUCTION_HOUSE_CLOSED");
 
   -- Another addon may have forced the Blizzard addons to load early.
