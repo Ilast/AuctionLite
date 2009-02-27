@@ -13,11 +13,11 @@ AuctionLite.lua
 
 AuctionFrame.lua
 
-BuyFrame.xml
 BuyFrame.lua
+BuyFrame.xml
 
-SellFrame.xml
 SellFrame.lua
+SellFrame.xml
 
 CreateAuctions.lua
 QueryAuctions.lua

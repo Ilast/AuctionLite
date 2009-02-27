@@ -141,6 +141,7 @@ local Defaults = {
     showStackPrice = true,
     printPriceData = false,
     getAll = false,
+    fastScanAd = false,
     showGreeting = false,
     favorites = {},
   },

@@ -394,12 +394,12 @@
 		<Frames>
 			<Frame name="BuyStatus">
 				<Size>
-					<AbsDimension x="250" y="350"/>
+					<AbsDimension x="150" y="200"/>
 				</Size>
 				<Anchors>
 					<Anchor point="TOPLEFT">
 						<Offset>
-							<AbsDimension x="375" y="-150"/>
+							<AbsDimension x="340" y="-170"/>
 						</Offset>
 					</Anchor>
 				</Anchors>
@@ -407,9 +407,9 @@
 					<Layer level="ARTWORK">
 						<FontString name="BuyStatusText" inherits="GameFontNormal" justifyH="RIGHT" text="Searching:">
 							<Anchors>
-								<Anchor point="RIGHT" relativePoint="TOPLEFT">
+								<Anchor point="LEFT" relativePoint="TOPLEFT">
 									<Offset>
-										<AbsDimension x="50" y="0"/>
+										<AbsDimension x="0" y="0"/>
 									</Offset>
 								</Anchor>
 							</Anchors>
@@ -418,32 +418,32 @@
 							<Anchors>
 								<Anchor point="LEFT" relativeTo="BuyStatusText" relativePoint="RIGHT">
 									<Offset>
-										<AbsDimension x="5" y="0"/>
+										<AbsDimension x="55" y="0"/>
 									</Offset>
 								</Anchor>
 							</Anchors>
 						</FontString>
 						<FontString name="BuyElapsedText" inherits="GameFontNormal" justifyH="RIGHT" text="Time Elapsed:">
 							<Anchors>
-								<Anchor point="RIGHT" relativeTo="BuyStatusText">
+								<Anchor point="LEFT" relativeTo="BuyStatusText">
 									<Offset>
-										<AbsDimension x="0" y="-40"/>
+										<AbsDimension x="0" y="-30"/>
 									</Offset>
 								</Anchor>
 							</Anchors>
 						</FontString>
 						<FontString name="BuyElapsedData" inherits="GameFontHighlight">
 							<Anchors>
-								<Anchor point="LEFT" relativeTo="BuyElapsedText" relativePoint="RIGHT">
+								<Anchor point="LEFT" relativeTo="BuyStatusData">
 									<Offset>
-										<AbsDimension x="5" y="0"/>
+										<AbsDimension x="0" y="-30"/>
 									</Offset>
 								</Anchor>
 							</Anchors>
 						</FontString>
 						<FontString name="BuyRemainingText" inherits="GameFontNormal" justifyH="RIGHT" text="Time Remaining:">
 							<Anchors>
-								<Anchor point="RIGHT" relativeTo="BuyElapsedText">
+								<Anchor point="LEFT" relativeTo="BuyElapsedText">
 									<Offset>
 										<AbsDimension x="0" y="-20"/>
 									</Offset>
@@ -452,15 +452,34 @@
 						</FontString>
 						<FontString name="BuyRemainingData" inherits="GameFontHighlight">
 							<Anchors>
-								<Anchor point="LEFT" relativeTo="BuyRemainingText" relativePoint="RIGHT">
+								<Anchor point="LEFT" relativeTo="BuyElapsedData">
 									<Offset>
-										<AbsDimension x="5" y="0"/>
+										<AbsDimension x="0" y="-20"/>
 									</Offset>
 								</Anchor>
 							</Anchors>
 						</FontString>
 					</Layer>
 				</Layers>
+				<Frames>
+					<Button name="BuyCancelSearchButton" inherits="UIPanelButtonTemplate" text="Cancel">
+						<Size>
+							<AbsDimension x="80" y="22"/>
+						</Size>
+						<Anchors>
+							<Anchor point="CENTER">
+								<Offset>
+									<AbsDimension x="0" y="0"/>
+								</Offset>
+							</Anchor>
+						</Anchors>
+						<Scripts>
+							<OnClick>
+								AuctionLite:BuyCancelButton_OnClick();
+							</OnClick>
+						</Scripts>
+					</Button>
+				</Frames>
 			</Frame>
 			<Frame name="BuyExpand">
 				<Size>
@@ -720,8 +739,10 @@
 						BuyQuantity:SetFocus();
 					</OnTabPressed>
 					<OnEnterPressed>
-						AuctionLite:AuctionFrameBuy_Search();
-						self:ClearFocus();
+						if self:GetText() ~= "" then
+							AuctionLite:AuctionFrameBuy_Search();
+							self:ClearFocus();
+						end
 					</OnEnterPressed>
 				</Scripts>
 				<FontString inherits="ChatFontNormal" bytes="64"/>
@@ -742,43 +763,106 @@
 						BuyName:SetFocus();
 					</OnTabPressed>
 					<OnEnterPressed>
-						AuctionLite:AuctionFrameBuy_Search();
-						self:ClearFocus();
+						if self:GetText() ~= "" then
+							AuctionLite:AuctionFrameBuy_Search();
+							self:ClearFocus();
+						end
 					</OnEnterPressed>
 				</Scripts>
 				<FontString inherits="ChatFontNormal" bytes="64"/>
 			</EditBox>
-			<Button name="BuyFavoritesButton" inherits="UIPanelButtonTemplate" text="Favorites">
+			<Button name="BuyAdvanced">
 				<Size>
-					<AbsDimension x="80" y="22"/>
+					<AbsDimension x="24" y="24"/>
 				</Size>
 				<Anchors>
 					<Anchor point="TOPRIGHT">
 						<Offset>
-							<AbsDimension x="50" y="-44"/>
+							<AbsDimension x="60" y="-44"/>
 						</Offset>
 					</Anchor>
 				</Anchors>
 				<Scripts>
 					<OnClick>
-						AuctionLite:AuctionFrameBuy_Favorites();
+						ToggleDropDownMenu(nil, nil, BuyAdvancedDropDown);
 					</OnClick>
 				</Scripts>
+				<Layers>
+					<Layer level="ARTWORK">
+						<FontString name="$parentText" inherits="GameFontNormal" text="Advanced" justifyH="RIGHT">
+							<Anchors>
+								<Anchor point="RIGHT" relativePoint="LEFT">
+									<Offset>
+										<AbsDimension x="-3" y="0"/>
+									</Offset>
+								</Anchor>
+							</Anchors>
+						</FontString>
+					</Layer>
+				</Layers>
+				<NormalTexture name="$parentNormalTexture" file="Interface\ChatFrame\UI-ChatIcon-ScrollDown-Up">
+					<Size>
+						<AbsDimension x="24" y="24"/>
+					</Size>
+					<Anchors>
+						<Anchor point="RIGHT"/>
+					</Anchors>
+				</NormalTexture>
+				<PushedTexture name="$parentPushedTexture" file="Interface\ChatFrame\UI-ChatIcon-ScrollDown-Down">
+					<Size>
+						<AbsDimension x="24" y="24"/>
+					</Size>
+					<Anchors>
+						<Anchor point="RIGHT"/>
+					</Anchors>
+				</PushedTexture>
+				<DisabledTexture name="$parentDisabledTexture" file="Interface\ChatFrame\UI-ChatIcon-ScrollDown-Disabled">
+					<Size>
+						<AbsDimension x="24" y="24"/>
+					</Size>
+					<Anchors>
+						<Anchor point="RIGHT"/>
+					</Anchors>
+				</DisabledTexture>
+				<HighlightTexture name="$parentHighlightTexture" file="Interface\Buttons\UI-Common-MouseHilight" alphaMode="ADD">
+					<Size>
+						<AbsDimension x="24" y="24"/>
+					</Size>
+					<Anchors>
+						<Anchor point="RIGHT"/>
+					</Anchors>
+				</HighlightTexture>
 			</Button>
-			<Button name="BuyDealsButton" inherits="UIPanelButtonTemplate" text="Deals">
+			<Frame name="BuyAdvancedDropDown" inherits="UIDropDownMenuTemplate" id="1" hidden="true">
+				<Anchors>
+					<Anchor point="TOPRIGHT" relativeTo="BuyAdvanced">
+						<Offset>
+							<AbsDimension x="0" y="0"/>
+						</Offset>
+					</Anchor>
+				</Anchors>
+				<Scripts>
+					<OnLoad>
+						local func = function(menu) AuctionLite:AdvancedMenuInit(menu) end;
+						UIDropDownMenu_SetWidth(self, 100);
+						UIDropDownMenu_Initialize(self, func, "MENU");
+					</OnLoad>
+				</Scripts>
+			</Frame>
+			<Button name="BuyScanButton" inherits="UIPanelButtonTemplate" text="Full Scan">
 				<Size>
-					<AbsDimension x="80" y="22"/>
+					<AbsDimension x="95" y="22"/>
 				</Size>
 				<Anchors>
-					<Anchor point="TOPRIGHT" relativeTo="BuyFavoritesButton">
+					<Anchor point="TOPRIGHT">
 						<Offset>
-							<AbsDimension x="-90" y="0"/>
+							<AbsDimension x="-100" y="-44"/>
 						</Offset>
 					</Anchor>
 				</Anchors>
 				<Scripts>
 					<OnClick>
-						AuctionLite:AuctionFrameBuy_Deals();
+						AuctionLite:StartFullScan();
 					</OnClick>
 				</Scripts>
 			</Button>
@@ -787,9 +871,9 @@
 					<AbsDimension x="80" y="22"/>
 				</Size>
 				<Anchors>
-					<Anchor point="TOPRIGHT" relativeTo="BuyDealsButton">
+					<Anchor point="TOPRIGHT" relativeTo="BuyScanButton" relativePoint="TOPLEFT">
 						<Offset>
-							<AbsDimension x="-170" y="0"/>
+							<AbsDimension x="-10" y="0"/>
 						</Offset>
 					</Anchor>
 				</Anchors>

@@ -34,6 +34,7 @@ local LastTime = nil;
 local LastRemaining = nil;
 local Progress = nil;
 local GetAll = nil;
+local Scanning = nil;
 
 -- Overall data returned from search.
 local SearchData = nil;
@@ -45,6 +46,33 @@ local DealsMode = false;
 
 -- Data for favorites as they are scanned.
 local FavoritesData = {};
+
+-- Static popup advertising AL's fast scan.
+StaticPopupDialogs["AL_FAST_SCAN"] = {
+	text = "AuctionLite's fast auction scan can scan the entire auction " ..
+         "house in a few seconds, but may cause disconnects to occur. " ..
+         "\n\n" ..
+         "Enable fast auction scans?" ..
+         "\n\n" ..
+         "(This setting can be modified later on the AuctionLite " ..
+         "options screen.)",
+	button1 = "Enable",
+  button2 = "Disable",
+	OnAccept = function(self)
+    AuctionLite.db.profile.fastScanAd = true;
+    AuctionLite.db.profile.getAll = true;
+    AuctionLite:StartFullScan();
+  end,
+	OnCancel = function(self)
+    AuctionLite.db.profile.fastScanAd = true;
+    AuctionLite.db.profile.getAll = false;
+    AuctionLite:StartFullScan();
+  end,
+	showAlert = 1,
+	timeout = 0,
+	exclusive = 1,
+	hideOnEscape = 1
+};
 
 -- Set current item to be shown in detail view, and update dependent data.
 function AuctionLite:SetDetailLink(link)
@@ -108,11 +136,7 @@ function AuctionLite:SetBuyData(results, dealsMode)
   DetailLinkPrev = nil;
 
   -- Reset current query info.
-  StartTime = nil;
-  LastTime = nil;
-  LastRemaining = nil;
-  Progress = nil;
-  GetAll = nil;
+  self:ResetSearch();
 
   -- Save our data and set our detail link, if we only got one kind of item.
   SearchData = results;
@@ -336,7 +360,7 @@ function AuctionLite:PurchaseComplete()
 end
 
 -- Update search progress display.
-function AuctionLite:UpdateProgressSearch(pct, getAll)
+function AuctionLite:UpdateProgressSearch(pct, getAll, scan)
   -- If we got a progress update, record it.
   if pct ~= nil then
     Progress = pct;
@@ -347,9 +371,12 @@ function AuctionLite:UpdateProgressSearch(pct, getAll)
     StartTime = math.floor(time());
   end
 
-  -- Figure out whether we're actually doing getAll.
+  -- Figure out whether we're actually doing getAll and/or scanning.
   if GetAll == nil and getAll ~= nil then
     GetAll = getAll;
+  end
+  if Scanning == nil and scan ~= nil then
+    Scanning = scan;
   end
 
   -- Update the display every second.
@@ -385,10 +412,14 @@ function AuctionLite:UpdateProgressSearch(pct, getAll)
 
     -- Update the percentage.
     if GetAll then
-      BuyStatusText:SetText("Searching...");
+      BuyStatusText:SetText("Scanning...");
       BuyStatusData:SetText("");
     else
-      BuyStatusText:SetText("Searching:");
+      if Scanning then
+        BuyStatusText:SetText("Scanning:");
+      else
+        BuyStatusText:SetText("Searching:");
+      end
       BuyStatusData:SetText(tostring(Progress) .. "%");
     end
 
@@ -412,12 +443,12 @@ function AuctionLite:UpdateProgressFavorites(pct)
   end
 
   local overall = math.floor(((100 * numDone) + pct) / numFavs);
-  BuyStatusData:SetText(tostring(overall) .. "%");
+  self:UpdateProgressSearch(overall);
 end
 
 -- Take the next step in a favorites scan.  If we need to scan for another
 -- item, do it; if there are no favorites left, display our results.
-function AuctionLite:FavoritesScan()
+function AuctionLite:FavoritesScan(first)
   local request = nil;
   local link;
 
@@ -437,7 +468,10 @@ function AuctionLite:FavoritesScan()
       finish = function(data, link) AuctionLite:SetFavoritesData(data, link) end,
     };
 
-    self:StartQuery(query);
+    if self:StartQuery(query) and first then
+      DetailLinkPrev = nil;
+      self:ClearBuyFrame(true);
+    end
   else
     -- Nothing left to scan, so erase any empty objects in our list.
     for link, results in pairs(FavoritesData) do
@@ -575,6 +609,7 @@ end
 function AuctionLite:BuySummaryButton_OnClick()
   if PurchaseOrder ~= nil and self:GetCart() ~= nil then
     self:CancelQuery();
+    self:ResetSearch();
   end
 
   self:SetDetailLink(nil);
@@ -592,6 +627,7 @@ end
 -- Cancel a pending purchase.
 function AuctionLite:BuyCancelButton_OnClick()
   self:CancelQuery();
+  self:ResetSearch();
   self:AuctionFrameBuy_Update();
 end
 
@@ -609,16 +645,24 @@ end
 
 -- Starts a full scan of the auction house.
 function AuctionLite:StartFullScan()
-  local query = {
-    name = "",
-    getAll = self.db.profile.getAll,
-    update = function(pct, all) AuctionLite:UpdateProgressScan(pct, all) end,
-    finish = function(data, link) AuctionLite:SetScanData(data) end,
-  };
+  if not self.db.profile.fastScanAd then
+    StaticPopup_Show("AL_FAST_SCAN");
+  else
+    local query = {
+      name = "",
+      getAll = self.db.profile.getAll,
+      update = function(pct, all)
+        AuctionLite:UpdateProgressSearch(pct, all, true);
+      end,
+      finish = function(data, link)
+        AuctionLite:SetScanData(data);
+      end,
+    };
 
-  if self:StartQuery(query) then
-    DetailLinkPrev = nil;
-    self:ClearBuyFrame(true);
+    if self:StartQuery(query) then
+      DetailLinkPrev = nil;
+      self:ClearBuyFrame(true);
+    end
   end
 end
 
@@ -634,10 +678,7 @@ end
 
 -- Query and display favorites.
 function AuctionLite:AuctionFrameBuy_Favorites()
-  DetailLinkPrev = nil;
-  self:ClearBuyFrame(true);
-
-  self:FavoritesScan();
+  self:FavoritesScan(true);
 end
 
 -- Submit a search query.
@@ -660,14 +701,16 @@ function AuctionLite:AuctionFrameBuy_OnUpdate()
   local canSend = CanSendAuctionQuery("list") and not self:QueryInProgress();
   local biddable, buyable = self:GetSelectionStatus();
 
-  if canSend then
+  if canSend and BuyName:GetText() ~= "" then
     BuySearchButton:Enable();
-    BuyDealsButton:Enable();
-    BuyFavoritesButton:Enable();
   else
     BuySearchButton:Disable();
-    BuyDealsButton:Disable();
-    BuyFavoritesButton:Disable();
+  end
+
+  if canSend then
+    BuyScanButton:Enable();
+  else
+    BuyScanButton:Disable();
   end
 
   if canSend and biddable then
@@ -1035,6 +1078,16 @@ function AuctionLite:BagClickBuy(container, slot)
   end
 end
 
+-- Resets all info about an in-progress search.
+function AuctionLite:ResetSearch()
+  StartTime = nil;
+  LastTime = nil;
+  LastRemaining = nil;
+  Progress = nil;
+  GetAll = nil;
+  Scanning = nil;
+end
+
 -- Clean up the "Buy" tab.
 function AuctionLite:ClearBuyFrame(partial)
   ExpandHeight = 0;
@@ -1052,11 +1105,7 @@ function AuctionLite:ClearBuyFrame(partial)
   SummaryData = {};
   PurchaseOrder = nil;
 
-  StartTime = nil;
-  LastTime = nil;
-  LastRemaining = nil;
-  Progress = nil;
-  GetAll = nil;
+  self:ResetSearch();
 
   SearchData = nil;
   NoResults = false;
@@ -1086,6 +1135,19 @@ function AuctionLite:ClearBuyFrame(partial)
   FauxScrollFrame_SetOffset(BuyScrollFrame, 0);
 
   self:AuctionFrameBuy_Update();
+end
+
+-- Populate the advanced menu.
+function AuctionLite:AdvancedMenuInit(menu)
+  local info = UIDropDownMenu_CreateInfo();
+  info.text = "Show Deals";
+  info.func = function() AuctionLite:AuctionFrameBuy_Deals() end;
+  UIDropDownMenu_AddButton(info);
+
+  local info = UIDropDownMenu_CreateInfo();
+  info.text = "Show Favorites";
+  info.func = function() AuctionLite:AuctionFrameBuy_Favorites() end;
+  UIDropDownMenu_AddButton(info);
 end
 
 -- Create the "Buy" tab.
