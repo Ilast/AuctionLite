@@ -87,8 +87,9 @@ function AuctionLite:QueryUpdate()
           getAll = true;
         else
           Query.getAll = false;
-          self:Print("|cffff0000[Warning]|r Fast queries can only be used " ..
-                     "once every 15 minutes. Using a slow query for now.");
+          self:Print("|cffffd000[Note]|r " ..
+                     "Fast auction scans can only be used once every " ..
+                     "15 minutes. Using a slow scan for now.");
         end
       end
 

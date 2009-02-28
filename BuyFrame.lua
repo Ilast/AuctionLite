@@ -50,20 +50,22 @@ local FavoritesData = {};
 -- Static popup advertising AL's fast scan.
 StaticPopupDialogs["AL_FAST_SCAN"] = {
 	text = "AuctionLite's fast auction scan can scan the entire auction " ..
-         "house in a few seconds, but may cause disconnects to occur. " ..
+         "house in a few seconds." ..
          "\n\n" ..
-         "Enable fast auction scans?" ..
+         "If you experience problems during fast auction scans, this " ..
+         "feature can be disabled on the AuctionLite options screen." ..
          "\n\n" ..
-         "(This setting can be modified later on the AuctionLite " ..
-         "options screen.)",
+         "Enable fast auction scans?",
 	button1 = "Enable",
   button2 = "Disable",
 	OnAccept = function(self)
+    AuctionLite:Print("Fast auction scan enabled.");
     AuctionLite.db.profile.fastScanAd = true;
     AuctionLite.db.profile.getAll = true;
     AuctionLite:StartFullScan();
   end,
 	OnCancel = function(self)
+    AuctionLite:Print("Fast auction scan disabled.");
     AuctionLite.db.profile.fastScanAd = true;
     AuctionLite.db.profile.getAll = false;
     AuctionLite:StartFullScan();
@@ -1155,6 +1157,13 @@ function AuctionLite:AdvancedMenuInit(menu)
   local info = UIDropDownMenu_CreateInfo();
   info.text = "Show Favorites";
   info.func = function() AuctionLite:AuctionFrameBuy_Favorites() end;
+  UIDropDownMenu_AddButton(info);
+
+  local info = UIDropDownMenu_CreateInfo();
+  info.text = "Configure AuctionLite";
+  info.func = function()
+    InterfaceOptionsFrame_OpenToCategory(self.optionFrames.main);
+  end
   UIDropDownMenu_AddButton(info);
 end
 

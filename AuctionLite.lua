@@ -1,5 +1,5 @@
 -------------------------------------------------------------------------------
--- AuctionLite 0.6
+-- AuctionLite 0.7
 --
 -- Lightweight addon to determine accurate market prices and to simplify
 -- the process of posting auctions.
@@ -98,8 +98,13 @@ local Options = {
       type = "toggle",
       desc = "Use fast method for full scans (may cause disconnects).",
       name = "Fast Auction Scan",
-      width = "full",
       order = 11,
+    },
+    openBags = {
+      type = "toggle",
+      desc = "Open all your bags when you visit the auction house.",
+      name = "Open All Bags at AH",
+      order = 12,
     },
     startTab = {
       type = "select",
@@ -154,6 +159,7 @@ local Defaults = {
     showStackPrice = true,
     printPriceData = false,
     getAll = false,
+    openBags = false,
     startTab = "a_default",
     lastTab = 1,
     fastScanAd = false,
@@ -164,7 +170,7 @@ local Defaults = {
 
 local DBName = "AuctionLiteDB";
 
-local AUCTIONLITE_VERSION = 0.6;
+local AUCTIONLITE_VERSION = 0.7;
 
 -------------------------------------------------------------------------------
 -- Hooks and boostrap code

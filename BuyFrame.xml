@@ -844,7 +844,7 @@
 				<Scripts>
 					<OnLoad>
 						local func = function(menu) AuctionLite:AdvancedMenuInit(menu) end;
-						UIDropDownMenu_SetWidth(self, 100);
+						UIDropDownMenu_SetWidth(self, 140);
 						UIDropDownMenu_Initialize(self, func, "MENU");
 					</OnLoad>
 				</Scripts>

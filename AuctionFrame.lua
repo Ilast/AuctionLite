@@ -88,6 +88,10 @@ function AuctionLite:AUCTION_HOUSE_SHOW()
   if jumpTab ~= nil and _G["AuctionFrameTab" .. jumpTab] ~= nil then
     AuctionFrameTab_OnClick(_G["AuctionFrameTab" .. jumpTab]);
   end
+
+  if self.db.profile.openBags then
+    OpenAllBags(true);
+  end
 end
 
 -- Clean up if the auction house is closed.
