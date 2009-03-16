@@ -719,23 +719,6 @@
 					</OnLoad>
 				</Scripts>
 			</Frame>
-			<Button name="SellCloseButton" inherits="UIPanelButtonTemplate" text="CLOSE">
-				<Size>
-					<AbsDimension x="80" y="22"/>
-				</Size>
-				<Anchors>
-					<Anchor point="BOTTOMRIGHT" relativePoint="BOTTOMRIGHT">
-						<Offset>
-							<AbsDimension x="66" y="14"/>
-						</Offset>
-					</Anchor>
-				</Anchors>
-				<Scripts>
-					<OnClick>
-						HideUIPanel(self:GetParent():GetParent());
-					</OnClick>
-				</Scripts>
-			</Button>
 			<Button name="SellCreateAuctionButton" inherits="UIPanelButtonTemplate" text="CREATE_AUCTION">
 				<Size>
 					<AbsDimension x="191" y="20"/>

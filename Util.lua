@@ -178,3 +178,60 @@ function AuctionLite:Truncate(str, bytes)
 
   return str:sub(1, bytes);
 end
+
+-- Get a listing from the auction house.
+function AuctionLite:GetListing(kind, i)
+  -- There has *got* to be a better way to do this...
+  local link = self:RemoveUniqueId(GetAuctionItemLink(kind, i));
+  local name, texture, count, quality, canUse, level,
+        minBid, minIncrement, buyout, bidAmount,
+        highBidder, owner = GetAuctionItemInfo(kind, i);
+
+  -- Figure out the true minimum bid.
+  local bid;
+  if bidAmount <= 0 then
+    bid = minBid;
+  else
+    bid = bidAmount + minIncrement;
+    if bid > buyout and buyout > 0 then
+      bid = buyout;
+    end
+  end
+
+  -- Craete a listing object with all this data.
+  local listing = {
+    link = link, name = name, texture = texture, count = count,
+    quality = quality, canUse = canUse, level = level,
+    bid = bid, minBid = minBid, minIncrement = minIncrement,
+    buyout = buyout, bidAmount = bidAmount,
+    highBidder = highBidder, owner = owner
+  };
+
+  return listing;
+end
+
+-- Does a target from the "Buy" frame match an auction listing?
+function AuctionLite:MatchListing(targetName, target, listing)
+  return targetName == listing.name and
+         target.count == listing.count and
+         target.bid == listing.bid and
+         target.buyout == listing.buyout and
+         (target.owner == nil or listing.owner == nil or
+          target.owner == listing.owner);
+end
+
+-- Get the names of all my auctions.
+function AuctionLite:GetMyAuctionLinks()
+  local batch = GetNumAuctionItems("owner");
+  local links = {};
+
+  -- Find all the auctions to cancel.
+  local i;
+  for i = 1, batch do
+    local listing = self:GetListing("owner", i);
+    links[listing.link] = true;
+  end
+
+  return links;
+end
+

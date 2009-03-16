@@ -373,16 +373,6 @@ function AuctionLite:ShowReceipt(cancelled)
   end
 end
 
--- Does a target from the shopping list match a listing?
-function AuctionLite:ListingMatch(targetName, target, listing)
-  return targetName == listing.name and
-         target.count == listing.count and
-         target.bid == listing.bid and
-         target.buyout == listing.buyout and
-         (target.owner == nil or listing.owner == nil or
-          target.owner == listing.owner);
-end
-
 -- We've got new data.
 function AuctionLite:QueryNewData()
   assert(Query ~= nil);
@@ -434,7 +424,7 @@ function AuctionLite:QueryNewData()
       local listing = Query.data[Query.page * AUCTIONS_PER_PAGE + i];
       for _, target in ipairs(Query.list) do
         if not target.found and
-           self:ListingMatch(Query.name, target, listing) then
+           self:MatchListing(Query.name, target, listing) then
           target.found = true;
           listing.index = i;
           listing.target = target;
@@ -468,34 +458,10 @@ function AuctionLite:AUCTION_ITEM_LIST_UPDATE()
     local i;
 
     for i = 1, Query.batch do
-      -- There has *got* to be a better way to do this...
-      local link = self:RemoveUniqueId(GetAuctionItemLink("list", i));
-      local name, texture, count, quality, canUse, level,
-            minBid, minIncrement, buyout, bidAmount,
-            highBidder, owner = GetAuctionItemInfo("list", i);
-
-      -- Figure out the true minimum bid.
-      local bid;
-      if bidAmount <= 0 then
-        bid = minBid;
-      else
-        bid = bidAmount + minIncrement;
-        if bid > buyout and buyout > 0 then
-          bid = buyout;
-        end
-      end
-
-      -- Craete a listing object with all this data.
-      local listing = {
-        link = link, name = name, texture = texture, count = count,
-        quality = quality, canUse = canUse, level = level,
-        bid = bid, minBid = minBid, minIncrement = minIncrement,
-        buyout = buyout, bidAmount = bidAmount,
-        highBidder = highBidder, owner = owner
-      };
+      local listing = self:GetListing("list", i);
 
       -- Sometimes we get incomplete records.  Is this one of them?
-      if owner == nil then
+      if listing.owner == nil then
         incomplete = incomplete + 1;
       end
 

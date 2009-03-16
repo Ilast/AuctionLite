@@ -475,7 +475,7 @@
 						</Anchors>
 						<Scripts>
 							<OnClick>
-								AuctionLite:BuyCancelButton_OnClick();
+								AuctionLite:BuyCancelSearchButton_OnClick();
 							</OnClick>
 						</Scripts>
 					</Button>
@@ -559,7 +559,7 @@
 							</OnClick>
 						</Scripts>
 					</Button>
-					<Button name="BuyCancelButton" inherits="UIPanelButtonTemplate" text="Cancel">
+					<Button name="BuyCancelPurchaseButton" inherits="UIPanelButtonTemplate" text="Cancel">
 						<Size>
 							<AbsDimension x="80" y="22"/>
 						</Size>
@@ -572,7 +572,7 @@
 						</Anchors>
 						<Scripts>
 							<OnClick>
-								AuctionLite:BuyCancelButton_OnClick();
+								AuctionLite:BuyCancelPurchaseButton_OnClick();
 							</OnClick>
 						</Scripts>
 					</Button>
@@ -1067,7 +1067,7 @@
 					</Anchor>
 				</Anchors>
 			</Button>
-			<Button name="BuyCloseButton" inherits="UIPanelButtonTemplate" text="CLOSE">
+			<Button name="BuyCancelAuctionButton" inherits="UIPanelButtonTemplate" text="Cancel">
 				<Size>
 					<AbsDimension x="80" y="22"/>
 				</Size>
@@ -1080,7 +1080,7 @@
 				</Anchors>
 				<Scripts>
 					<OnClick>
-						HideUIPanel(self:GetParent():GetParent());
+						AuctionLite:BuyCancelAuctionButton_OnClick();
 					</OnClick>
 				</Scripts>
 			</Button>
@@ -1089,7 +1089,7 @@
 					<AbsDimension x="80" y="22"/>
 				</Size>
 				<Anchors>
-					<Anchor point="RIGHT" relativeTo="BuyCloseButton" relativePoint="LEFT">
+					<Anchor point="RIGHT" relativeTo="BuyCancelAuctionButton" relativePoint="LEFT">
 						<Offset>
 							<AbsDimension x="0" y="0"/>
 						</Offset>

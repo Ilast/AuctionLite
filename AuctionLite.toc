@@ -19,6 +19,7 @@ BuyFrame.xml
 SellFrame.lua
 SellFrame.xml
 
+CancelAuctions.lua
 CreateAuctions.lua
 QueryAuctions.lua
 
