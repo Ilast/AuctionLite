@@ -1,5 +1,5 @@
 -------------------------------------------------------------------------------
--- AuctionLite 0.9
+-- AuctionLite 0.9.1
 --
 -- Lightweight addon to determine accurate market prices and to simplify
 -- the process of posting auctions.
@@ -239,7 +239,7 @@ local Defaults = {
 
 local DBName = "AuctionLiteDB";
 
-local AUCTIONLITE_VERSION = 0.9;
+local AUCTIONLITE_VERSION = "0.9.1";
 
 -------------------------------------------------------------------------------
 -- Hooks and boostrap code
@@ -284,14 +284,12 @@ end
 function AuctionLite:ConvertOptions()
   for _, profile in pairs(self.db.profiles) do
     if type(profile.showAuction) == "boolean" then
-      self:Print("converting auction");
       if profile.showAuction then
         profile.showAuction = "b_maybe";
       else
         profile.showAuction = "c_no";
       end
     elseif type(profile.showVendor) == "boolean" then
-      self:Print("converting vendor");
       if profile.showVendor then
         profile.showVendor = "a_yes";
       else
