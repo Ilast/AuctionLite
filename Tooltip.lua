@@ -9,12 +9,32 @@ local MAX_BANK_ROWS = 14;
 
 local LinkTooltips = true;
 
+local MustResetTooltip = false;
+
 MoneyTypeInfo["AUCTIONLITE_TOOLTIP"] = {
   UpdateFunc = function(self) return self.staticMoney end,
   showSmallerCoins = 1,
   collapse = 1,
 };
 
+-- Since we futz with the money frame anchors, we need to reset them
+-- when the tooltip is cleared.
+function AuctionLite:GameTooltip_ClearMoney_Hook(tooltip)
+  if MustResetTooltip then
+    local i = 1;
+    while i < 1000 do
+      local money = _G[tooltip:GetName() .. "MoneyFrame" .. i];
+      if money ~= nil then
+        money:ClearAllPoints();
+      else
+        break;
+      end
+      i = i + 1;
+    end
+
+    MustResetTooltip = false;
+  end
+end
 
 -- Make an appropriate money string
 function AuctionLite:AddTooltipLine(tooltip, option, getPrice, label,
@@ -52,6 +72,8 @@ function AuctionLite:AddTooltipLine(tooltip, option, getPrice, label,
         money:ClearAllPoints();
         money:SetPoint("RIGHT", tooltip, "RIGHT", -5, 0);
         money:SetPoint("TOP", text, "TOP", 0, 0);
+
+        MustResetTooltip = true;
       else
         -- Show the old-school text tooltip.
         local priceInfo = self:PrintMoney(price * count1);
@@ -340,4 +362,5 @@ end
 function AuctionLite:HookTooltips()
   self:AddHooksToTooltip(GameTooltip);
   self:AddHooksToTooltip(ItemRefTooltip);
+  self:SecureHook("GameTooltip_ClearMoney", "GameTooltip_ClearMoney_Hook");
 end

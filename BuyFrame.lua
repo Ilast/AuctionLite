@@ -1195,10 +1195,6 @@ function AuctionLite:ClearBuyFrame(partial)
   SearchData = nil;
   NoResults = false;
 
-  if not partial then
-    ScanData = nil;
-  end
-
   DealsMode = false;
 
   if not partial then
