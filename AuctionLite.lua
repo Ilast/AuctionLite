@@ -15,7 +15,7 @@ AuctionLite = LibStub("AceAddon-3.0"):NewAddon("AuctionLite",
 
 -- Currently no slash commands...
 local Options = {
-  type = 'group',
+  type = "group",
   get = function(item) return AuctionLite.db.profile[item[#item]] end,
   set = function(item, value) AuctionLite.db.profile[item[#item]] = value end,
   args = {
@@ -70,41 +70,26 @@ local Options = {
       max = 1,
       order = 6,
     },
-    showVendor = {
-      type = "toggle",
-      desc = "Show vendor sell price in tooltips.",
-      name = "Show Vendor Price",
-      order = 7,
-    },
-    showAuction = {
-      type = "toggle",
-      desc = "Show auction house value in tooltips.",
-      name = "Show Auction Value",
-      order = 8,
-    },
-    showStackPrice = {
-      type = "toggle",
-      desc = "Show full stack prices in tooltips (shift toggles on the fly).",
-      name = "Show Stack Price",
-      order = 9,
-    },
-    printPriceData = {
-      type = "toggle",
-      desc = "Print detailed price data when selling an item.",
-      name = "Print Price Data",
-      order = 10,
-    },
     getAll = {
       type = "toggle",
       desc = "Use fast method for full scans (may cause disconnects).",
       name = "Fast Auction Scan",
-      order = 11,
+      width = "double",
+      order = 7,
     },
     openBags = {
       type = "toggle",
       desc = "Open all your bags when you visit the auction house.",
       name = "Open All Bags at AH",
-      order = 12,
+      width = "double",
+      order = 8,
+    },
+    printPriceData = {
+      type = "toggle",
+      desc = "Print detailed price data when selling an item.",
+      name = "Print Detailed Price Data",
+      width = "double",
+      order = 9,
     },
     startTab = {
       type = "select",
@@ -121,8 +106,82 @@ local Options = {
   },
 }
 
+local TooltipOptions = {
+  type = "group",
+  get = function(item) return AuctionLite.db.profile[item[#item]] end,
+  set = function(item, value) AuctionLite.db.profile[item[#item]] = value end,
+  args = {
+    showVendor = {
+      type = "select",
+      desc = "Show vendor sell price in tooltips.",
+      name = "Show Vendor Price",
+      style = "dropdown",
+      values = {
+        a_yes = "Always",
+        b_maybe = "If Applicable",
+        c_no = "Never",
+      },
+      order = 1,
+    },
+    blankVendor = {
+      type = "description",
+      name = "",
+      desc = "",
+      order = 2,
+    },
+    showDisenchant = {
+      type = "select",
+      desc = "Show expected disenchant value in tooltips.",
+      name = "Show Disenchant Value",
+      style = "dropdown",
+      values = {
+        a_yes = "Always",
+        b_maybe = "If Applicable",
+        c_no = "Never",
+      },
+      order = 3,
+    },
+    blankDisenchant = {
+      type = "description",
+      name = "",
+      desc = "",
+      order = 4,
+    },
+    showAuction = {
+      type = "select",
+      desc = "Show auction house value in tooltips.",
+      name = "Show Auction Value",
+      style = "dropdown",
+      values = {
+        a_yes = "Always",
+        b_maybe = "If Applicable",
+        c_no = "Never",
+      },
+      order = 5,
+    },
+    blankAuction = {
+      type = "description",
+      name = "",
+      desc = "",
+      order = 6,
+    },
+    blank = {
+      type = "description",
+      name = " ",
+      desc = " ",
+      order = 7,
+    },
+    showStackPrice = {
+      type = "toggle",
+      desc = "Show full stack prices in tooltips (shift toggles on the fly).",
+      name = "Show Full Stack Price",
+      order = 8,
+    },
+  },
+};
+
 local SlashOptions = {
-  type = 'group',
+  type = "group",
   handler = AuctionLite,
   args = {
     config = {
@@ -130,6 +189,7 @@ local SlashOptions = {
       desc = "Open configuration dialog",
       name = "Configure",
       func = function()
+        InterfaceOptionsFrame_OpenToCategory(AuctionLite.optionFrames.tooltips);
         InterfaceOptionsFrame_OpenToCategory(AuctionLite.optionFrames.main);
       end,
     },
@@ -154,8 +214,9 @@ local Defaults = {
     roundPrices = 0.05,
     minProfit = 10,
     minDiscount = 0.25,
-    showVendor = true,
-    showAuction = true,
+    showVendor = "a_yes",
+    showAuction = "b_maybe",
+    showDisenchant = "b_maybe",
     showStackPrice = true,
     printPriceData = false,
     getAll = false,
@@ -211,11 +272,35 @@ function AuctionLite:ConvertDB()
   end
 end
 
+-- If any of the options are outdated, convert them.
+function AuctionLite:ConvertOptions()
+  for _, profile in pairs(self.db.profiles) do
+    if type(profile.showAuction) == "boolean" then
+      self:Print("converting auction");
+      if profile.showAuction then
+        profile.showAuction = "b_maybe";
+      else
+        profile.showAuction = "c_no";
+      end
+    elseif type(profile.showVendor) == "boolean" then
+      self:Print("converting vendor");
+      if profile.showVendor then
+        profile.showVendor = "a_yes";
+      else
+        profile.showVendor = "c_no";
+      end
+    end
+  end
+end
+
 -- We're alive!
 function AuctionLite:OnInitialize()
   -- Load our database.
   self:ConvertDB();
   self.db = LibStub("AceDB-3.0"):New(DBName, Defaults, "Default");
+
+  -- Update any options that have changed.
+  self:ConvertOptions();
 
   -- Set up our config options.
   local profiles = LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db);
@@ -225,11 +310,14 @@ function AuctionLite:OnInitialize()
 
   local registry = LibStub("AceConfigRegistry-3.0");
   registry:RegisterOptionsTable("AuctionLite Options", Options);
+  registry:RegisterOptionsTable("AuctionLite Tooltips", TooltipOptions);
   registry:RegisterOptionsTable("AuctionLite Profiles", profiles);
 
   local dialog = LibStub("AceConfigDialog-3.0");
   self.optionFrames = {
     main     = dialog:AddToBlizOptions("AuctionLite Options", "AuctionLite"),
+    tooltips = dialog:AddToBlizOptions("AuctionLite Tooltips", "Tooltips",
+                                       "AuctionLite");
     profiles = dialog:AddToBlizOptions("AuctionLite Profiles", "Profiles",
                                        "AuctionLite");
   };
@@ -251,6 +339,9 @@ function AuctionLite:OnInitialize()
   -- Add any hooks that don't depend upon Blizzard addons.
   self:HookCoroutines();
   self:HookTooltips();
+
+  -- Set up our disenchant info.
+  self:BuildDisenchantTable();
 
   -- And print a message if we're debugging.
   if self.db.profile.showGreeting then

@@ -9,6 +9,27 @@ local MAX_BANK_ROWS = 14;
 
 local LinkTooltips = true;
 
+-- Make an appropriate money string
+function AuctionLite:AddTooltipLine(tooltip, option, getPrice, label,
+                                    link, count1, count2)
+  if option ~= "c_no" then
+    local priceInfo;
+    local price = getPrice(link);
+    if price ~= nil then
+      priceInfo = self:PrintMoney(price * count1);
+      if count2 ~= nil then
+        priceInfo = priceInfo .. " |cffffffff-|r " ..
+                    self:PrintMoney(price * count2);
+      end
+    end
+    if priceInfo ~= nil then
+      tooltip:AddDoubleLine(label, priceInfo);
+    elseif option == "a_yes" then
+      tooltip:AddDoubleLine(label, "|cffffffffn/a|r");
+    end
+  end
+end
+
 -- Add vendor and auction data to a tooltip.  We have count1 and count2
 -- for the upper and lower bound on the number of items; count2 may be nil.
 function AuctionLite:AddTooltipData(tooltip, link, count1, count2)
@@ -29,35 +50,18 @@ function AuctionLite:AddTooltipData(tooltip, link, count1, count2)
       suffix = " |cffb09000(x" .. count1 .. "-" .. count2 .. ")|r";
     end
 
-    -- First add vendor info.  Always print a line for the vendor price.
-    if self.db.profile.showVendor then
-      local _, _, id = self:SplitLink(link);
-      local vendor = self.VendorData[id];
-      local vendorInfo;
-      if vendor ~= nil then
-        vendorInfo = self:PrintMoney(vendor * count1);
-        if count2 ~= nil then
-          vendorInfo = vendorInfo .. " |cffffffff-|r " ..
-                       self:PrintMoney(vendor * count2);
-        end
-      else
-        vendorInfo = "|cffffffffn/a|r";
-      end
-      tooltip:AddDoubleLine("Vendor" .. suffix, vendorInfo);
-    end
+    -- Add lines for vendor, auction, and disenchant as appropriate.
+    self:AddTooltipLine(tooltip, self.db.profile.showVendor,
+      function(link) return AuctionLite:GetVendorValue(link) end,
+      "Vendor" .. suffix, link, count1, count2);
 
-    -- Next show the auction price, if any exists.
-    if self.db.profile.showAuction then
-      local hist = self:GetHistoricalPrice(link);
-      if hist ~= nil and hist.price ~= nil then
-        local auctionInfo = self:PrintMoney(hist.price * count1);
-        if count2 ~= nil then
-          auctionInfo = auctionInfo .. " |cffffffff-|r " ..
-                        self:PrintMoney(hist.price * count2);
-        end
-        tooltip:AddDoubleLine("Auction" .. suffix, auctionInfo);
-      end
-    end
+    self:AddTooltipLine(tooltip, self.db.profile.showDisenchant,
+      function(link) return AuctionLite:GetDisenchantValue(link) end,
+      "Disenchant" .. suffix, link, count1, count2);
+
+    self:AddTooltipLine(tooltip, self.db.profile.showAuction,
+      function(link) return AuctionLite:GetAuctionValue(link) end,
+      "Auction" .. suffix, link, count1, count2);
 
     tooltip:Show();
   end

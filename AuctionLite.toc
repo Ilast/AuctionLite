@@ -23,6 +23,7 @@ CancelAuctions.lua
 CreateAuctions.lua
 QueryAuctions.lua
 
+Disenchant.lua
 History.lua
 VendorData.lua
 Tooltip.lua
