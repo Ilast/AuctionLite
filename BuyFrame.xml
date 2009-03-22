@@ -494,7 +494,7 @@
 				</Anchors>
 				<Layers>
 					<Layer level="BACKGROUND">
-						<FontString name="BuyBatchText" inherits="GameFontHighlightSmall" text="test">
+						<FontString name="BuyBatchText" inherits="GameFontHighlightSmall">
 							<Anchors>
 								<Anchor point="CENTER">
 									<Offset>
@@ -789,7 +789,7 @@
 				</Scripts>
 				<Layers>
 					<Layer level="ARTWORK">
-						<FontString name="$parentText" inherits="GameFontNormal" text="Advanced" justifyH="RIGHT">
+						<FontString name="BuyAdvancedText" inherits="GameFontNormal" text="Advanced" justifyH="RIGHT">
 							<Anchors>
 								<Anchor point="RIGHT" relativePoint="LEFT">
 									<Offset>

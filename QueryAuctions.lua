@@ -4,6 +4,8 @@
 -- Queries the auction house.
 -------------------------------------------------------------------------------
 
+local L = LibStub("AceLocale-3.0"):GetLocale("AuctionLite", false)
+
 -- Number of results returned per query.
 local AUCTIONS_PER_PAGE = 50;
 
@@ -87,9 +89,9 @@ function AuctionLite:QueryUpdate()
           getAll = true;
         else
           Query.getAll = false;
-          self:Print("|cffffd000[Note]|r " ..
-                     "Fast auction scans can only be used once every " ..
-                     "15 minutes. Using a slow scan for now.");
+          self:Print(L["|cffffd000[Note]|r " ..
+                       "Fast auction scans can only be used once every " ..
+                       "15 minutes. Using a slow scan for now."]);
         end
       end
 
@@ -342,28 +344,14 @@ function AuctionLite:ShowReceipt(cancelled)
   end
 
   -- Print a summary.
-  local action;
-  if Query.isBuyout then
-    action = "Bought";
-  else
-    action = "Bid on";
-  end
-
   if not cancelled or listingsBought > 0 then
-    self:Print(action .. " " .. itemsBought .. "x " .. Query.name ..
-               " (" .. self:MakePlural(listingsBought, "listing") ..
-               " at " ..  self:PrintMoney(price) .. ").");
+    self:Print(L["Bought/bid on Xx Y (Z listings at W)."](
+               Query.isBuyout, itemsBought, Query.name,
+               listingsBought, price));
 
     if itemsNotFound > 0 then
-      local verb;
-      if listingsNotFound == 1 then
-        verb = "was";
-      else
-        verb = "were";
-      end
-      self:Print("Note: " .. self:MakePlural(listingsNotFound, "listing") ..
-                 " of " .. self:MakePlural(itemsNotFound, "item") ..
-                 " " .. verb .. " not purchased.");
+      self:Print(L["Note: X listings of Y items was/were not purchased."](
+                 listingsNotFound, itemsNotFound));
     end
   end
 

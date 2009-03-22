@@ -13,6 +13,8 @@ AuctionLite = LibStub("AceAddon-3.0"):NewAddon("AuctionLite",
                                                "AceEvent-3.0",
                                                "AceHook-3.0");
 
+local L = LibStub("AceLocale-3.0"):GetLocale("AuctionLite", false)
+
 -- Currently no slash commands...
 local Options = {
   type = "group",
@@ -21,8 +23,8 @@ local Options = {
   args = {
     bidUndercut = {
       type = "range",
-      desc = "Percent to undercut market value for bid prices (0-100).",
-      name = "Bid Undercut",
+      desc = L["Percent to undercut market value for bid prices (0-100)."],
+      name = L["Bid Undercut"],
       isPercent = true,
       min = 0,
       max = 1,
@@ -30,8 +32,8 @@ local Options = {
     },
     buyoutUndercut = {
       type = "range",
-      desc = "Percent to undercut market value for buyout prices (0-100).",
-      name = "Buyout Undercut",
+      desc = L["Percent to undercut market value for buyout prices (0-100)."],
+      name = L["Buyout Undercut"],
       isPercent = true,
       min = 0,
       max = 1,
@@ -39,8 +41,8 @@ local Options = {
     },
     vendorMultiplier = {
       type = "range",
-      desc = "Amount to multiply by vendor price to get default sell price.",
-      name = "Vendor Multiplier",
+      desc = L["Amount to multiply by vendor price to get default sell price."],
+      name = L["Vendor Multiplier"],
       min = 0,
       max = 100,
       step = 0.1,
@@ -48,14 +50,14 @@ local Options = {
     },
     roundPrices = {
       type = "range",
-      desc = "Round all prices to this granularity, or zero to disable (0-1).",
-      name = "Round Prices",
+      desc = L["Round all prices to this granularity, or zero to disable (0-1)."],
+      name = L["Round Prices"],
       order = 4,
     },
     minProfit = {
       type = "range",
-      desc = "Deals must be below the historical price by this much gold.",
-      name = "Minimum Profit (Gold)",
+      desc = L["Deals must be below the historical price by this much gold."],
+      name = L["Minimum Profit (Gold)"],
       min = 0,
       max = 1000,
       step = 1,
@@ -63,8 +65,8 @@ local Options = {
     },
     minDiscount = {
       type = "range",
-      desc = "Deals must be below the historical price by this percentage.",
-      name = "Minimum Profit (Pct)",
+      desc = L["Deals must be below the historical price by this percentage."],
+      name = L["Minimum Profit (Pct)"],
       isPercent = true,
       min = 0,
       max = 1,
@@ -72,29 +74,29 @@ local Options = {
     },
     getAll = {
       type = "toggle",
-      desc = "Use fast method for full scans (may cause disconnects).",
-      name = "Fast Auction Scan",
+      desc = L["Use fast method for full scans (may cause disconnects)."],
+      name = L["Fast Auction Scan"],
       width = "double",
       order = 7,
     },
     openBags = {
       type = "toggle",
-      desc = "Open all your bags when you visit the auction house.",
-      name = "Open All Bags at AH",
+      desc = L["Open all your bags when you visit the auction house."],
+      name = L["Open All Bags at AH"],
       width = "double",
       order = 8,
     },
     printPriceData = {
       type = "toggle",
-      desc = "Print detailed price data when selling an item.",
-      name = "Print Detailed Price Data",
+      desc = L["Print detailed price data when selling an item."],
+      name = L["Print Detailed Price Data"],
       width = "double",
       order = 9,
     },
     startTab = {
       type = "select",
-      desc = "Choose which tab is selected when opening the auction house.",
-      name = "Start Tab",
+      desc = L["Choose which tab is selected when opening the auction house."],
+      name = L["Start Tab"],
       style = "dropdown",
       values = {
         a_default = "Default",
@@ -106,6 +108,12 @@ local Options = {
   },
 }
 
+local YesNoMaybe = {
+  a_yes = L["Always"],
+  b_maybe = L["If Applicable"],
+  c_no = L["Never"],
+};
+
 local TooltipOptions = {
   type = "group",
   get = function(item) return AuctionLite.db.profile[item[#item]] end,
@@ -113,14 +121,10 @@ local TooltipOptions = {
   args = {
     showVendor = {
       type = "select",
-      desc = "Show vendor sell price in tooltips.",
-      name = "Show Vendor Price",
+      desc = L["Show vendor sell price in tooltips."],
+      name = L["Show Vendor Price"],
       style = "dropdown",
-      values = {
-        a_yes = "Always",
-        b_maybe = "If Applicable",
-        c_no = "Never",
-      },
+      values = YesNoMaybe,
       order = 1,
     },
     blankVendor = {
@@ -131,14 +135,10 @@ local TooltipOptions = {
     },
     showDisenchant = {
       type = "select",
-      desc = "Show expected disenchant value in tooltips.",
-      name = "Show Disenchant Value",
+      desc = L["Show expected disenchant value in tooltips."],
+      name = L["Show Disenchant Value"],
       style = "dropdown",
-      values = {
-        a_yes = "Always",
-        b_maybe = "If Applicable",
-        c_no = "Never",
-      },
+      values = YesNoMaybe,
       order = 3,
     },
     blankDisenchant = {
@@ -149,14 +149,10 @@ local TooltipOptions = {
     },
     showAuction = {
       type = "select",
-      desc = "Show auction house value in tooltips.",
-      name = "Show Auction Value",
+      desc = L["Show auction house value in tooltips."],
+      name = L["Show Auction Value"],
       style = "dropdown",
-      values = {
-        a_yes = "Always",
-        b_maybe = "If Applicable",
-        c_no = "Never",
-      },
+      values = YesNoMaybe,
       order = 5,
     },
     blankAuction = {
@@ -173,15 +169,15 @@ local TooltipOptions = {
     },
     coinTooltips = {
       type = "toggle",
-      desc = "Uses the standard gold/silver/copper icons in tooltips.",
-      name = "Use Coin Icons in Tooltips",
+      desc = L["Uses the standard gold/silver/copper icons in tooltips."],
+      name = L["Use Coin Icons in Tooltips"],
       width = "double",
       order = 8,
     },
     showStackPrice = {
       type = "toggle",
-      desc = "Show full stack prices in tooltips (shift toggles on the fly).",
-      name = "Show Full Stack Price",
+      desc = L["Show full stack prices in tooltips (shift toggles on the fly)."],
+      name = L["Show Full Stack Price"],
       order = 9,
     },
   },
@@ -193,8 +189,8 @@ local SlashOptions = {
   args = {
     config = {
       type = "execute",
-      desc = "Open configuration dialog",
-      name = "Configure",
+      desc = L["Open configuration dialog"],
+      name = L["Configure"],
       func = function()
         InterfaceOptionsFrame_OpenToCategory(AuctionLite.optionFrames.tooltips);
         InterfaceOptionsFrame_OpenToCategory(AuctionLite.optionFrames.main);
@@ -321,11 +317,11 @@ function AuctionLite:OnInitialize()
 
   local dialog = LibStub("AceConfigDialog-3.0");
   self.optionFrames = {
-    main     = dialog:AddToBlizOptions("AuctionLite Options", "AuctionLite"),
-    tooltips = dialog:AddToBlizOptions("AuctionLite Tooltips", "Tooltips",
-                                       "AuctionLite");
-    profiles = dialog:AddToBlizOptions("AuctionLite Profiles", "Profiles",
-                                       "AuctionLite");
+    main     = dialog:AddToBlizOptions("AuctionLite Options", L["AuctionLite"]),
+    tooltips = dialog:AddToBlizOptions("AuctionLite Tooltips", L["Tooltips"],
+                                       L["AuctionLite"]);
+    profiles = dialog:AddToBlizOptions("AuctionLite Profiles", L["Profiles"],
+                                       L["AuctionLite"]);
   };
 
   -- Register for events.
@@ -351,6 +347,6 @@ function AuctionLite:OnInitialize()
 
   -- And print a message if we're debugging.
   if self.db.profile.showGreeting then
-    self:Print("AuctionLite v" .. AUCTIONLITE_VERSION .. " loaded!");
+    self:Print(L["AuctionLite vX loaded!"](AUCTIONLITE_VERSION));
   end
 end

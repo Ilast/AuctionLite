@@ -4,6 +4,8 @@
 -- Create a group of auctions based on input in the "Sell" tab.
 -------------------------------------------------------------------------------
 
+local L = LibStub("AceLocale-3.0"):GetLocale("AuctionLite", false)
+
 -- Flag indicating whether we're currently posting auctions.
 local Selling = false;
 
@@ -122,15 +124,15 @@ function AuctionLite:CreateAuctionsCore()
 
     -- Now do some sanity checks.
     if name == nil then
-      self:Print("Error locating item in bags.  Please try again!");
+      self:Print(L["Error locating item in bags.  Please try again!"]);
     elseif bid == 0 then
-      self:Print("Invalid starting bid.");
+      self:Print(L["Invalid starting bid."]);
     elseif buyout < bid then
-      self:Print("Buyout cannot be less than starting bid.");
+      self:Print(L["Buyout cannot be less than starting bid."]);
     elseif GetMoney() < self:CalculateDeposit() then
-      self:Print("Not enough cash for deposit.");
+      self:Print(L["Not enough cash for deposit."]);
     elseif self:CountItems(link) < stacks * size then
-      self:Print("Not enough items available.");
+      self:Print(L["Not enough items available."]);
     elseif count ~= nil and stacks > 0 then
       local created = 0;
 
@@ -172,7 +174,7 @@ function AuctionLite:CreateAuctionsCore()
             StartAuction(bid, buyout, time);
             self:WaitForEmpty(container, slot);
           else
-            self:Print("Error when creating auctions.");
+            self:Print(L["Error when creating auctions."]);
             break;
           end
 
@@ -183,19 +185,18 @@ function AuctionLite:CreateAuctionsCore()
         self:ClearSellFrame();
       elseif created < stocks then
         -- Couldn't find an empty bag slot.
-        self:Print("Need an empty bag slot to create auctions.");
+        self:Print(L["Need an empty bag slot to create auctions."]);
       else
         -- We're done anyway.
         self:ClearSellFrame();
       end
 
-      self:Print("Created " .. self:MakePlural(created, "auction") ..
-                 " of " ..  name .. " x" .. size .. ".");
+      self:Print(L["Created X auctions of Y xZ."](created, name, size));
     end
 
     Selling = false;
   else
-    self:Print("Auction creation is already in progress.");
+    self:Print(L["Auction creation is already in progress."]);
   end
 end
 

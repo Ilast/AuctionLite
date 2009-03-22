@@ -4,6 +4,9 @@
 -- Implements the "Sell" tab.
 -------------------------------------------------------------------------------
 
+local L = LibStub("AceLocale-3.0"):GetLocale("AuctionLite", false)
+
+-- Constants for display elements.
 local SELL_DISPLAY_SIZE = 16;
 
 -- Pricing methods.
@@ -84,24 +87,26 @@ function AuctionLite:ShowPriceData(itemLink, itemValue, stackSize)
   local _, _, count, _, _, vendor = GetAuctionSellItemInfo();
   local itemVendor = vendor / count;
 
-  self:Print("|cff8080ffData for " .. itemLink .. " x" .. stackSize .. "|r");
-  self:Print("Vendor: " .. self:PrintMoney(itemVendor * stackSize));
+  self:Print(L["|cff8080ffData for X xY|r"](itemLink, stackSize));
+  self:Print(L["Vendor: X"](itemVendor * stackSize));
 
   if hist ~= nil and hist.scans > 0 and hist.price > 0 then
-    self:Print("Historical: " .. self:PrintMoney(hist.price * stackSize) .. " (" ..
-               math.floor(0.5 + hist.listings / hist.scans) .. " listings/scan, " ..
-               math.floor(0.5 + hist.items / hist.scans) .. " items/scan)");
+    self:Print(L["Historical: X (Y listings/scan, Z items/scan)"](
+               hist.price * stackSize,
+               math.floor(0.5 + hist.listings / hist.scans),
+               math.floor(0.5 + hist.items / hist.scans)));
     if itemVendor > 0 then
-      self:Print("Current: " .. self:PrintMoney(stackValue) .. " (" ..
-                 (math.floor(100 * itemValue / hist.price) / 100) .. "x historical, " ..
-                 (math.floor(100 * itemValue / itemVendor) / 100) .. "x vendor)");
+      self:Print(L["Current: X (Yx historical, Zx vendor)"](
+                 stackValue,
+                 math.floor(100 * itemValue / hist.price) / 100,
+                 math.floor(100 * itemValue / itemVendor) / 100));
     else
-      self:Print("Current: " .. self:PrintMoney(stackValue) .. " (" ..
-                 (math.floor(100 * itemValue / hist.price) / 100) .. "x historical)");
+      self:Print(L["Current: X (Yx historical)"](
+                 stackValue, math.floor(100 * itemValue / hist.price) / 100));
     end
   elseif itemVendor > 0 then
-    self:Print("Current: " .. self:PrintMoney(stackValue) .. " (" ..
-               (math.floor(100 * itemValue / itemVendor) / 100) .. "x vendor)");
+    self:Print(L["Current: X (Yx vendor)"](
+               stackValue, math.floor(100 * itemValue / itemVendor) / 100));
   end
 
   return bid, buyout;
@@ -170,27 +175,27 @@ function AuctionLite:ValidateAuction()
     -- Now perform our checks.
     if stacks * size <= 0 then
       StatusError = true;
-      SellStatusText:SetText("|cffff0000Invalid stack size/count.|r");
+      SellStatusText:SetText(L["|cffff0000Invalid stack size/count.|r"]);
       SellCreateAuctionButton:Disable();
     elseif self:CountItems(link) < stacks * size then
       StatusError = true;
-      SellStatusText:SetText("|cffff0000Not enough items available.|r");
+      SellStatusText:SetText(L["|cffff0000Not enough items available.|r"]);
       SellCreateAuctionButton:Disable();
     elseif bid == 0 then
       StatusError = true;
-      SellStatusText:SetText("|cffff0000No bid price set.|r");
+      SellStatusText:SetText(L["|cffff0000No bid price set.|r"]);
       SellCreateAuctionButton:Disable();
     elseif buyout < bid then
       StatusError = true;
-      SellStatusText:SetText("|cffff0000Buyout less than bid.|r");
+      SellStatusText:SetText(L["|cffff0000Buyout less than bid.|r"]);
       SellCreateAuctionButton:Disable();
     elseif GetMoney() < self:CalculateDeposit() then
       StatusError = true;
-      SellStatusText:SetText("|cffff0000Not enough cash for deposit.|r");
+      SellStatusText:SetText(L["|cffff0000Not enough cash for deposit.|r"]);
       SellCreateAuctionButton:Disable();
     elseif buyout <= (vendor * size / count) then
       StatusError = true;
-      SellStatusText:SetText("|cffff0000Buyout less than vendor price.|r");
+      SellStatusText:SetText(L["|cffff0000Buyout less than vendor price.|r"]);
       SellCreateAuctionButton:Disable();
     else
       StatusError = false;
@@ -228,7 +233,7 @@ function AuctionLite:ClickAuctionSellItemButton_Hook()
       SellStacks:SetFocus();
 
       local total = self:CountItems(link);
-      SellStackText:SetText("Number of Items |cff808080(max " .. total .. ")|r");
+      SellStackText:SetText(L["Number of Items |cff808080(max X)|r"](total));
 
       self:UpdateDeposit();
 
@@ -263,7 +268,7 @@ function AuctionLite:ClearSellFrame()
   SellItemButtonName:SetText("");
   SellItemButtonCount:Hide();
 
-  SellStackText:SetText("Number of Items");
+  SellStackText:SetText(L["Number of Items"]);
   SellStacks:SetText("");
   SellSize:SetText("");
 
@@ -320,18 +325,17 @@ function AuctionLite:SetSellData(results, link)
     if self.db.profile.printPriceData then
       self:ShowPriceData(link, itemValue, SellSize:GetNumber());
     end
-    self:SetStatus("|cff00ff00Scanned " ..
-                   self:MakePlural(result.listings, "listing") .. ".|r");
+    self:SetStatus(L["|cff00ff00Scanned X listings.|r"](result.listings));
   else
     local hist = self:GetHistoricalPrice(link);
     if hist ~= nil and hist.price > 0 then
       itemValue = hist.price;
-      self:SetStatus("|cffff0000Using historical data.|r");
+      self:SetStatus(L["|cffff0000Using historical data.|r"]);
     else
       local _, _, count, _, _, vendor = GetAuctionSellItemInfo();
       local mult = self.db.profile.vendorMultiplier;
       itemValue = mult * vendor / count;
-      self:SetStatus("|cffff0000Using " .. mult .. "x vendor price.|r");
+      self:SetStatus(L["|cffff0000Using Xx vendor price.|r"](mult));
     end
   end
   self:SetItemValue(itemValue);
@@ -339,7 +343,7 @@ function AuctionLite:SetSellData(results, link)
   -- Load the user's saved price, if it exists.
   local saved = SavedPrices[link];
   if saved ~= nil then
-    self:SetStatus("|cff00ff00Using previous price.|r");
+    self:SetStatus(L["|cff00ff00Using previous price.|r"]);
     self:SetItemBidBuyout(saved.bid, saved.buyout);
   end
 
@@ -448,13 +452,13 @@ function AuctionLite:ChangePricingMethod(value)
   if value == METHOD_PER_ITEM then
     SellPerItemButton:SetChecked(true);
 
-    SellBidStackText:SetText("|cff808080(per item)|r");
-    SellBuyoutStackText:SetText("|cff808080(per item)|r");
+    SellBidStackText:SetText(L["|cff808080(per item)|r"]);
+    SellBuyoutStackText:SetText(L["|cff808080(per item)|r"]);
   elseif value == METHOD_PER_STACK then
     SellPerStackButton:SetChecked(true);
 
-    SellBidStackText:SetText("|cff808080(per stack)|r");
-    SellBuyoutStackText:SetText("|cff808080(per stack)|r");
+    SellBidStackText:SetText(L["|cff808080(per stack)|r"]);
+    SellBuyoutStackText:SetText(L["|cff808080(per stack)|r"]);
   end
 
   -- Update the listed prices based on the new pricing method.
@@ -480,7 +484,7 @@ end
 
 -- Update query progress.
 function AuctionLite:UpdateProgressSell(pct)
-  self:SetStatus("|cffffff00Scanning: " .. pct .. "%|r");
+  self:SetStatus(L["|cffffff00Scanning: X%|r"](pct));
 end
 
 -- Paint the scroll frame on the right-hand side with competing auctions.
@@ -581,7 +585,17 @@ end
 -- Create the "Sell" tab.
 function AuctionLite:CreateSellFrame()
   -- Create our tab.
-  local index = self:CreateTab("AuctionLite - Sell", AuctionFrameSell);
+  local index = self:CreateTab(L["AuctionLite - Sell"], AuctionFrameSell);
+
+  -- Set all localizable strings in the UI.
+  SellTitle:SetText(L["AuctionLite - Sell"]);
+  SellStackText:SetText(L["Number of Items"]);
+  SellStacksOfText:SetText(L["stacks of"]);
+  SellBuyoutText:SetText(L["Buyout Price"]);
+  SellMethodText:SetText(L["Pricing Method"]);
+  SellHeaderText:SetText(L["Competing Auctions"]);
+  SellTotalHeaderText:SetText(L["Buyout Total"]);
+  SellEachHeaderText:SetText(L["Buyout Per Item"]);
 
   -- Set our constants.
   SellPerItemButton:SetID(METHOD_PER_ITEM);
@@ -610,4 +624,3 @@ function AuctionLite:CreateSellFrame()
 
   return index;
 end
-

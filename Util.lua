@@ -133,15 +133,6 @@ function AuctionLite:GetAuctionSellItemInfoAndLink()
   return name, texture, count, quality, canUse, price, link, container, slot;
 end
 
--- Create a string with an "s" on the end if need be.
-function AuctionLite:MakePlural(count, name)
-  local base = tostring(count) .. " " .. name;
-  if count ~= 1 then
-    base = base .. "s";
-  end
-  return base;
-end
-
 -- Make a money frame value negative.
 function AuctionLite:MakeNegative(frameName)
   local adjust = function(button)

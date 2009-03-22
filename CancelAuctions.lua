@@ -4,6 +4,8 @@
 -- Cancel a group of auctions.
 -------------------------------------------------------------------------------
 
+local L = LibStub("AceLocale-3.0"):GetLocale("AuctionLite", false)
+
 -- Cancel all auctions for "name" listed in "targets".
 function AuctionLite:CancelAuctions(name, targets)
   local batch = GetNumAuctionItems("owner");
@@ -36,6 +38,5 @@ function AuctionLite:CancelAuctions(name, targets)
   end
 
   -- Print a summary.
-  self:Print("Cancelled " .. self:MakePlural(listingsCancelled, "listing") ..
-             " of " .. name);
+  self:Print(L["Cancelled X listings of Y"](listingsCancelled, name));
 end

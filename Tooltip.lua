@@ -4,6 +4,8 @@
 -- Displays tooltips with vendor and auction prices.
 -------------------------------------------------------------------------------
 
+local L = LibStub("AceLocale-3.0"):GetLocale("AuctionLite", false)
+
 local MAX_BANK_COLUMNS = 7;
 local MAX_BANK_ROWS = 14;
 
@@ -120,15 +122,15 @@ function AuctionLite:AddTooltipData(tooltip, link, count1, count2)
     -- Add lines for vendor, auction, and disenchant as appropriate.
     self:AddTooltipLine(tooltip, self.db.profile.showVendor,
       function(link) return AuctionLite:GetVendorValue(link) end,
-      "|cffffd000Vendor|r" .. suffix, link, count1, count2);
+      "|cffffd000" .. L["Vendor"] .. "|r" .. suffix, link, count1, count2);
 
     self:AddTooltipLine(tooltip, self.db.profile.showDisenchant,
       function(link) return AuctionLite:GetDisenchantValue(link) end,
-      "|cffffd000Disenchant|r" .. suffix, link, count1, count2);
+      "|cffffd000" .. L["Disenchant"] .. "|r" .. suffix, link, count1, count2);
 
     self:AddTooltipLine(tooltip, self.db.profile.showAuction,
       function(link) return AuctionLite:GetAuctionValue(link) end,
-      "|cffffd000Auction|r" .. suffix, link, count1, count2);
+      "|cffffd000" .. L["Auction"] .. "|r" .. suffix, link, count1, count2);
 
     -- Find out how many money frames we added.
     local endMoney = tooltip.shownMoneyFrames;

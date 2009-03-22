@@ -4,6 +4,9 @@
 -- Implements the "Buy" tab.
 -------------------------------------------------------------------------------
 
+local L = LibStub("AceLocale-3.0"):GetLocale("AuctionLite", false)
+
+-- Constants for display elements.
 local BUY_DISPLAY_SIZE = 15;
 local ROW_HEIGHT = 21;
 local EXPAND_ROWS = 4;
@@ -51,24 +54,17 @@ local MultiScanData = {};
 
 -- Static popup advertising AL's fast scan.
 StaticPopupDialogs["AL_FAST_SCAN"] = {
-	text = "AuctionLite's fast auction scan can scan the entire auction " ..
-         "house in a few seconds." ..
-         "\n\n" ..
-         "However, depending on your connection, a fast scan can cause " ..
-         "you to be disconnected from the server.  If this happens, you " ..
-         "can disable fast scanning on the AuctionLite options screen." ..
-         "\n\n" ..
-         "Enable fast auction scans?",
+	text = L["FAST_SCAN_AD"],
 	button1 = "Enable",
   button2 = "Disable",
 	OnAccept = function(self)
-    AuctionLite:Print("Fast auction scan enabled.");
+    AuctionLite:Print(L["Fast auction scan enabled."]);
     AuctionLite.db.profile.fastScanAd2 = true;
     AuctionLite.db.profile.getAll = true;
     AuctionLite:StartFullScan();
   end,
 	OnCancel = function(self)
-    AuctionLite:Print("Fast auction scan disabled.");
+    AuctionLite:Print(L["Fast auction scan disabled."]);
     AuctionLite.db.profile.fastScanAd2 = true;
     AuctionLite.db.profile.getAll = false;
     AuctionLite:StartFullScan();
@@ -295,7 +291,7 @@ function AuctionLite:CreateOrder(isBuyout, requested)
 
     -- If we found any selected items and we have enough money, proceed.
     if order.price > GetMoney() then
-      self:Print("|cffff0000[Error]|r Insufficient funds.");
+      self:Print(L["|cffff0000[Error]|r Insufficient funds."]);
     elseif order.count > 0 then
       -- If the second argument wasn't specified, the user wants exactly
       -- the number of items selected.
@@ -358,7 +354,8 @@ function AuctionLite:StartMassBuyout()
           count = count + DetailData[i].count;
         elseif not warned then
           warned = true;
-          self:Print("|cffff0000[Warning]|r Skipping your own auctions. You might want to cancel them instead.");
+          self:Print(L["|cffff0000[Warning]|r Skipping your own auctions.  " ..
+                       "You might want to cancel them instead."]);
         end
       end
       i = i + 1;
@@ -466,13 +463,13 @@ function AuctionLite:UpdateProgressSearch(pct, getAll, scan)
 
     -- Update the percentage.
     if GetAll then
-      BuyStatusText:SetText("Scanning...");
+      BuyStatusText:SetText(L["Scanning..."]);
       BuyStatusData:SetText("");
     else
       if Scanning then
-        BuyStatusText:SetText("Scanning:");
+        BuyStatusText:SetText(L["Scanning:"]);
       else
-        BuyStatusText:SetText("Searching:");
+        BuyStatusText:SetText(L["Searching:"]);
       end
       BuyStatusData:SetText(tostring(Progress) .. "%");
     end
@@ -890,28 +887,24 @@ function AuctionLite:AuctionFrameBuy_UpdateExpand()
   -- Populate the expandable frame with appropriate data from the order.
   local order = PurchaseOrder;
   if order ~= nil then
-    local action;
-    if order.isBuyout then
-      action = "Buyout";
-    else
-      action = "Bid";
-    end
-
     if order.resell == nil then
-      BuyExpand1Text:SetText(action .. " cost for " .. order.count .. ":");
+      BuyExpand1Text:SetText(
+        L["Bid/buyout cost for X:"](order.isBuyout, order.count));
       MoneyFrame_Update(BuyExpand1MoneyFrame, order.price);
 
-      BuyExpand2Text:SetText("Historical price for " .. order.count .. ":");
+      BuyExpand2Text:SetText(L["Historical price for X:"](order.count));
       MoneyFrame_Update(BuyExpand2MoneyFrame, order.histPrice);
     else
-      BuyExpand1Text:SetText(action .. " cost for " .. order.count .. ":");
+      BuyExpand1Text:SetText(
+        L["Bid/buyout cost for X:"](order.isBuyout, order.count));
       MoneyFrame_Update(BuyExpand1MoneyFrame, order.price);
 
-      BuyExpand2Text:SetText("Resell " .. order.resell .. ":");
+      BuyExpand2Text:SetText(L["Resell X:"](order.resell));
       MoneyFrame_Update(BuyExpand2MoneyFrame, order.resellPrice);
       self:MakeNegative("BuyExpand2MoneyFrame");
 
-      BuyExpand3Text:SetText("Net cost for " .. (order.count - order.resell) .. ":");
+      BuyExpand3Text:SetText(
+        L["Net cost for X:"](order.count - order.resell));
       if order.netPrice < 0 then
         MoneyFrame_Update(BuyExpand3MoneyFrame, - order.netPrice);
         self:MakeNegative("BuyExpand3MoneyFrame");
@@ -919,7 +912,8 @@ function AuctionLite:AuctionFrameBuy_UpdateExpand()
         MoneyFrame_Update(BuyExpand3MoneyFrame, order.netPrice);
       end
 
-      BuyExpand4Text:SetText("Historical price for " .. (order.count - order.resell) .. ":");
+      BuyExpand4Text:SetText(
+        L["Historical price for X:"](order.count - order.resell));
       MoneyFrame_Update(BuyExpand4MoneyFrame, order.histPrice);
     end
   end
@@ -940,8 +934,7 @@ function AuctionLite:AuctionFrameBuy_UpdateExpand()
     end
 
     if count < order.count then
-      BuyBatchText:SetText("Batch " .. order.batch .. ": " .. count ..
-                           " at " .. self:PrintMoney(price));
+      BuyBatchText:SetText(L["Batch X: Y at Z"](order.batch, count, price));
     end
   end
 
@@ -1145,9 +1138,9 @@ function AuctionLite:AuctionFrameBuy_UpdateSummary()
   if table.getn(SummaryData) > 0 then
     BuySummaryHeader:Show();
     if DealsMode then
-      BuyHistPriceText:SetText("Potential Profit");
+      BuyHistPriceText:SetText(L["Potential Profit"]);
     else
-      BuyHistPriceText:SetText("Historical Price");
+      BuyHistPriceText:SetText(L["Historical Price"]);
     end
   end
 end
@@ -1224,22 +1217,22 @@ end
 -- Populate the advanced menu.
 function AuctionLite:AdvancedMenuInit(menu)
   local info = UIDropDownMenu_CreateInfo();
-  info.text = "Show Deals";
+  info.text = L["Show Deals"];
   info.func = function() AuctionLite:AuctionFrameBuy_Deals() end;
   UIDropDownMenu_AddButton(info);
 
   local info = UIDropDownMenu_CreateInfo();
-  info.text = "Show Favorites";
+  info.text = L["Show Favorites"];
   info.func = function() AuctionLite:AuctionFrameBuy_Favorites() end;
   UIDropDownMenu_AddButton(info);
 
   local info = UIDropDownMenu_CreateInfo();
-  info.text = "Show My Auctions";
+  info.text = L["Show My Auctions"];
   info.func = function() AuctionLite:AuctionFrameBuy_MyAuctions() end;
   UIDropDownMenu_AddButton(info);
 
   local info = UIDropDownMenu_CreateInfo();
-  info.text = "Configure AuctionLite";
+  info.text = L["Configure AuctionLite"];
   info.func = function()
     InterfaceOptionsFrame_OpenToCategory(self.optionFrames.main);
   end
@@ -1249,10 +1242,34 @@ end
 -- Create the "Buy" tab.
 function AuctionLite:CreateBuyFrame()
   -- Create our tab.
-  local index = self:CreateTab("AuctionLite - Buy", AuctionFrameBuy);
+  local index = self:CreateTab(L["AuctionLite - Buy"], AuctionFrameBuy);
 
-  -- Set the intro text.
-  BuyIntroText:SetText("Enter item name and click \"Search\"");
+  -- Set all localizable strings in the UI.
+  BuyTitle:SetText(L["AuctionLite - Buy"]);
+  BuyNameText:SetText(L["Name"]);
+  BuyQuantityText:SetText(L["Qty"]);
+  BuyIntroText:SetText(L["Enter item name and click \"Search\""]);
+  BuyNoItemsText:SetText(L["No items found"]);
+  BuyStatusText:SetText(L["Searching:"]);
+  BuyElapsedText:SetText(L["Time Elapsed:"]);
+  BuyRemainingText:SetText(L["Time Remaining:"]);
+  BuyCancelSearchButton:SetText(L["Cancel"]);
+  BuyApproveButton:SetText(L["Approve"]);
+  BuyCancelPurchaseButton:SetText(L["Cancel"]);
+  BuyItemSummaryText:SetText(L["Item Summary"]);
+  BuyHistPriceText:SetText(L["Historical Price"]);
+  BuyMarketPriceText:SetText(L["Market Price"]);
+  BuyItemsText:SetText(L["Items"]);
+  BuyListingsText:SetText(L["Listings"]);
+  BuyItemText:SetText(L["Item"]);
+  BuyBuyoutAllText:SetText(L["Buyout Total"]);
+  BuyBuyoutEachText:SetText(L["Buyout Per Item"]);
+  BuyBidAllText:SetText(L["Bid Total"]);
+  BuyBidEachText:SetText(L["Bid Per Item"]);
+  BuyAdvancedText:SetText(L["Advanced"]);
+  BuyScanButton:SetText(L["Full Scan"]);
+  BuySearchButton:SetText(L["Search"]);
+  BuyCancelAuctionButton:SetText(L["Cancel"]);
 
   -- Make sure it's pristine.
   self:ClearBuyFrame();
