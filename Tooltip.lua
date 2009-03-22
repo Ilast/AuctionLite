@@ -26,6 +26,7 @@ function AuctionLite:GameTooltip_ClearMoney_Hook(tooltip)
   for _, money in ipairs(ResetMoneyFrames) do
     if money ~= nil then
       money:ClearAllPoints();
+      money:Hide();
     end
   end
   ResetMoneyFrames = {};
