@@ -29,6 +29,9 @@ local ItemValue = nil;
 local ItemBid = nil;
 local ItemBuyout = nil;
 
+-- Can we undercut the current item value?
+local AllowUndercut = nil;
+
 -- Status shown in auction posting frame.
 local StatusMessage = "";
 local StatusError = false;
@@ -59,7 +62,7 @@ end
 
 -- Generate a suggested bid and buyout from the market value.  We undercut
 -- and round prices according to the user's settings.
-function AuctionLite:GeneratePrice(value)
+function AuctionLite:GeneratePrice(value, allowUndercut)
   -- Find out how to round prices.
   local granularity = 1;
   if self.db.profile.roundPrices > 0 then
@@ -67,13 +70,22 @@ function AuctionLite:GeneratePrice(value)
                   self.db.profile.roundPrices;
   end
 
+  -- How much do we undercut?
+  local bidUndercut = self.db.profile.bidUndercut;
+  local buyoutUndercut = self.db.profile.buyoutUndercut;
+
+  if not allowUndercut then
+    bidUndercut = 0;
+    buyoutUndercut = 0;
+  end
+
   -- Undercut bid and buyout as specified.
   local generate = function(value, undercut, granularity)
     return math.floor((value * (1 - undercut)) / granularity) * granularity;
   end
 
-  local bid    = generate(value, self.db.profile.bidUndercut,    granularity);
-  local buyout = generate(value, self.db.profile.buyoutUndercut, granularity);
+  local bid    = generate(value, bidUndercut,    granularity);
+  local buyout = generate(value, buyoutUndercut, granularity);
 
   return bid, buyout;
 end
@@ -113,8 +125,10 @@ function AuctionLite:ShowPriceData(itemLink, itemValue, stackSize)
 end
 
 -- Set the market value for the current item.
-function AuctionLite:SetItemValue(value)
+function AuctionLite:SetItemValue(value, allowUndercut)
   ItemValue = value;
+  AllowUndercut = allowUndercut;
+
   ItemBid = nil;
   ItemBuyout = nil;
 end
@@ -133,7 +147,7 @@ function AuctionLite:UpdatePrices()
     if ItemBid ~= nil and ItemBuyout ~= nil then
       bid, buyout = ItemBid, ItemBuyout;
     else
-      bid, buyout = self:GeneratePrice(ItemValue);
+      bid, buyout = self:GeneratePrice(ItemValue, AllowUndercut);
     end
 
     -- If we're pricing by stack, multiply by our stack size.
@@ -263,6 +277,7 @@ function AuctionLite:ClearSellFrame()
   ItemValue = nil;
   ItemBid = nil;
   ItemBuyout = nil;
+  AllowUndercut = nil;
 
   SellItemButton:SetNormalTexture(nil);
   SellItemButtonName:SetText("");
@@ -320,6 +335,7 @@ function AuctionLite:SetSellData(results, link)
 
   -- Get our recommended item value.
   local itemValue = 0;
+  local allowUndercut = true;
   if result ~= nil and result.price > 0 then
     itemValue = result.price;
     if self.db.profile.printPriceData then
@@ -337,8 +353,9 @@ function AuctionLite:SetSellData(results, link)
       itemValue = mult * vendor / count;
       self:SetStatus(L["|cffff0000Using Xx vendor price.|r"](mult));
     end
+    allowUndercut = false;
   end
-  self:SetItemValue(itemValue);
+  self:SetItemValue(itemValue, allowUndercut);
 
   -- Load the user's saved price, if it exists.
   local saved = SavedPrices[link];
@@ -372,7 +389,7 @@ function AuctionLite:SellButton_OnClick(id)
     if item.owner == UnitName("player") then
       self:SetItemBidBuyout(item.bid / item.count, item.buyout / item.count);
     else
-      self:SetItemValue(item.price);
+      self:SetItemValue(item.price, true);
     end
 
     self:UpdatePrices();
