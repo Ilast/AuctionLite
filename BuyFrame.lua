@@ -77,10 +77,12 @@ StaticPopupDialogs["AL_FAST_SCAN"] = {
 
 -- Set current item to be shown in detail view, and update dependent data.
 function AuctionLite:SetDetailLink(link)
+  -- If we're leaving the summary view, save our offset.
   if DetailLink == nil then
     SavedOffset = FauxScrollFrame_GetOffset(BuyScrollFrame);
   end
 
+  -- Set the new detail link, if any.
   DetailLink = link;
 
   local offset;
@@ -92,7 +94,13 @@ function AuctionLite:SetDetailLink(link)
     offset = SavedOffset;
   end
 
+  -- Return to our saved offset.  We have to set the inner scroll bar
+  -- manually, because otherwise the two values will become inconsistent.
+  -- We also set the max values to make sure that the value we're setting
+  -- is not ignored.
   FauxScrollFrame_SetOffset(BuyScrollFrame, offset);
+  BuyScrollFrameScrollBar:SetMinMaxValues(0, offset * BuyButton1:GetHeight());
+  BuyScrollFrameScrollBar:SetValue(offset * BuyButton1:GetHeight());
 
   SelectedItems = {};
   LastClick = nil;
@@ -1210,6 +1218,7 @@ function AuctionLite:ClearBuyFrame(partial)
   BuyStatus:Hide();
 
   FauxScrollFrame_SetOffset(BuyScrollFrame, 0);
+  BuyScrollFrameScrollBar:SetValue(0);
 
   self:AuctionFrameBuy_Update();
 end
