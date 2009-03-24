@@ -71,11 +71,11 @@ function AuctionLite:GeneratePrice(value, allowUndercut)
   end
 
   -- How much do we undercut?
+  -- Bid undercut applies all the time; buyout only when allowed.
   local bidUndercut = self.db.profile.bidUndercut;
   local buyoutUndercut = self.db.profile.buyoutUndercut;
 
   if not allowUndercut then
-    bidUndercut = 0;
     buyoutUndercut = 0;
   end
 
