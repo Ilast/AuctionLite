@@ -199,7 +199,7 @@ function AuctionLite:ValidateAuction()
       StatusError = true;
       SellStatusText:SetText(L["|cffff0000No bid price set.|r"]);
       SellCreateAuctionButton:Disable();
-    elseif buyout < bid then
+    elseif 0 < buyout and buyout < bid then
       StatusError = true;
       SellStatusText:SetText(L["|cffff0000Buyout less than bid.|r"]);
       SellCreateAuctionButton:Disable();
@@ -207,7 +207,7 @@ function AuctionLite:ValidateAuction()
       StatusError = true;
       SellStatusText:SetText(L["|cffff0000Not enough cash for deposit.|r"]);
       SellCreateAuctionButton:Disable();
-    elseif buyout <= (vendor * size / count) then
+    elseif 0 < buyout and buyout <= (vendor * size / count) then
       StatusError = true;
       SellStatusText:SetText(L["|cffff0000Buyout less than vendor price.|r"]);
       SellCreateAuctionButton:Disable();
@@ -346,7 +346,7 @@ function AuctionLite:SetSellData(results, link)
     local hist = self:GetHistoricalPrice(link);
     if hist ~= nil and hist.price > 0 then
       itemValue = hist.price;
-      self:SetStatus(L["|cffff0000Using historical data.|r"]);
+      self:SetStatus(L["|cffffd000Using historical data.|r"]);
     else
       local _, _, count, _, _, vendor = GetAuctionSellItemInfo();
       local mult = self.db.profile.vendorMultiplier;

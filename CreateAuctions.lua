@@ -127,7 +127,7 @@ function AuctionLite:CreateAuctionsCore()
       self:Print(L["Error locating item in bags.  Please try again!"]);
     elseif bid == 0 then
       self:Print(L["Invalid starting bid."]);
-    elseif buyout < bid then
+    elseif 0 < buyout and buyout < bid then
       self:Print(L["Buyout cannot be less than starting bid."]);
     elseif GetMoney() < self:CalculateDeposit() then
       self:Print(L["Not enough cash for deposit."]);

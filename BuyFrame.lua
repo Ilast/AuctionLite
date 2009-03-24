@@ -51,6 +51,7 @@ local DealsMode = false;
 -- Links and data for multi-item scan.
 local MultiScanLinks = {};
 local MultiScanData = {};
+local MultiScanMyAuctions = false;
 
 -- Static popup advertising AL's fast scan.
 StaticPopupDialogs["AL_FAST_SCAN"] = {
@@ -107,7 +108,7 @@ function AuctionLite:SetDetailLink(link)
 end
 
 -- Set the data for the scrolling frame.
-function AuctionLite:SetBuyData(results, dealsMode)
+function AuctionLite:SetBuyData(results, dealsMode, myAuctionsMode)
   SummaryData = {};
 
   local count = 0;
@@ -149,6 +150,18 @@ function AuctionLite:SetBuyData(results, dealsMode)
     table.sort(SummaryData, sortByProfit);
   else
     table.sort(SummaryData, sortByName);
+  end
+
+  -- If we've searched for our own auctions, find undercuts.
+  if myAuctionsMode then
+    for link, results in pairs(results) do
+      for _, listing in ipairs(results.data) do
+        if listing.buyout > 0 then
+          results.warning = (listing.owner ~= UnitName("player"));
+          break;
+        end
+      end
+    end
   end
 
   -- If we found our last-selected item, then select it again.
@@ -507,12 +520,13 @@ end
 
 -- Take the next step in a multi-item scan.  If we need to scan for another
 -- item, do it; if there are no items left, display our results.
-function AuctionLite:MultiScan(links)
+function AuctionLite:MultiScan(links, myAuctions)
   -- Are we starting a new multi-item scan?
   local first = false;
   if links ~= nil then
     MultiScanLinks = links;
     MultiScanData = {};
+    MultiScanMyAuctions = myAuctions;
     first = true;
   end
 
@@ -547,8 +561,9 @@ function AuctionLite:MultiScan(links)
     end
 
     -- Show our results.
-    self:SetBuyData(MultiScanData);
+    self:SetBuyData(MultiScanData, nil, MultiScanMyAuctions);
     MultiScanData = {};
+    MultiScanMyAuctions = false;
   end
 end
 
@@ -762,7 +777,7 @@ end
 
 -- Show my auctions.
 function AuctionLite:AuctionFrameBuy_MyAuctions()
-  self:MultiScan(self:GetMyAuctionLinks());
+  self:MultiScan(self:GetMyAuctionLinks(), true);
 end
 
 -- Submit a search query.
@@ -983,6 +998,8 @@ function AuctionLite:AuctionFrameBuy_UpdateDetail()
       local buttonName = "BuyButton" .. i;
       local button = _G[buttonName];
 
+      local warning = _G[buttonName .. "Warning"];
+
       local buttonDetailName = buttonName .. "Detail";
       local buttonDetail     = _G[buttonDetailName];
 
@@ -1051,6 +1068,8 @@ function AuctionLite:AuctionFrameBuy_UpdateDetail()
         button:UnlockHighlight();
       end
 
+      warning:SetAlpha(0);
+
       buttonDetail:Show();
       button:Show();
     end
@@ -1083,6 +1102,8 @@ function AuctionLite:AuctionFrameBuy_UpdateSummary()
 
       local buttonName = "BuyButton" .. i;
       local button = _G[buttonName];
+
+      local warning = _G[buttonName .. "Warning"];
 
       local buttonSummaryName = buttonName .. "Summary";
       local buttonSummary     = _G[buttonSummaryName];
@@ -1134,6 +1155,12 @@ function AuctionLite:AuctionFrameBuy_UpdateSummary()
       end
 
       button:UnlockHighlight();
+
+      if result.warning then
+        warning:SetAlpha(0.4);
+      else
+        warning:SetAlpha(0);
+      end
 
       buttonSummary:Show();
       button:Show();
@@ -1200,6 +1227,7 @@ function AuctionLite:ClearBuyFrame(partial)
 
   if not partial then
     MultiScanLinks = {};
+    MultiScanMyAuctions = false;
   end
   MultiScanData = {};
 

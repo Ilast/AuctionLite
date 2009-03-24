@@ -310,6 +310,20 @@
 				AuctionLite:BuyButton_OnClick(self:GetID());
 			</OnClick>
 		</Scripts>
+		<NormalTexture name="$parentWarning" file="Interface\HelpFrame\HelpFrameButton-Highlight" alphaMode="ADD">
+			<Size>
+				<AbsDimension x="777" y="18"/>
+			</Size>
+			<Anchors>
+				<Anchor point="TOPLEFT">
+					<Offset>
+						<AbsDimension x="0" y="0"/>
+					</Offset>
+				</Anchor>
+			</Anchors>
+			<TexCoords left="0" right="1.0" top="0" bottom="0.578125"/>
+      <Color r="1.0" g="0.0" b="0.0" a="0.0"/>
+		</NormalTexture>
 		<HighlightTexture name="$parentHighlight" file="Interface\HelpFrame\HelpFrameButton-Highlight" alphaMode="ADD">
 			<Size>
 				<AbsDimension x="777" y="18"/>

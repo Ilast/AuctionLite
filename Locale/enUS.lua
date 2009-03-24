@@ -216,7 +216,7 @@ L["|cffff0000Buyout less than vendor price.|r"] = true;
 L["|cff00ff00Scanned X listings.|r"] = function(listings)
   return "|cff00ff00Scanned " .. plural(listings, "listing") .. ".|r";
 end
-L["|cffff0000Using historical data.|r"] = true;
+L["|cffffd000Using historical data.|r"] = true;
 L["|cffff0000Using Xx vendor price.|r"] = function(mult)
   return "|cffff0000Using " .. mult .. "x vendor price.|r";
 end

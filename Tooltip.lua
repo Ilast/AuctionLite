@@ -23,7 +23,7 @@ MoneyTypeInfo["AUCTIONLITE_TOOLTIP"] = {
 -- when the tooltip is cleared.
 function AuctionLite:GameTooltip_ClearMoney_Hook(tooltip)
   local money;
-  for _, money in ipairs(ResetMoneyFrames) do
+  for money, _ in pairs(ResetMoneyFrames) do
     if money ~= nil then
       money:ClearAllPoints();
       money:Hide();
@@ -69,7 +69,7 @@ function AuctionLite:AddTooltipLine(tooltip, option, getPrice, label,
         money:SetPoint("RIGHT", tooltip, "RIGHT", -5, 0);
         money:SetPoint("TOP", text, "TOP", 0, 0);
 
-        table.insert(ResetMoneyFrames, money);
+        ResetMoneyFrames[money] = true;
       else
         -- Show the old-school text tooltip.
         local priceInfo = self:PrintMoney(price * count1);

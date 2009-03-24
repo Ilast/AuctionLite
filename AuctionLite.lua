@@ -28,6 +28,7 @@ local Options = {
       isPercent = true,
       min = 0,
       max = 1,
+      step = 0.01,
       order = 1,
     },
     buyoutUndercut = {
@@ -37,6 +38,7 @@ local Options = {
       isPercent = true,
       min = 0,
       max = 1,
+      step = 0.01,
       order = 2,
     },
     vendorMultiplier = {
@@ -45,13 +47,16 @@ local Options = {
       name = L["Vendor Multiplier"],
       min = 0,
       max = 100,
-      step = 0.1,
+      step = 0.5,
       order = 3,
     },
     roundPrices = {
       type = "range",
       desc = L["Round all prices to this granularity, or zero to disable (0-1)."],
       name = L["Round Prices"],
+      min = 0,
+      max = 1,
+      step = 0.01,
       order = 4,
     },
     minProfit = {
@@ -60,7 +65,7 @@ local Options = {
       name = L["Minimum Profit (Gold)"],
       min = 0,
       max = 1000,
-      step = 1,
+      step = 10,
       order = 5,
     },
     minDiscount = {
@@ -70,6 +75,7 @@ local Options = {
       isPercent = true,
       min = 0,
       max = 1,
+      step = 0.01,
       order = 6,
     },
     getAll = {
