@@ -61,15 +61,29 @@ end
 
 -- Handle modified clicks on bag spaces.
 function AuctionLite:ContainerFrameItemButton_OnModifiedClick_Hook(widget, button)
-  local container = widget:GetParent():GetID();
-  local slot = widget:GetID();
+  local handled = false;
 
-  if IsAltKeyDown() and button == "RightButton" then
-    AuctionFrameTab_OnClick(_G["AuctionFrameTab" .. SellTabIndex]);
-    self:BagClickSell(container, slot);
-  elseif IsControlKeyDown() and button == "RightButton" then
-    AuctionFrameTab_OnClick(_G["AuctionFrameTab" .. BuyTabIndex]);
-    self:BagClickBuy(container, slot);
+  if AuctionFrame:IsShown() then
+    local container = widget:GetParent():GetID();
+    local slot = widget:GetID();
+
+    if IsAltKeyDown() and button == "RightButton" then
+      AuctionFrameTab_OnClick(_G["AuctionFrameTab" .. SellTabIndex]);
+      self:BagClickSell(container, slot);
+      handled = true;
+    elseif IsControlKeyDown() and button == "RightButton" then
+      AuctionFrameTab_OnClick(_G["AuctionFrameTab" .. BuyTabIndex]);
+      self:BagClickBuy(container, slot);
+      handled = true;
+    elseif IsShiftKeyDown() and button == "LeftButton" and
+           CurrentTab == BuyTabIndex then
+      self:BagClickBuy(container, slot);
+      handled = true;
+    end
+  end
+
+  if not handled then
+    self.hooks["ContainerFrameItemButton_OnModifiedClick"](widget, button);
   end
 end
 
