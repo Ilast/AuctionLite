@@ -1,5 +1,5 @@
 -------------------------------------------------------------------------------
--- AuctionLite 1.0.1
+-- AuctionLite 1.0.2
 --
 -- Lightweight addon to determine accurate market prices and to simplify
 -- the process of posting auctions.
@@ -241,7 +241,7 @@ local Defaults = {
 
 local DBName = "AuctionLiteDB";
 
-local AUCTIONLITE_VERSION = "1.0.1";
+local AUCTIONLITE_VERSION = "1.0.2";
 
 -------------------------------------------------------------------------------
 -- Hooks and boostrap code
@@ -250,8 +250,8 @@ local AUCTIONLITE_VERSION = "1.0.1";
 -- Hook some AH/GB functions and UI widgets when the AH/GB gets loaded.
 function AuctionLite:ADDON_LOADED(_, name)
   if name == "Blizzard_AuctionUI" then
-    self:RawHook("ContainerFrameItemButton_OnModifiedClick",
-                 "ContainerFrameItemButton_OnModifiedClick_Hook");
+    self:SecureHook("ContainerFrameItemButton_OnModifiedClick",
+                    "ContainerFrameItemButton_OnModifiedClick_Hook");
     self:SecureHook("AuctionFrameTab_OnClick",
                     "AuctionFrameTab_OnClick_Hook");
     self:SecureHook("ClickAuctionSellItemButton",
