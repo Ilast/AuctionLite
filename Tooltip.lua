@@ -11,7 +11,7 @@ local MAX_BANK_ROWS = 14;
 
 local LinkTooltips = true;
 
-local ResetMoneyFrames = {};
+local ShownMoneyFrames = {};
 
 MoneyTypeInfo["AUCTIONLITE_TOOLTIP"] = {
   UpdateFunc = function(self) return self.staticMoney end,
@@ -19,17 +19,51 @@ MoneyTypeInfo["AUCTIONLITE_TOOLTIP"] = {
   collapse = 1,
 };
 
--- Since we futz with the money frame anchors, we need to reset them
--- when the tooltip is cleared.
+-- Hide all of our private money frames.
 function AuctionLite:GameTooltip_ClearMoney_Hook(tooltip)
-  local money;
-  for money, _ in pairs(ResetMoneyFrames) do
-    if money ~= nil then
-      money:ClearAllPoints();
-      money:Hide();
+  local shownFrames = ShownMoneyFrames[tooltip];
+  if shownFrames ~= nil then
+    local i;
+    for i = 1, shownFrames do
+      local moneyFrame = _G[tooltip:GetName() .. "MoneyFrameAL" .. i];
+      if moneyFrame ~= nil then
+        moneyFrame:Hide();
+      end
     end
+    ShownMoneyFrames[tooltip] = nil;
   end
-  ResetMoneyFrames = {};
+end
+
+-- This is our version of Blizzard's SetTooltipMoney.  We create our
+-- own money frames inside the tooltip so that we can align them properly.
+function AuctionLite:SetTooltipMoney(tooltip, label, money)
+  -- Add the label.
+  tooltip:AddLine(label);
+
+  -- Keep track of frames for this tooltip.
+  local shownFrames = ShownMoneyFrames[tooltip] or 0;
+  shownFrames = shownFrames + 1;
+  ShownMoneyFrames[tooltip] = shownFrames;
+
+  -- Create the frame if necessary.
+  local moneyName = tooltip:GetName() .. "MoneyFrameAL" .. shownFrames;
+  local moneyFrame = _G[moneyName];
+  if moneyFrame == nil then
+    moneyFrame = CreateFrame("Frame", moneyName, tooltip,
+                             "TooltipMoneyFrameTemplate");
+    MoneyFrame_SetType(moneyFrame, "AUCTIONLITE_TOOLTIP");
+  end
+
+  -- Align it to the right of the tooltip at the appropriate line.
+  local numLines = tooltip:NumLines();
+  local textName = tooltip:GetName() .. "TextLeft" .. numLines;
+  moneyFrame:SetPoint("RIGHT", tooltip, "RIGHT", 0, 0);
+  moneyFrame:SetPoint("TOP", textName, "TOP", 0, 0);
+  moneyFrame:Show();
+
+  -- Set the money amount and adjust the width.
+  MoneyFrame_Update(moneyFrame:GetName(), money);
+  moneyFrame.lineNum = numLines;
 end
 
 -- Make an appropriate money string
@@ -53,23 +87,7 @@ function AuctionLite:AddTooltipLine(tooltip, option, getPrice, label,
         end
 
         -- Add the money frame.
-        SetTooltipMoney(tooltip, priceAvg, "AUCTIONLITE_TOOLTIP", label, nil);
-
-        -- Adjust the money frame so that it aligns right.
-        local text = _G[tooltip:GetName() .. "TextLeft" ..  tooltip:NumLines()];
-        local moneyName = tooltip:GetName() .. "MoneyFrame" ..
-                          tooltip.shownMoneyFrames;
-        local money = _G[moneyName];
-        local moneyPrefix = _G[moneyName .. "PrefixText"];
-
-        text:SetText(label);
-        moneyPrefix:Hide();
-
-        money:ClearAllPoints();
-        money:SetPoint("RIGHT", tooltip, "RIGHT", -5, 0);
-        money:SetPoint("TOP", text, "TOP", 0, 0);
-
-        ResetMoneyFrames[money] = true;
+        self:SetTooltipMoney(tooltip, label, priceAvg);
       else
         -- Show the old-school text tooltip.
         local priceInfo = self:PrintMoney(price * count1);
@@ -90,7 +108,11 @@ end
 -- Add vendor and auction data to a tooltip.  We have count1 and count2
 -- for the upper and lower bound on the number of items; count2 may be nil.
 function AuctionLite:AddTooltipData(tooltip, link, count1, count2)
-  if link ~= nil and count1 ~= nil then
+  if link ~= nil and count1 ~= nil and
+     (self.db.profile.showVendor or
+      self.db.profile.showDisenchant or
+      self.db.profile.showAuction) then
+
     -- Do we multiply by the stack size?
     local stackPrice = self.db.profile.showStackPrice;
     if (stackPrice and IsShiftKeyDown()) or
@@ -108,10 +130,7 @@ function AuctionLite:AddTooltipData(tooltip, link, count1, count2)
     end
 
     -- Remember how many money frames this tooltip had originally.
-    local startMoney = tooltip.shownMoneyFrames;
-    if startMoney == nil then
-      startMoney = 0;
-    end
+    local startMoney = ShownMoneyFrames[tooltip] or 0;
 
     -- Add lines for vendor, auction, and disenchant as appropriate.
     self:AddTooltipLine(tooltip, self.db.profile.showVendor,
@@ -127,10 +146,7 @@ function AuctionLite:AddTooltipData(tooltip, link, count1, count2)
       "|cffffd000" .. L["Auction"] .. "|r" .. suffix, link, count1, count2);
 
     -- Find out how many money frames we added.
-    local endMoney = tooltip.shownMoneyFrames;
-    if endMoney == nil then
-      endMoney = 0;
-    end
+    local endMoney = ShownMoneyFrames[tooltip] or 0;
 
     -- Figure out the maximum width for each denomination in our tooltips.
     local goldWidth = 0;
@@ -148,7 +164,7 @@ function AuctionLite:AddTooltipData(tooltip, link, count1, count2)
 
     local i;
     for i = startMoney + 1, endMoney do
-      local moneyName = tooltip:GetName() .. "MoneyFrame" .. i;
+      local moneyName = tooltip:GetName() .. "MoneyFrameAL" .. i;
       goldWidth = maxWidth(moneyName .. "GoldButton", goldWidth);
       silverWidth = maxWidth(moneyName .. "SilverButton", silverWidth);
       copperWidth = maxWidth(moneyName .. "CopperButton", copperWidth);
@@ -156,24 +172,36 @@ function AuctionLite:AddTooltipData(tooltip, link, count1, count2)
 
     -- Now update the width of each denomination and each money frame
     -- so that they line up nicely.
-    local updateWidth = function(buttonName, newWidth, totalWidth)
+    local updateWidth = function(buttonName, newWidth)
       local button = _G[buttonName];
-      totalWidth = totalWidth + newWidth - button:GetWidth();
       button:SetWidth(newWidth);
-      return totalWidth;
     end
+
+    local maxTextWidth = 0;
+    local maxMoneyWidth = 0;
 
     local i;
     for i = startMoney + 1, endMoney do
-      local moneyName = tooltip:GetName() .. "MoneyFrame" .. i;
-      local money = _G[moneyName];
-      local width = money:GetWidth();
-      width = updateWidth(moneyName .. "GoldButton", goldWidth, width);
-      width = updateWidth(moneyName .. "SilverButton", silverWidth, width);
-      width = updateWidth(moneyName .. "CopperButton", copperWidth, width);
-      if tooltip:GetMinimumWidth() < width then
-        tooltip:SetMinimumWidth(width);
+      -- Update each column width.
+      local moneyName = tooltip:GetName() .. "MoneyFrameAL" .. i;
+      updateWidth(moneyName .. "GoldButton", goldWidth);
+      updateWidth(moneyName .. "SilverButton", silverWidth);
+      updateWidth(moneyName .. "CopperButton", copperWidth);
+      -- Get the maximum text width and money width.
+      local moneyFrame = _G[moneyName];
+      if moneyFrame:GetWidth() > maxMoneyWidth then
+        maxMoneyWidth = moneyFrame:GetWidth();
       end
+      local textName = tooltip:GetName() .. "TextLeft" .. moneyFrame.lineNum;
+      local textFrame = _G[textName];
+      if textFrame:GetWidth() > maxTextWidth then
+        maxTextWidth = textFrame:GetWidth();
+      end
+    end
+
+    -- Widen the tooltip if necessary.
+    if tooltip:GetMinimumWidth() < maxTextWidth + maxMoneyWidth then
+      tooltip:SetMinimumWidth(maxTextWidth + maxMoneyWidth);
     end
 
     -- We're done!  Show the tooltip.
