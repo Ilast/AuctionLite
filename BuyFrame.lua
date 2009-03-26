@@ -11,6 +11,18 @@ local BUY_DISPLAY_SIZE = 15;
 local ROW_HEIGHT = 21;
 local EXPAND_ROWS = 4;
 
+-- Various states for the buy frame.
+local BUY_MODE_NONE        = 1;
+local BUY_MODE_INTRO       = 2;
+local BUY_MODE_SEARCH      = 3;
+local BUY_MODE_SCAN        = 4;
+local BUY_MODE_DEALS       = 5;
+local BUY_MODE_FAVORITES   = 6;
+local BUY_MODE_MY_AUCTIONS = 7;
+
+-- Current state of the buy frame.
+local BuyMode = BUY_MODE_NONE;
+
 -- Height of expandable frame.
 local ExpandHeight = 0;
 
@@ -46,12 +58,10 @@ local NoResults = false;
 
 -- Stored scan data from the latest full scan.
 local ScanData = nil;
-local DealsMode = false;
 
 -- Links and data for multi-item scan.
 local MultiScanLinks = {};
 local MultiScanData = {};
-local MultiScanMyAuctions = false;
 
 -- Static popup advertising AL's fast scan.
 StaticPopupDialogs["AL_FAST_SCAN"] = {
@@ -108,7 +118,7 @@ function AuctionLite:SetDetailLink(link)
 end
 
 -- Set the data for the scrolling frame.
-function AuctionLite:SetBuyData(results, dealsMode, myAuctionsMode)
+function AuctionLite:SetBuyData(results)
   SummaryData = {};
 
   local count = 0;
@@ -146,14 +156,14 @@ function AuctionLite:SetBuyData(results, dealsMode, myAuctionsMode)
     return results[a].profit > results[b].profit;
   end
 
-  if dealsMode then
+  if BuyMode == BUY_MODE_DEALS then
     table.sort(SummaryData, sortByProfit);
   else
     table.sort(SummaryData, sortByName);
   end
 
   -- If we've searched for our own auctions, find undercuts.
-  if myAuctionsMode then
+  if BuyMode == BUY_MODE_MY_AUCTIONS then
     for link, results in pairs(results) do
       for _, listing in ipairs(results.data) do
         if listing.buyout > 0 then
@@ -180,12 +190,10 @@ function AuctionLite:SetBuyData(results, dealsMode, myAuctionsMode)
   -- Save our data and set our detail link, if we only got one kind of item.
   SearchData = results;
   NoResults = (count == 0);
-  DealsMode = dealsMode;
   self:SetDetailLink(newLink);
 
   -- Clean up the display.
-  BuyIntroText:Hide();
-  BuyNoItemsText:Hide();
+  BuyMessageText:Hide();
   BuyStatus:Hide();
 
   -- Start a mass buyout, if necessary.
@@ -221,6 +229,8 @@ function AuctionLite:SetScanData(results)
       ScanData[link] = result;
     end
   end
+
+  ScanData = {};
 
   -- Display our list of deals.
   DetailLinkPrev = nil;
@@ -520,13 +530,12 @@ end
 
 -- Take the next step in a multi-item scan.  If we need to scan for another
 -- item, do it; if there are no items left, display our results.
-function AuctionLite:MultiScan(links, myAuctions)
+function AuctionLite:MultiScan(links)
   -- Are we starting a new multi-item scan?
   local first = false;
   if links ~= nil then
     MultiScanLinks = links;
     MultiScanData = {};
-    MultiScanMyAuctions = myAuctions;
     first = true;
   end
 
@@ -561,9 +570,8 @@ function AuctionLite:MultiScan(links, myAuctions)
     end
 
     -- Show our results.
-    self:SetBuyData(MultiScanData, nil, MultiScanMyAuctions);
+    self:SetBuyData(MultiScanData);
     MultiScanData = {};
-    MultiScanMyAuctions = false;
   end
 end
 
@@ -739,6 +747,8 @@ end
 
 -- Starts a full scan of the auction house.
 function AuctionLite:StartFullScan()
+  BuyMode = BUY_MODE_SCAN;
+
   if not self.db.profile.fastScanAd2 then
     StaticPopup_Show("AL_FAST_SCAN");
   else
@@ -762,6 +772,8 @@ end
 
 -- List current deals.  If we haven't done a full scan, do it now.
 function AuctionLite:AuctionFrameBuy_Deals()
+  BuyMode = BUY_MODE_DEALS;
+
   if ScanData ~= nil then
     DetailLinkPrev = nil;
     self:SetScanData(ScanData);
@@ -772,16 +784,22 @@ end
 
 -- Query and display favorites.
 function AuctionLite:AuctionFrameBuy_Favorites()
+  BuyMode = BUY_MODE_FAVORITES;
+
   self:MultiScan(self.db.profile.favorites);
 end
 
 -- Show my auctions.
 function AuctionLite:AuctionFrameBuy_MyAuctions()
-  self:MultiScan(self:GetMyAuctionLinks(), true);
+  BuyMode = BUY_MODE_MY_AUCTIONS;
+
+  self:MultiScan(self:GetMyAuctionLinks());
 end
 
 -- Submit a search query.
 function AuctionLite:AuctionFrameBuy_Search()
+  BuyMode = BUY_MODE_SEARCH;
+
   local query = {
     name = BuyName:GetText(),
     wait = true,
@@ -857,10 +875,21 @@ function AuctionLite:AuctionFrameBuy_Update()
   BuyStatus:Hide();
 
   -- If we have no items, say so.
-  if NoResults then
-    BuyNoItemsText:Show();
+  BuyMessageText:Show();
+  if BuyMode == BUY_MODE_INTRO then
+    BuyMessageText:SetText(L["Enter item name and click \"Search\""]);
+  elseif BuyMode == BUY_MODE_SEARCH and NoResults then
+    BuyMessageText:SetText(L["No items found"]);
+  elseif BuyMode == BUY_MODE_SCAN and NoResults then
+    BuyMessageText:SetText(L["Scan complete.  Try again later to find deals!"]);
+  elseif BuyMode == BUY_MODE_DEALS and NoResults then
+    BuyMessageText:SetText(L["No deals found"]);
+  elseif BuyMode == BUY_MODE_FAVORITES and NoResults then
+    BuyMessageText:SetText(L["No items found"]);
+  elseif BuyMode == BUY_MODE_MY_AUCTIONS and NoResults then
+    BuyMessageText:SetText(L["No current auctions"]);
   else
-    BuyNoItemsText:Hide();
+    BuyMessageText:Hide();
   end
 
   -- Update the expandable header.
@@ -1094,7 +1123,8 @@ function AuctionLite:AuctionFrameBuy_UpdateSummary()
     if link ~= nil then
       local result;
       
-      if DealsMode then
+      if BuyMode == BUY_MODE_DEALS or
+         BuyMode == BUY_MODE_SCAN then
         result = ScanData[link];
       else
         result = SearchData[link];
@@ -1131,7 +1161,8 @@ function AuctionLite:AuctionFrameBuy_UpdateSummary()
 
       MoneyFrame_Update(marketFrame, math.floor(result.price));
 
-      if DealsMode then
+      if BuyMode == BUY_MODE_DEALS or
+         BuyMode == BUY_MODE_SCAN then
         MoneyFrame_Update(histFrame, math.floor(result.profit));
         histFrame:Show();
       else
@@ -1172,7 +1203,8 @@ function AuctionLite:AuctionFrameBuy_UpdateSummary()
 
   if table.getn(SummaryData) > 0 then
     BuySummaryHeader:Show();
-    if DealsMode then
+    if BuyMode == BUY_MODE_DEALS or
+       BuyMode == BUY_MODE_SCAN then
       BuyHistPriceText:SetText(L["Potential Profit"]);
     else
       BuyHistPriceText:SetText(L["Historical Price"]);
@@ -1210,6 +1242,10 @@ end
 function AuctionLite:ClearBuyFrame(partial)
   ExpandHeight = 0;
 
+  if not partial then
+    BuyMode = BUY_MODE_INTRO;
+  end
+
   DetailLink = nil;
   DetailData = {};
 
@@ -1228,11 +1264,8 @@ function AuctionLite:ClearBuyFrame(partial)
   SearchData = nil;
   NoResults = false;
 
-  DealsMode = false;
-
   if not partial then
     MultiScanLinks = {};
-    MultiScanMyAuctions = false;
   end
   MultiScanData = {};
 
@@ -1242,12 +1275,7 @@ function AuctionLite:ClearBuyFrame(partial)
     BuyName:SetFocus();
   end
 
-  if not partial then
-    BuyIntroText:Show();
-  else
-    BuyIntroText:Hide();
-  end
-
+  BuyMessageText:Hide();
   BuyStatus:Hide();
 
   FauxScrollFrame_SetOffset(BuyScrollFrame, 0);
@@ -1290,8 +1318,6 @@ function AuctionLite:CreateBuyFrame()
   BuyTitle:SetText(L["AuctionLite - Buy"]);
   BuyNameText:SetText(L["Name"]);
   BuyQuantityText:SetText(L["Qty"]);
-  BuyIntroText:SetText(L["Enter item name and click \"Search\""]);
-  BuyNoItemsText:SetText(L["No items found"]);
   BuyStatusText:SetText(L["Searching:"]);
   BuyElapsedText:SetText(L["Time Elapsed:"]);
   BuyRemainingText:SetText(L["Time Remaining:"]);

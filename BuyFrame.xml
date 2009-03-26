@@ -385,16 +385,7 @@
 						</Anchor>
 					</Anchors>
 				</FontString>
-				<FontString name="BuyNoItemsText" inherits="GameFontNormal" text="No items found">
-					<Anchors>
-						<Anchor point="CENTER" relativePoint="TOPLEFT">
-							<Offset>
-								<AbsDimension x="425" y="-150"/>
-							</Offset>
-						</Anchor>
-					</Anchors>
-				</FontString>
-				<FontString name="BuyIntroText" inherits="GameFontNormal">
+				<FontString name="BuyMessageText" inherits="GameFontNormal" justifyH="CENTER">
 					<Anchors>
 						<Anchor point="CENTER" relativePoint="TOPLEFT">
 							<Offset>

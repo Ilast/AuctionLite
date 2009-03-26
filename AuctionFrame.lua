@@ -18,10 +18,8 @@ function AuctionLite:AuctionFrame_OnUpdate()
 end
 
 -- Handle tab clicks by showing or hiding our frame as appropriate.
-function AuctionLite:AuctionFrameTab_OnClick_Hook(button, index)
-  if not index then
-    index = button:GetID();
-  end
+function AuctionLite:AuctionFrameTab_OnClick_Hook(tab, arg)
+  local index = (tab and tab:GetID()) or arg;
 
   CurrentTab = index;
 
