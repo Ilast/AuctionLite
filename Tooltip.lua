@@ -333,6 +333,15 @@ function AuctionLite:AuctionSellTooltip(tooltip)
   end
 end
 
+-- Add data to mailbox tooltips.
+function AuctionLite:InboxTooltip(tooltip, msgIndex, attachIndex)
+  if tooltip:NumLines() > 0 then
+    local link = GetInboxItemLink(msgIndex, attachIndex);
+    local _, _, count = GetInboxItem(msgIndex, attachIndex);
+    self:AddTooltipData(tooltip, link, count);
+  end
+end
+
 -- Add data to item link tooltips.
 function AuctionLite:HyperlinkTooltip(tooltip, link)
   if tooltip:NumLines() > 0 and link:find("item") and LinkTooltips then
@@ -379,6 +388,7 @@ function AuctionLite:AddHooksToTooltip(tooltip)
   self:SecureHook(tooltip, "SetLootRollItem", "LootRollTooltip");
   self:SecureHook(tooltip, "SetAuctionItem", "AuctionTooltip");
   self:SecureHook(tooltip, "SetAuctionSellItem", "AuctionSellTooltip");
+  self:SecureHook(tooltip, "SetInboxItem", "InboxTooltip");
   self:SecureHook(tooltip, "SetHyperlink", "HyperlinkTooltip");
 end
 
