@@ -1180,14 +1180,19 @@ function AuctionLite:AuctionFrameBuy_UpdateSummary()
   end
 end
 
+-- Loads a name into the input field and searches.
+function AuctionLite:NameClickBuy(name)
+  BuyName:SetText(name);
+  BuyQuantity:SetFocus();
+  AuctionLite:AuctionFrameBuy_Search();
+end
+
 -- Handle bag item clicks by searching for the item.
 function AuctionLite:BagClickBuy(container, slot)
   local link = GetContainerItemLink(container, slot);
   if link ~= nil then
     local name = self:SplitLink(link);
-    BuyName:SetText(name);
-    BuyQuantity:SetFocus();
-    AuctionLite:AuctionFrameBuy_Search();
+    self:NameClickBuy(name);
   end
 end
 

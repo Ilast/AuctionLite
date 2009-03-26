@@ -71,11 +71,33 @@ function AuctionLite:ContainerFrameItemButton_OnModifiedClick_Hook(widget, butto
     elseif IsControlKeyDown() and button == "RightButton" then
       AuctionFrameTab_OnClick(_G["AuctionFrameTab" .. BuyTabIndex]);
       self:BagClickBuy(container, slot);
-    elseif IsShiftKeyDown() and button == "LeftButton" and
-           CurrentTab == BuyTabIndex then
-      self:BagClickBuy(container, slot);
     end
   end
+end
+
+-- Intercept calls to ChatEdit_InsertLink to handle shift-click in the
+-- "Buy" frame.  We use a raw hook so that the stack-splitting frame
+-- doesn't show up.
+function AuctionLite:ChatEdit_InsertLink_Hook(link)
+  local handled = false;
+
+  -- Is this click ours?
+  if AuctionFrame:IsShown() and
+     CurrentTab == BuyTabIndex and
+     link:find("item:", 1, true) then
+    local name = GetItemInfo(link);
+    if name ~= nil then
+      self:NameClickBuy(name);
+      handled = true;
+    end
+  end
+
+  -- It wasn't, so let the existing handler take it.
+  if not handled then
+    handled = self.hooks["ChatEdit_InsertLink"](link);
+  end
+
+  return handled;
 end
 
 -- Jump to the selected tab on opening the AH.
