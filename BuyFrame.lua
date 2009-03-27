@@ -230,8 +230,6 @@ function AuctionLite:SetScanData(results)
     end
   end
 
-  ScanData = {};
-
   -- Display our list of deals.
   DetailLinkPrev = nil;
   self:SetBuyData(ScanData, true);
