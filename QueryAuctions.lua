@@ -345,13 +345,19 @@ function AuctionLite:ShowReceipt(cancelled)
 
   -- Print a summary.
   if not cancelled or listingsBought > 0 then
-    self:Print(L["Bought/bid on Xx Y (Z listings at W)."](
-               Query.isBuyout, itemsBought, Query.name,
-               listingsBought, price));
+    if Query.isBuyout then
+      self:Print(L["Bought %dx %s (%d |4listing:listings; at %s)."]:
+                 format(itemsBought, Query.name, listingsBought,
+                        self:PrintMoney(price)));
+    else
+      self:Print(L["Bid on %dx %s (%d |4listing:listings; at %s)."]:
+                 format(itemsBought, Query.name, listingsBought,
+                        self:PrintMoney(price)));
+    end
 
     if itemsNotFound > 0 then
-      self:Print(L["Note: X listings of Y items was/were not purchased."](
-                 listingsNotFound, itemsNotFound));
+      self:Print(L["Note: %d |4listing:listings; of %d |4item was:items were; not purchased."]:
+                 format(listingsNotFound, itemsNotFound));
     end
   end
 

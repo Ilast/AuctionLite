@@ -191,7 +191,8 @@ function AuctionLite:CreateAuctionsCore()
         self:ClearSellFrame();
       end
 
-      self:Print(L["Created X auctions of Y xZ."](created, name, size));
+      self:Print(L["Created %d |4auction:auctions; of %s x%d."]:
+                 format(created, name, size));
     end
 
     Selling = false;

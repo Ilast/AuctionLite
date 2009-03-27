@@ -938,23 +938,29 @@ function AuctionLite:AuctionFrameBuy_UpdateExpand()
   local order = PurchaseOrder;
   if order ~= nil then
     if order.resell == nil then
-      BuyExpand1Text:SetText(
-        L["Bid/buyout cost for X:"](order.isBuyout, order.count));
+      if order.isBuyout then
+        BuyExpand1Text:SetText(L["Buyout cost for %d:"]:format(order.count));
+      else
+        BuyExpand1Text:SetText(L["Bid cost for %d:"]:format(order.count));
+      end
       MoneyFrame_Update(BuyExpand1MoneyFrame, order.price);
 
-      BuyExpand2Text:SetText(L["Historical price for X:"](order.count));
+      BuyExpand2Text:SetText(L["Historical price for %d:"]:format(order.count));
       MoneyFrame_Update(BuyExpand2MoneyFrame, order.histPrice);
     else
-      BuyExpand1Text:SetText(
-        L["Bid/buyout cost for X:"](order.isBuyout, order.count));
+      if order.isBuyout then
+        BuyExpand1Text:SetText(L["Buyout cost for %d:"]:format(order.count));
+      else
+        BuyExpand1Text:SetText(L["Bid cost for %d:"]:format(order.count));
+      end
       MoneyFrame_Update(BuyExpand1MoneyFrame, order.price);
 
-      BuyExpand2Text:SetText(L["Resell X:"](order.resell));
+      BuyExpand2Text:SetText(L["Resell %d:"]:format(order.resell));
       MoneyFrame_Update(BuyExpand2MoneyFrame, order.resellPrice);
       self:MakeNegative("BuyExpand2MoneyFrame");
 
       BuyExpand3Text:SetText(
-        L["Net cost for X:"](order.count - order.resell));
+        L["Net cost for %d:"]:format(order.count - order.resell));
       if order.netPrice < 0 then
         MoneyFrame_Update(BuyExpand3MoneyFrame, - order.netPrice);
         self:MakeNegative("BuyExpand3MoneyFrame");
@@ -963,7 +969,7 @@ function AuctionLite:AuctionFrameBuy_UpdateExpand()
       end
 
       BuyExpand4Text:SetText(
-        L["Historical price for X:"](order.count - order.resell));
+        L["Historical price for %d:"]:format(order.count - order.resell));
       MoneyFrame_Update(BuyExpand4MoneyFrame, order.histPrice);
     end
   end
@@ -984,7 +990,8 @@ function AuctionLite:AuctionFrameBuy_UpdateExpand()
     end
 
     if count < order.count then
-      BuyBatchText:SetText(L["Batch X: Y at Z"](order.batch, count, price));
+      BuyBatchText:SetText(L["Batch %d: %d at %s"]:
+                           format(order.batch, count, self:PrintMoney(price)));
     end
   end
 

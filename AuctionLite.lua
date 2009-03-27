@@ -354,6 +354,6 @@ function AuctionLite:OnInitialize()
 
   -- And print a message if we're debugging.
   if self.db.profile.showGreeting then
-    self:Print(L["AuctionLite vX loaded!"](AUCTIONLITE_VERSION));
+    self:Print(L["AuctionLite v%s loaded!"]:format(AUCTIONLITE_VERSION));
   end
 end

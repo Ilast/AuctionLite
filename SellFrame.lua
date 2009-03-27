@@ -99,26 +99,28 @@ function AuctionLite:ShowPriceData(itemLink, itemValue, stackSize)
   local _, _, count, _, _, vendor = GetAuctionSellItemInfo();
   local itemVendor = vendor / count;
 
-  self:Print(L["|cff8080ffData for X xY|r"](itemLink, stackSize));
-  self:Print(L["Vendor: X"](itemVendor * stackSize));
+  self:Print(L["|cff8080ffData for %s x%d|r"]:format(itemLink, stackSize));
+  self:Print(L["Vendor: %s"]:format(self:PrintMoney(itemVendor * stackSize)));
 
   if hist ~= nil and hist.scans > 0 and hist.price > 0 then
-    self:Print(L["Historical: X (Y listings/scan, Z items/scan)"](
-               hist.price * stackSize,
-               math.floor(0.5 + hist.listings / hist.scans),
-               math.floor(0.5 + hist.items / hist.scans)));
+    self:Print(L["Historical: %s (%d |4listing:listings;/scan, %d |4item:items;/scan)"]:
+               format(self:PrintMoney(hist.price * stackSize),
+                      math.floor(0.5 + hist.listings / hist.scans),
+                      math.floor(0.5 + hist.items / hist.scans)));
     if itemVendor > 0 then
-      self:Print(L["Current: X (Yx historical, Zx vendor)"](
-                 stackValue,
-                 math.floor(100 * itemValue / hist.price) / 100,
-                 math.floor(100 * itemValue / itemVendor) / 100));
+      self:Print(L["Current: %s (%.2gx historical, %.2gx vendor)"]:
+                 format(self:PrintMoney(stackValue),
+                        math.floor(100 * itemValue / hist.price) / 100,
+                        math.floor(100 * itemValue / itemVendor) / 100));
     else
-      self:Print(L["Current: X (Yx historical)"](
-                 stackValue, math.floor(100 * itemValue / hist.price) / 100));
+      self:Print(L["Current: %s (%.2gx historical)"]:
+                 format(self:PrintMoney(stackValue),
+                        math.floor(100 * itemValue / hist.price) / 100));
     end
   elseif itemVendor > 0 then
-    self:Print(L["Current: X (Yx vendor)"](
-               stackValue, math.floor(100 * itemValue / itemVendor) / 100));
+    self:Print(L["Current: %s (%.2gx vendor)"]:
+               format(self:PrintMoney(stackValue),
+                      math.floor(100 * itemValue / itemVendor) / 100));
   end
 
   return bid, buyout;
@@ -247,7 +249,8 @@ function AuctionLite:ClickAuctionSellItemButton_Hook()
       SellStacks:SetFocus();
 
       local total = self:CountItems(link);
-      SellStackText:SetText(L["Number of Items |cff808080(max X)|r"](total));
+      SellStackText:SetText(
+        L["Number of Items |cff808080(max %d)|r"]:format(total));
 
       self:UpdateDeposit();
 
@@ -341,7 +344,8 @@ function AuctionLite:SetSellData(results, link)
     if self.db.profile.printPriceData then
       self:ShowPriceData(link, itemValue, SellSize:GetNumber());
     end
-    self:SetStatus(L["|cff00ff00Scanned X listings.|r"](result.listings));
+    self:SetStatus(L["|cff00ff00Scanned %d listings.|r"]:
+                   format(result.listings));
   else
     local hist = self:GetHistoricalPrice(link);
     if hist ~= nil and hist.price > 0 then
@@ -351,7 +355,8 @@ function AuctionLite:SetSellData(results, link)
       local _, _, count, _, _, vendor = GetAuctionSellItemInfo();
       local mult = self.db.profile.vendorMultiplier;
       itemValue = mult * vendor / count;
-      self:SetStatus(L["|cffff0000Using Xx vendor price.|r"](mult));
+      self:SetStatus(L["|cffff0000Using %.1gx vendor price.|r"]:
+                     format(mult));
     end
     allowUndercut = false;
   end
@@ -501,7 +506,7 @@ end
 
 -- Update query progress.
 function AuctionLite:UpdateProgressSell(pct)
-  self:SetStatus(L["|cffffff00Scanning: X%|r"](pct));
+  self:SetStatus(L["|cffffff00Scanning: %d%%|r"]:format(pct));
 end
 
 -- Paint the scroll frame on the right-hand side with competing auctions.

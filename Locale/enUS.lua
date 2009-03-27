@@ -2,20 +2,6 @@ local L = LibStub("AceLocale-3.0"):NewLocale("AuctionLite", "enUS", true);
 
 if L then
 
--- Helper functions.
-
-local function money(price)
-  return AuctionLite:PrintMoney(price);
-end
-
-local function plural(count, name)
-  local base = tostring(count) .. " " .. name;
-  if count ~= 1 then
-    base = base .. "s";
-  end
-  return base;
-end
-
 -- AuctionLite.lua
 
 L["Percent to undercut market value for bid prices (0-100)."] = true;
@@ -56,9 +42,7 @@ L["Never"] = true;
 L["Tooltips"] = true;
 L["Profiles"] = true;
 L["AuctionLite"] = true;
-L["AuctionLite vX loaded!"] = function(version)
-  return "AuctionLite v" .. version .. " loaded!"
-end
+L["AuctionLite v%s loaded!"] = true;
 
 -- BuyFrame.lua
 
@@ -79,30 +63,12 @@ L["|cffff0000[Warning]|r Skipping your own auctions.  " ..
 L["Scanning..."] = true;
 L["Scanning:"] = true;
 L["Searching:"] = true;
-L["Bid/buyout cost for X:"] = function(isBuyout, count)
-  local action;
-  if isBuyout then
-    action = "Buyout";
-  else
-    action = "Bid";
-  end
-  return action .. " cost for " .. count .. ":";
-end
-L["Historical price for X:"] = function(count)
-  return "Historical price for " .. count .. ":";
-end
-L["Resell X:"] = function(count)
-  return "Resell " .. count .. ":";
-end
-L["Net cost for X:"] = function(count)
-  return "Net cost for " .. count .. ":";
-end
-L["Historical price for X:"] = function(count)
-  return "Historical price for " .. count .. ":";
-end
-L["Batch X: Y at Z"] = function(batch, count, price)
-  return "Batch " .. batch .. ": " .. count .. " at " .. money(price);
-end
+L["Bid cost for %d:"] = true;
+L["Buyout cost for %d:"] = true;
+L["Historical price for %d:"] = true;
+L["Resell %d:"] = true;
+L["Net cost for %d:"] = true;
+L["Batch %d: %d at %s"] = true;
 L["Potential Profit"] = true;
 L["Historical Price"] = true;
 L["Show Deals"] = true;
@@ -138,9 +104,7 @@ L["Search"] = true;
 
 -- CancelAuctions.lua
 
-L["Cancelled X listings of Y"] = function(listings, name)
-  return "Cancelled " .. listings .. " of " .. name;
-end
+L["Cancelled %d listings of %s"] = true;
 L["Error locating item in bags.  Please try again!"] = true;
 L["Invalid starting bid."] = true;
 L["Buyout cannot be less than starting bid."] = true;
@@ -148,10 +112,7 @@ L["Not enough cash for deposit."] = true;
 L["Not enough items available."] = true;
 L["Error when creating auctions."] = true;
 L["Need an empty bag slot to create auctions."] = true;
-L["Created X auctions of Y xZ."] = function(count, name, size)
-  return "Created " .. plural(count, "auction") ..
-         " of " ..  name .. " x" ..  size;
-end
+L["Created %d |4auction:auctions; of %s x%d."] = true;
 L["Auction creation is already in progress."] = true;
 
 -- QueryAuctions.lua
@@ -159,80 +120,33 @@ L["Auction creation is already in progress."] = true;
 L["|cffffd000[Note]|r " ..
   "Fast auction scans can only be used once every " ..
   "15 minutes. Using a slow scan for now."] = true;
-L["Bought/bid on Xx Y (Z listings at W)."] =
-function(isBuyout, items, name, listings, price)
-  local action;
-  if isBuyout then
-    action = "Bought ";
-  else
-    action = "Bid on ";
-  end
-  return action .. items .. "x " .. name ..
-         " (" .. plural(listings, "listing") ..
-         " at " .. money(price) ..  ").";
-end
-L["Note: X listings of Y items was/were not purchased."] =
-function(listings, items)
-  local verb;
-  if listingsNotFound == 1 then
-    verb = "was";
-  else
-    verb = "were";
-  end
-  return "Note: " .. plural(listings, "listing") .. " of " ..
-         plural(items, "item") .. " " .. verb .. " not purchased.";
-end
+L["Bought %dx %s (%d |4listing:listings; at %s)."] = true;
+L["Bid on %dx %s (%d |4listing:listings; at %s)."] = true;
+L["Note: %d |4listing:listings; of %d |4item was:items were; not purchased."] = true;
 
 -- SellFrame.lua
 
-L["|cff8080ffData for X xY|r"] = function(link, size)
-  return "|cff8080ffData for " .. link .. " x" .. size .. "|r";
-end
-L["Vendor: X"] =function(price)
-  return "Vendor: " .. money(price);
-end
-L["Historical: X (Y listings/scan, Z items/scan)"] =
-function(price, listings, items)
-  return "Historical: " .. money(price) ..  " (" ..
-          plural(listings, "listing") .. "/scan, " ..
-          plural(items, "item") .. "/scan)";
-end
-L["Current: X (Yx historical, Zx vendor)"] =
-function(price, hist, vendor)
-  return "Current: " .. money(price) ..  " (" ..
-          hist .. "x historical, " ..  vendor .. "x vendor)";
-end
-L["Current: X (Yx historical)"] =
-function(price, hist)
-  return "Current: " .. money(price) ..  " (" ..  hist .. "x historical)";
-end
-L["Current: X (Yx vendor)"] =
-function(price, vendor)
-  return "Current: " .. money(price) ..  " (" ..  vendor .. "x vendor)";
-end
+L["|cff8080ffData for %s x%d|r"] = true;
+L["Vendor: %s"] = true;
+L["Historical: %s (%d |4listing:listings;/scan, %d |4item:items;/scan)"] = true;
+L["Current: %s (%.2gx historical, %.2gx vendor)"] = true;
+L["Current: %s (%.2gx historical)"] = true;
+L["Current: %s (%.2gx vendor)"] = true;
 L["|cffff0000Invalid stack size/count.|r"] = true;
 L["|cffff0000Not enough items available.|r"] = true;
 L["|cffff0000No bid price set.|r"] = true;
 L["|cffff0000Buyout less than bid.|r"] = true;
 L["|cffff0000Not enough cash for deposit.|r"] = true;
 L["|cffff0000Buyout less than vendor price.|r"] = true;
-L["|cff00ff00Scanned X listings.|r"] = function(listings)
-  return "|cff00ff00Scanned " .. plural(listings, "listing") .. ".|r";
-end
+L["|cff00ff00Scanned %d listings.|r"] = true;
 L["|cffffd000Using historical data.|r"] = true;
-L["|cffff0000Using Xx vendor price.|r"] = function(mult)
-  return "|cffff0000Using " .. mult .. "x vendor price.|r";
-end
+L["|cffff0000Using %.1gx vendor price.|r"] = true;
 L["|cff00ff00Using previous price.|r"] = true;
 L["|cff808080(per item)|r"] = true;
 L["|cff808080(per stack)|r"] = true;
-L["|cffffff00Scanning: X%|r"] = function(pct)
-  return "|cffffff00Scanning: " .. pct .. "%|r";
-end
+L["|cffffff00Scanning: %d%%|r"] = true;
 L["AuctionLite - Sell"] = true;
-L["Number of Items |cff808080(max X)|r"] = function(total)
-  return "Number of Items |cff808080(max " .. total .. ")|r";
-end
+L["Number of Items |cff808080(max %d)|r"] = true;
 L["Number of Items"] = true;
 L["stacks of"] = true;
 L["Buyout Price"] = true;
