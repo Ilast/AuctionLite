@@ -30,19 +30,19 @@
 						</Anchor>
 					</Anchors>
 				</FontString>
-        <FontString name="$parentPlus" inherits="GameFontNormal" justifyH="LEFT" text="+">
-          <Size>
-            <AbsDimension x="0" y="18"/>
-          </Size>
-          <Anchors>
-            <Anchor point="LEFT" relativeTo="$parentName">
-              <Offset>
-                <AbsDimension x="0" y="0"/>
-              </Offset>
-            </Anchor>
-          </Anchors>
-          <Color r="1.0" g="0.0" b="0.0" a="1.0"/>
-        </FontString>
+				<FontString name="$parentPlus" inherits="GameFontNormal" justifyH="LEFT" text="+">
+					<Size>
+						<AbsDimension x="0" y="18"/>
+					</Size>
+					<Anchors>
+						<Anchor point="LEFT" relativeTo="$parentName">
+							<Offset>
+								<AbsDimension x="0" y="0"/>
+							</Offset>
+						</Anchor>
+					</Anchors>
+					<Color r="1.0" g="0.0" b="0.0" a="1.0"/>
+				</FontString>
 			</Layer>
 		</Layers>
 		<Frames>
@@ -80,7 +80,7 @@
 		<Scripts>
 			<OnLoad>
 				self.UpdateTooltip =
-				  function() AuctionLite:SellButton_OnEnter(self) end;
+					function() AuctionLite:SellButton_OnEnter(self) end;
 			</OnLoad>
 			<OnEnter>
 				AuctionLite:SellButton_OnEnter(self);
@@ -232,36 +232,60 @@
 						</Anchor>
 					</Anchors>
 				</FontString>
-				<FontString name="SellHeaderText" inherits="GameFontHighlightSmall" text="Competing Auctions">
-					<Anchors>
-						<Anchor point="TOPLEFT">
-							<Offset>
-								<AbsDimension x="230" y="-55"/>
-							</Offset>
-						</Anchor>
-					</Anchors>
-				</FontString>
-				<FontString name="SellTotalHeaderText" inherits="GameFontHighlightSmall" text="Buyout Total">
-					<Anchors>
-						<Anchor point="TOPRIGHT">
-							<Offset>
-								<AbsDimension x="35" y="-55"/>
-							</Offset>
-						</Anchor>
-					</Anchors>
-				</FontString>
-				<FontString name="SellEachHeaderText" inherits="GameFontHighlightSmall" text="Buyout Per Item">
-					<Anchors>
-						<Anchor point="TOPRIGHT" relativeTo="SellTotalHeaderText">
-							<Offset>
-								<AbsDimension x="-165" y="0"/>
-							</Offset>
-						</Anchor>
-					</Anchors>
-				</FontString>
 			</Layer>
 		</Layers>
 		<Frames>
+			<Button name="SellItemNameButton" inherits="SortButtonLeftTemplate">
+				<Size>
+					<AbsDimension x="125" y="21"/>
+				</Size>
+				<Anchors>
+					<Anchor point="TOPLEFT">
+						<Offset>
+							<AbsDimension x="230" y="-49"/>
+						</Offset>
+					</Anchor>
+				</Anchors>
+				<Scripts>
+					<OnClick>
+						AuctionLite:SellSortButton_OnClick("ItemName");
+					</OnClick>
+				</Scripts>
+			</Button>
+			<Button name="SellBuyoutAllButton" inherits="SortButtonRightTemplate">
+				<Size>
+					<AbsDimension x="155" y="21"/>
+				</Size>
+				<Anchors>
+					<Anchor point="TOPRIGHT">
+						<Offset>
+							<AbsDimension x="35" y="-49"/>
+						</Offset>
+					</Anchor>
+				</Anchors>
+				<Scripts>
+					<OnClick>
+						AuctionLite:SellSortButton_OnClick("BuyoutAll");
+					</OnClick>
+				</Scripts>
+			</Button>
+			<Button name="SellBuyoutEachButton" inherits="SortButtonRightTemplate">
+				<Size>
+					<AbsDimension x="155" y="21"/>
+				</Size>
+				<Anchors>
+					<Anchor point="TOPRIGHT" relativeTo="SellBuyoutAllButton">
+						<Offset>
+							<AbsDimension x="-165" y="0"/>
+						</Offset>
+					</Anchor>
+				</Anchors>
+				<Scripts>
+					<OnClick>
+						AuctionLite:SellSortButton_OnClick("BuyoutEach");
+					</OnClick>
+				</Scripts>
+			</Button>
 			<ScrollFrame name="SellScrollFrame" inherits="FauxScrollFrameTemplate">
 				<Size>
 					<AbsDimension x="435" y="339"/>

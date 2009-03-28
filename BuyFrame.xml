@@ -200,7 +200,7 @@
 							<Anchors>
 								<Anchor point="TOPRIGHT">
 									<Offset>
-										<AbsDimension x="-340" y="0"/>
+										<AbsDimension x="-360" y="0"/>
 									</Offset>
 								</Anchor>
 							</Anchors>
@@ -322,7 +322,7 @@
 				</Anchor>
 			</Anchors>
 			<TexCoords left="0" right="1.0" top="0" bottom="0.578125"/>
-      <Color r="1.0" g="0.0" b="0.0" a="0.0"/>
+			<Color r="1.0" g="0.0" b="0.0" a="0.0"/>
 		</NormalTexture>
 		<HighlightTexture name="$parentHighlight" file="Interface\HelpFrame\HelpFrameButton-Highlight" alphaMode="ADD">
 			<Size>
@@ -594,55 +594,93 @@
 						</Offset>
 					</Anchor>
 				</Anchors>
-				<Layers>
-					<Layer level="ARTWORK">
-						<FontString name="BuyItemSummaryText" inherits="GameFontNormalSmall" text="Item Summary">
-							<Anchors>
-								<Anchor point="TOPLEFT">
-									<Offset>
-										<AbsDimension x="21" y="-5"/>
-									</Offset>
-								</Anchor>
-							</Anchors>
-						</FontString>
-						<FontString name="BuyHistPriceText" inherits="GameFontNormalSmall" text="Historical Price">
-							<Anchors>
-								<Anchor point="TOPRIGHT">
-									<Offset>
-										<AbsDimension x="-5" y="-5"/>
-									</Offset>
-								</Anchor>
-							</Anchors>
-						</FontString>
-						<FontString name="BuyMarketPriceText" inherits="GameFontNormalSmall" text="Market Price">
-							<Anchors>
-								<Anchor point="TOPRIGHT" relativeTo="BuyHistPriceText">
-									<Offset>
-										<AbsDimension x="-135" y="0"/>
-									</Offset>
-								</Anchor>
-							</Anchors>
-						</FontString>
-						<FontString name="BuyItemsText" inherits="GameFontNormalSmall" text="Items">
-							<Anchors>
-								<Anchor point="TOPRIGHT" relativeTo="BuyMarketPriceText">
-									<Offset>
-										<AbsDimension x="-150" y="0"/>
-									</Offset>
-								</Anchor>
-							</Anchors>
-						</FontString>
-						<FontString name="BuyListingsText" inherits="GameFontNormalSmall" text="Listings">
-							<Anchors>
-								<Anchor point="TOPRIGHT" relativeTo="BuyItemsText">
-									<Offset>
-										<AbsDimension x="-50" y="0"/>
-									</Offset>
-								</Anchor>
-							</Anchors>
-						</FontString>
-					</Layer>
-				</Layers>
+				<Frames>
+					<Button name="BuyItemSummaryButton" inherits="SortButtonLeftTemplate">
+						<Size>
+							<AbsDimension x="125" y="21"/>
+						</Size>
+						<Anchors>
+							<Anchor point="TOPLEFT">
+								<Offset>
+									<AbsDimension x="21" y="1"/>
+								</Offset>
+							</Anchor>
+						</Anchors>
+						<Scripts>
+							<OnClick>
+								AuctionLite:SummarySortButton_OnClick("ItemSummary");
+							</OnClick>
+						</Scripts>
+					</Button>
+					<Button name="BuyHistoricalButton" inherits="SortButtonRightTemplate">
+						<Size>
+							<AbsDimension x="125" y="21"/>
+						</Size>
+						<Anchors>
+							<Anchor point="TOPRIGHT">
+								<Offset>
+									<AbsDimension x="-5" y="1"/>
+								</Offset>
+							</Anchor>
+						</Anchors>
+						<Scripts>
+							<OnClick>
+								AuctionLite:SummarySortButton_OnClick("Historical");
+							</OnClick>
+						</Scripts>
+					</Button>
+					<Button name="BuyMarketButton" inherits="SortButtonRightTemplate">
+						<Size>
+							<AbsDimension x="125" y="21"/>
+						</Size>
+						<Anchors>
+							<Anchor point="TOPRIGHT" relativeTo="BuyHistoricalButton" relativePoint="TOPLEFT">
+								<Offset>
+									<AbsDimension x="-10" y="0"/>
+								</Offset>
+							</Anchor>
+						</Anchors>
+						<Scripts>
+							<OnClick>
+								AuctionLite:SummarySortButton_OnClick("Market");
+							</OnClick>
+						</Scripts>
+					</Button>
+					<Button name="BuyItemsButton" inherits="SortButtonRightTemplate">
+						<Size>
+							<AbsDimension x="60" y="21"/>
+						</Size>
+						<Anchors>
+							<Anchor point="TOPRIGHT" relativeTo="BuyMarketButton" relativePoint="TOPLEFT">
+								<Offset>
+									<AbsDimension x="-25" y="0"/>
+								</Offset>
+							</Anchor>
+						</Anchors>
+						<Scripts>
+							<OnClick>
+								AuctionLite:SummarySortButton_OnClick("Items");
+							</OnClick>
+						</Scripts>
+					</Button>
+					<Button name="BuyListingsButton" inherits="SortButtonRightTemplate">
+						<Size>
+							<AbsDimension x="60" y="21"/>
+						</Size>
+						<Anchors>
+							<Anchor point="TOPRIGHT" relativeTo="BuyItemsButton" relativePoint="TOPLEFT">
+								<Offset>
+									<AbsDimension x="-10" y="0"/>
+								</Offset>
+							</Anchor>
+						</Anchors>
+						<Scripts>
+							<OnClick>
+								AuctionLite:SummarySortButton_OnClick("Listings");
+							</OnClick>
+						</Scripts>
+					</Button>
+				</Frames>
 			</Frame>
 			<Frame name="BuyHeader">
 				<Size>
@@ -655,56 +693,92 @@
 						</Offset>
 					</Anchor>
 				</Anchors>
-				<Layers>
-					<Layer level="ARTWORK">
-						<FontString name="BuyItemText" inherits="GameFontNormalSmall" text="Item">
-							<Anchors>
-								<Anchor point="TOPLEFT">
-									<Offset>
-										<AbsDimension x="43" y="-5"/>
-									</Offset>
-								</Anchor>
-							</Anchors>
-						</FontString>
-						<FontString name="BuyBuyoutAllText" inherits="GameFontNormalSmall" text="Buyout Total">
-							<Anchors>
-								<Anchor point="TOPRIGHT">
-									<Offset>
-										<AbsDimension x="-5" y="-5"/>
-									</Offset>
-								</Anchor>
-							</Anchors>
-						</FontString>
-						<FontString name="BuyBuyoutEachText" inherits="GameFontNormalSmall" text="Buyout Per Item">
-							<Anchors>
-								<Anchor point="TOPRIGHT" relativeTo="BuyBuyoutAllText">
-									<Offset>
-										<AbsDimension x="-135" y="0"/>
-									</Offset>
-								</Anchor>
-							</Anchors>
-						</FontString>
-						<FontString name="BuyBidAllText" inherits="GameFontNormalSmall" text="Bid Total">
-							<Anchors>
-								<Anchor point="TOPRIGHT" relativeTo="BuyBuyoutEachText">
-									<Offset>
-										<AbsDimension x="-135" y="0"/>
-									</Offset>
-								</Anchor>
-							</Anchors>
-						</FontString>
-						<FontString name="BuyBidEachText" inherits="GameFontNormalSmall" text="Bid Per Item">
-							<Anchors>
-								<Anchor point="TOPRIGHT" relativeTo="BuyBidAllText">
-									<Offset>
-										<AbsDimension x="-135" y="0"/>
-									</Offset>
-								</Anchor>
-							</Anchors>
-						</FontString>
-					</Layer>
-				</Layers>
 				<Frames>
+					<Button name="BuyItemButton" inherits="SortButtonLeftTemplate">
+						<Size>
+							<AbsDimension x="125" y="21"/>
+						</Size>
+						<Anchors>
+							<Anchor point="TOPLEFT">
+								<Offset>
+									<AbsDimension x="43" y="1"/>
+								</Offset>
+							</Anchor>
+						</Anchors>
+						<Scripts>
+							<OnClick>
+								AuctionLite:DetailSortButton_OnClick("Item");
+							</OnClick>
+						</Scripts>
+					</Button>
+					<Button name="BuyBuyoutAllButton" inherits="SortButtonRightTemplate">
+						<Size>
+							<AbsDimension x="125" y="21"/>
+						</Size>
+						<Anchors>
+							<Anchor point="TOPRIGHT">
+								<Offset>
+									<AbsDimension x="-5" y="1"/>
+								</Offset>
+							</Anchor>
+						</Anchors>
+						<Scripts>
+							<OnClick>
+								AuctionLite:DetailSortButton_OnClick("BuyoutAll");
+							</OnClick>
+						</Scripts>
+					</Button>
+					<Button name="BuyBuyoutEachButton" inherits="SortButtonRightTemplate">
+						<Size>
+							<AbsDimension x="125" y="21"/>
+						</Size>
+						<Anchors>
+							<Anchor point="TOPRIGHT" relativeTo="BuyBuyoutAllButton" relativePoint="TOPLEFT">
+								<Offset>
+									<AbsDimension x="-10" y="0"/>
+								</Offset>
+							</Anchor>
+						</Anchors>
+						<Scripts>
+							<OnClick>
+								AuctionLite:DetailSortButton_OnClick("BuyoutEach");
+							</OnClick>
+						</Scripts>
+					</Button>
+					<Button name="BuyBidAllButton" inherits="SortButtonRightTemplate">
+						<Size>
+							<AbsDimension x="125" y="21"/>
+						</Size>
+						<Anchors>
+							<Anchor point="TOPRIGHT" relativeTo="BuyBuyoutEachButton" relativePoint="TOPLEFT">
+								<Offset>
+									<AbsDimension x="-10" y="0"/>
+								</Offset>
+							</Anchor>
+						</Anchors>
+						<Scripts>
+							<OnClick>
+								AuctionLite:DetailSortButton_OnClick("BidAll");
+							</OnClick>
+						</Scripts>
+					</Button>
+					<Button name="BuyBidEachButton" inherits="SortButtonRightTemplate">
+						<Size>
+							<AbsDimension x="125" y="21"/>
+						</Size>
+						<Anchors>
+							<Anchor point="TOPRIGHT" relativeTo="BuyBidAllButton" relativePoint="TOPLEFT">
+								<Offset>
+									<AbsDimension x="-10" y="0"/>
+								</Offset>
+							</Anchor>
+						</Anchors>
+						<Scripts>
+							<OnClick>
+								AuctionLite:DetailSortButton_OnClick("BidEach");
+							</OnClick>
+						</Scripts>
+					</Button>
 					<Button name="BuySummaryButton" inherits="UIPanelButtonTemplate">
 						<Size>
 							<AbsDimension x="22" y="22"/>

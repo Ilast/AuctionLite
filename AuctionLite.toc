@@ -12,8 +12,9 @@ embeds.xml
 Locale\enUS.lua
 
 AuctionLite.lua
-
 AuctionFrame.lua
+
+Templates.xml
 
 BuyFrame.lua
 BuyFrame.xml

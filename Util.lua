@@ -226,3 +226,79 @@ function AuctionLite:GetMyAuctionLinks()
   return links;
 end
 
+-- Sort the columns by the designated sort type.
+function AuctionLite:ApplySort(info, data, cmp)
+  local fn = function(a, b)
+    if cmp(a, b) == cmp(b, a) then
+      if info.justFlipped then
+        return a.orig < b.orig;
+      else
+        return b.orig < a.orig;
+      end
+    else
+      if info.flipped then
+        return cmp(b, a);
+      else
+        return cmp(a, b);
+      end
+    end
+  end
+
+  local i = 1;
+
+  local item;
+  for _, item in ipairs(data) do
+    item.orig = i;
+    i = i + 1;
+  end
+
+  table.sort(data, fn);
+
+  local item;
+  for _, item in ipairs(data) do
+    item.orig = nil;
+  end
+
+  info.sorted = true;
+  info.justFlipped = false;
+end
+
+-- Update the current sort for a click.
+function AuctionLite:SortButton_OnClick(info, sort)
+  if info.sort == sort then
+    info.flipped = not info.flipped;
+  else
+    info.sort = sort;
+    info.flipped = false;
+    info.justFlipped = true;
+  end
+
+  info.sorted = false;
+end
+
+-- Update sortable header buttons.
+function AuctionLite:UpdateSortButton(prefix, buttonName, text)
+  local button = _G[prefix .. buttonName .. "Button"];
+  local arrow = _G[prefix .. buttonName .. "ButtonArrow"];
+  button:SetText(text);
+  local offset = button:GetTextWidth();
+  if offset > button:GetWidth() - 10 then
+    offset = button:GetWidth() - 10;
+  end
+  arrow:SetPoint("RIGHT", button, "RIGHT", -offset - 1, -1);
+end
+
+-- Update sort arrows.
+function AuctionLite:UpdateSortArrow(prefix, buttonSort, sort, flipped)
+  local arrow = _G[prefix .. buttonSort .. "ButtonArrow"];
+  if buttonSort == sort then
+    arrow:Show();
+    if flipped then
+			arrow:SetTexCoord(0, 0.5625, 1.0, 0);
+		else
+		  arrow:SetTexCoord(0, 0.5625, 0, 1.0);
+    end
+  else
+    arrow:Hide();
+  end
+end

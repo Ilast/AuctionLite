@@ -18,9 +18,17 @@ local DURATION_SHORT = 1;
 local DURATION_MEDIUM = 2;
 local DURATION_LONG = 3;
 
+-- Current sorting state.
+local SellSort = {
+  sort = "BuyoutEach",
+  flipped = false,
+  justFlipped = false,
+  sorted = false,
+};
+
 -- Info about data to be shown in scrolling pane.
-local ScrollLink = nil;
-local ScrollData = {};
+local SellLink = nil;
+local SellData = {};
 
 -- Value of item currently in "Sell" tab.
 local ItemValue = nil;
@@ -274,8 +282,15 @@ end
 function AuctionLite:ClearSellFrame()
   self:CancelQuery();
 
-  ScrollLink = nil;
-  ScrollData = {};
+  SellSort = {
+    sort = "BuyoutEach",
+    flipped = false,
+    justFlipped = false,
+    sorted = false,
+  };
+
+  SellLink = nil;
+  SellData = {};
 
   ItemValue = nil;
   ItemBid = nil;
@@ -311,29 +326,29 @@ function AuctionLite:SetStatus(message)
   end
 end
 
--- Set the data for the scrolling frame.
-function AuctionLite:SetScrollData(link, data)
-  local filtered = {};
-  
-  local i;
-  for _, listing in ipairs(data) do
-    if listing.buyout > 0 then
-      table.insert(filtered, listing);
-    end
-  end
-
-  table.sort(filtered, function(a, b) return a.price < b.price end);
-
-  ScrollLink = link;
-  ScrollData = filtered;
-end
-
 -- Get our query results.
 function AuctionLite:SetSellData(results, link)
   -- Set the competing auction display.
   local result = results[link];
   if result ~= nil then
-    self:SetScrollData(link, result.data);
+    local filtered = {};
+    
+    local i;
+    for _, listing in ipairs(result.data) do
+      if listing.buyout > 0 then
+        table.insert(filtered, listing);
+      end
+    end
+
+    SellLink = link;
+    SellData = filtered;
+
+    SellSort = {
+      sort = "BuyoutEach",
+      flipped = false,
+      justFlipped = false,
+      sorted = false,
+    };
   end
 
   -- Get our recommended item value.
@@ -388,7 +403,7 @@ end
 -- Get the appropriate auction and undercut it!
 function AuctionLite:SellButton_OnClick(id)
   local offset = FauxScrollFrame_GetOffset(SellScrollFrame);
-  local item = ScrollData[offset + id];
+  local item = SellData[offset + id];
 
   if item ~= nil then
     if item.owner == UnitName("player") then
@@ -408,7 +423,7 @@ function AuctionLite:SellButton_OnEnter(widget)
   local id = widget:GetID();
 
   -- If there's an item at this location, create a tooltip for it.
-  local item = ScrollData[offset + id];
+  local item = SellData[offset + id];
   local _, _, _, _, _, _, link = self:GetAuctionSellItemInfoAndLink();
   if item ~= nil and link ~= nil then
     local shift = SellButton1Name:GetLeft() - SellButton1Count:GetLeft();
@@ -509,16 +524,52 @@ function AuctionLite:UpdateProgressSell(pct)
   self:SetStatus(L["|cffffff00Scanning: %d%%|r"]:format(pct));
 end
 
+-- Apply the current sort.
+function AuctionLite:ApplySellSort()
+  local info = SellSort;
+  local data = SellData;
+
+  local cmp;
+  if info.sort == "ItemName" then
+    cmp = function(a, b) return a.count < b.count end;
+  elseif info.sort == "BuyoutEach" then
+    cmp = function(a, b) return a.buyout / a.count < b.buyout / b.count end;
+  elseif info.sort == "BuyoutAll" then
+    cmp = function(a, b) return a.buyout < b.buyout end;
+  else
+    assert(false);
+  end
+  
+  self:ApplySort(info, data, cmp);
+end
+
+-- Set a new sort type for the "Sell" tab.
+function AuctionLite:SellSortButton_OnClick(sort)
+  assert(sort == "ItemName" or sort == "BuyoutEach" or sort == "BuyoutAll");
+
+  self:SortButton_OnClick(SellSort, sort);
+  self:AuctionFrameSell_Update();
+end
+
 -- Paint the scroll frame on the right-hand side with competing auctions.
 function AuctionLite:AuctionFrameSell_Update()
+  if not SellSort.sorted then
+    self:ApplySellSort();
+  end
+
+  local sort;
+  for _, sort in ipairs({ "ItemName", "BuyoutEach", "BuyoutAll" }) do
+    self:UpdateSortArrow("Sell", sort, SellSort.sort, SellSort.flipped);
+  end
+
   local offset = FauxScrollFrame_GetOffset(SellScrollFrame);
 
   local name, color, enchant, jewel1, jewel2, jewel3, jewel4;
   local showPlus;
 
-  if ScrollLink ~= nil then
+  if SellLink ~= nil then
     name, color, _, _, enchant, jewel1, jewel2, jewel3, jewel4 =
-      self:SplitLink(ScrollLink);
+      self:SplitLink(SellLink);
 
     showPlus = enchant ~= 0 or
                jewel1 ~= 0 or jewel2 ~= 0 or
@@ -527,7 +578,7 @@ function AuctionLite:AuctionFrameSell_Update()
 
   local i;
   for i = 1, SELL_DISPLAY_SIZE do
-    local item = ScrollData[offset + i];
+    local item = SellData[offset + i];
 
     local buttonName = "SellButton" .. i;
     local button = _G[buttonName];
@@ -582,7 +633,7 @@ function AuctionLite:AuctionFrameSell_Update()
     end
   end
 
-  FauxScrollFrame_Update(SellScrollFrame, table.getn(ScrollData),
+  FauxScrollFrame_Update(SellScrollFrame, table.getn(SellData),
                          SELL_DISPLAY_SIZE, SellButton1:GetHeight());
 end
 
@@ -615,9 +666,12 @@ function AuctionLite:CreateSellFrame()
   SellStacksOfText:SetText(L["stacks of"]);
   SellBuyoutText:SetText(L["Buyout Price"]);
   SellMethodText:SetText(L["Pricing Method"]);
-  SellHeaderText:SetText(L["Competing Auctions"]);
-  SellTotalHeaderText:SetText(L["Buyout Total"]);
-  SellEachHeaderText:SetText(L["Buyout Per Item"]);
+
+  -- Set button text and adjust arrows.
+  SellItemNameButton:SetText(L["Competing Auctions"]);
+
+  self:UpdateSortButton("Sell", "BuyoutEach", L["Buyout Per Item"]);
+  self:UpdateSortButton("Sell", "BuyoutAll", L["Buyout Total"]);
 
   -- Set our constants.
   SellPerItemButton:SetID(METHOD_PER_ITEM);

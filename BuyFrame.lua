@@ -23,6 +23,20 @@ local BUY_MODE_MY_AUCTIONS = 7;
 -- Current state of the buy frame.
 local BuyMode = BUY_MODE_NONE;
 
+-- Current sorting state.
+local SummarySort = {
+  sort = "ItemSummary",
+  flipped = false,
+  justFlipped = false,
+  sorted = false,
+};
+local DetailSort = {
+  sort = "BuyoutEach",
+  flipped = false,
+  justFlipped = false,
+  sorted = false,
+};
+
 -- Height of expandable frame.
 local ExpandHeight = 0;
 
@@ -40,6 +54,8 @@ local LastClick = nil;
 
 -- Data to be shown in summary view.
 local SummaryData = {};
+local SummaryDataByLink = {};
+local NoResults = false;
 
 -- Info about current purchase for display in expandable frame.
 local PurchaseOrder = nil;
@@ -51,10 +67,6 @@ local LastRemaining = nil;
 local Progress = nil;
 local GetAll = nil;
 local Scanning = nil;
-
--- Overall data returned from search.
-local SearchData = nil;
-local NoResults = false;
 
 -- Stored scan data from the latest full scan.
 local ScanData = nil;
@@ -98,12 +110,14 @@ function AuctionLite:SetDetailLink(link)
 
   local offset;
   if DetailLink ~= nil then
-    DetailData = SearchData[DetailLink].data;
+    DetailData = SummaryDataByLink[DetailLink].data;
     offset = 0;
   else
     DetailData = {};
     offset = SavedOffset;
   end
+
+  DetailSort.sorted = false;
 
   -- Return to our saved offset.  We have to set the inner scroll bar
   -- manually, because otherwise the two values will become inconsistent.
@@ -127,9 +141,17 @@ function AuctionLite:SetBuyData(results)
 
   -- Sort everything and assemble the summary data.
   for link, result in pairs(results) do
-    table.sort(result.data, function(a, b) return a.price < b.price end);
+    table.insert(SummaryData, result);
 
-    table.insert(SummaryData, link);
+    result.link = link;
+    result.name = self:SplitLink(link);
+
+    local hist = self:GetHistoricalPrice(link);
+    if hist ~= nil then
+      result.histPrice = hist.price;
+    else
+      result.histPrice = 0;
+    end
 
     count = count + 1;
     last = link;
@@ -139,28 +161,20 @@ function AuctionLite:SetBuyData(results)
     end
   end
 
+  SummaryDataByLink = results;
+
   -- Sort our data by name/profit.
-  local sortByName = function(a, b)
-    local aFav = self.db.profile.favorites[a];
-    local bFav = self.db.profile.favorites[b];
-    if aFav == bFav then
-      return self:SplitLink(a) < self:SplitLink(b);
-    elseif aFav then
-      return true;
-    else
-      return false;
-    end
-  end
-
-  local sortByProfit = function(a, b)
-    return results[a].profit > results[b].profit;
-  end
-
-  if BuyMode == BUY_MODE_DEALS then
-    table.sort(SummaryData, sortByProfit);
+  if BuyMode == BUY_MODE_DEALS or
+     BuyMode == BUY_MODE_SCAN then
+    SummarySort.sort = "Historical";
+    SummarySort.flipped = true;
   else
-    table.sort(SummaryData, sortByName);
+    SummarySort.sort = "ItemSummary";
+    SummarySort.flipped = false;
   end
+
+  SummarySort.sorted = false;
+  SummarySort.justFlipped = false;
 
   -- If we've searched for our own auctions, find undercuts.
   if BuyMode == BUY_MODE_MY_AUCTIONS then
@@ -188,7 +202,7 @@ function AuctionLite:SetBuyData(results)
   self:ResetSearch();
 
   -- Save our data and set our detail link, if we only got one kind of item.
-  SearchData = results;
+  SummaryDataByLink = results;
   NoResults = (count == 0);
   self:SetDetailLink(newLink);
 
@@ -243,16 +257,16 @@ function AuctionLite:GetSelectionStatus()
   local found = false;
 
   if DetailLink ~= nil then
-    for i, _ in pairs(SelectedItems) do
+    for listing, _ in pairs(SelectedItems) do
       -- We can't bid/buy our own auctions.
-      if DetailData[i].owner == UnitName("player") then
+      if listing.owner == UnitName("player") then
         biddable = false;
         buyable = false;
       else
         cancellable = false;
       end
       -- To buy, we must have a buyout price listed.
-      if DetailData[i].buyout == 0 then
+      if listing.buyout == 0 then
         buyable = false;
       end
       -- We must find at least one selected item.
@@ -271,9 +285,9 @@ function AuctionLite:CancelItems()
 
     -- Add information about each selected item.
     local i;
-    for i, _ in pairs(SelectedItems) do
-      assert(DetailData[i].owner == UnitName("player"));
-      table.insert(list, DetailData[i]);
+    for listing, _ in pairs(SelectedItems) do
+      assert(listing.owner == UnitName("player"));
+      table.insert(list, listing);
     end
 
     local name = self:SplitLink(DetailLink);
@@ -303,18 +317,18 @@ function AuctionLite:CreateOrder(isBuyout, requested)
 
     -- Add information about each selected item.
     local i;
-    for i, _ in pairs(SelectedItems) do
-      assert(DetailData[i].owner ~= UnitName("player"));
+    for listing, _ in pairs(SelectedItems) do
+      assert(listing.owner ~= UnitName("player"));
 
       local price;
       if isBuyout then
-        price = DetailData[i].buyout;
+        price = listing.buyout;
       else
-        price = DetailData[i].bid;
+        price = listing.bid;
       end
 
-      table.insert(order.list, DetailData[i]);
-      order.count = order.count + DetailData[i].count;
+      table.insert(order.list, listing);
+      order.count = order.count + listing.count;
       order.price = order.price + price;
     end
 
@@ -332,7 +346,7 @@ function AuctionLite:CreateOrder(isBuyout, requested)
       if order.count > requested then
         order.resell = order.count - requested;
 
-        local price = SearchData[DetailLink].price;
+        local price = SummaryDataByLink[DetailLink].price;
         order.resellPrice = math.floor(order.resell * price);
 
         order.netPrice = order.price - order.resellPrice;
@@ -371,15 +385,23 @@ function AuctionLite:StartMassBuyout()
     -- Clear our selected items.  (Should already be done, but what the hey.)
     SelectedItems = {};
 
+    -- Sort the list by per-item buyout.  Then mark it as unsorted so
+    -- that we'll restore the user's preferred sort on next update.
+    local sort = function(a, b)
+      return a.buyout / a.count < b.buyout / b.count;
+    end
+
+    table.sort(DetailData, sort);
+    DetailSort.sorted = false;
+
     -- Pick the listings with the lowest per-item prices.
-    -- Note that DetailData is sorted!
     local i = 1;
     local count = 0;
     local warned = false;
     while i <= table.getn(DetailData) and count < requested do
       if DetailData[i].buyout > 0 then
         if DetailData[i].owner ~= UnitName("player") then
-          SelectedItems[i] = true;
+          SelectedItems[DetailData[i]] = true;
           count = count + DetailData[i].count;
         elseif not warned then
           warned = true;
@@ -590,10 +612,87 @@ function AuctionLite:SetMultiScanData(data, searchLink)
   self:MultiScan();
 end
 
+-- Sort the detail view.
+function AuctionLite:ApplyDetailSort()
+  local info = DetailSort;
+  local data = DetailData;
+
+  local cmp;
+  if info.sort == "Item" then
+    cmp = function(a, b) return a.count < b.count end;
+  elseif info.sort == "BidEach" then
+    cmp = function(a, b) return a.bid / a.count < b.bid / b.count end;
+  elseif info.sort == "BidAll" then
+    cmp = function(a, b) return a.bid < b.bid end;
+  elseif info.sort == "BuyoutEach" then
+    cmp = function(a, b) return a.buyout / a.count < b.buyout / b.count end;
+  elseif info.sort == "BuyoutAll" then
+    cmp = function(a, b) return a.buyout < b.buyout end;
+  else
+    assert(false);
+  end
+  
+  self:ApplySort(info, data, cmp);
+end
+
+-- Sort the summary view.
+function AuctionLite:ApplySummarySort()
+  local info = SummarySort;
+  local data = SummaryData;
+
+  local cmp;
+  if info.sort == "ItemSummary" then
+    cmp = function(a, b)
+      local aFav = self.db.profile.favorites[a.link];
+      local bFav = self.db.profile.favorites[b.link];
+      if aFav == bFav then
+        return a.name < b.name;
+      else
+        return aFav;
+      end
+    end
+  elseif info.sort == "Listings" then
+    cmp = function(a, b) return a.listings < b.listings end;
+  elseif info.sort == "Items" then
+    cmp = function(a, b) return a.items < b.items end;
+  elseif info.sort == "Market" then
+    cmp = function(a, b) return a.price < b.price end;
+  elseif info.sort == "Historical" then
+    if BuyMode == BUY_MODE_DEALS or
+       BuyMode == BUY_MODE_SCAN then
+      cmp = function(a, b) return a.profit < b.profit end;
+    else
+      cmp = function(a, b) return a.histPrice < b.histPrice end;
+    end
+  else
+    assert(false);
+  end
+
+  self:ApplySort(info, data, cmp);
+end
+
+-- Set a new sort type for the detail view.
+function AuctionLite:DetailSortButton_OnClick(sort)
+  assert(sort == "Item" or sort == "BidEach" or sort == "BidAll" or
+         sort == "BuyoutEach" or sort == "BuyoutAll");
+
+  self:SortButton_OnClick(DetailSort, sort);
+  self:AuctionFrameBuy_Update();
+end
+
+-- Set a new sort type for the summary view.
+function AuctionLite:SummarySortButton_OnClick(sort)
+  assert(sort == "ItemSummary" or sort == "Listings" or sort == "Items" or
+         sort == "Market" or sort == "Historical");
+
+  self:SortButton_OnClick(SummarySort, sort);
+  self:AuctionFrameBuy_Update();
+end
+
 -- Toggle the favorites flag for this item.
 function AuctionLite:FavoritesButton_OnClick(id)
   local offset = FauxScrollFrame_GetOffset(BuyScrollFrame);
-  local link = SummaryData[offset + id];
+  local link = SummaryData[offset + id].link;
 
   if self.db.profile.favorites[link] == nil then
     self.db.profile.favorites[link] = true;
@@ -630,21 +729,23 @@ function AuctionLite:BuyButton_OnClick(id)
 
       local i;
       for i = lower, upper do
-        SelectedItems[i] = true;
+        SelectedItems[DetailData[i]] = true;
       end
     else
       -- No shift, or first click; add only the current item to the selection.
       -- If control is down, toggle the item.
       LastClick = offset + id;
-      if IsControlKeyDown() and SelectedItems[offset + id] then
-        SelectedItems[offset + id] = nil;
+
+      local listing = DetailData[offset + id];
+      if IsControlKeyDown() and SelectedItems[listing] then
+        SelectedItems[listing] = nil;
       else
-        SelectedItems[offset + id] = true;
+        SelectedItems[listing] = true;
       end
     end
   else
     -- We're in summary view, so switch to detail view.
-    self:SetDetailLink(SummaryData[offset + id]);
+    self:SetDetailLink(SummaryData[offset + id].link);
     self:StartMassBuyout();
   end
 
@@ -673,7 +774,7 @@ function AuctionLite:BuyButton_OnEnter(widget)
     end
     shift = shift + 200;
   else
-    link = SummaryData[offset + id];
+    link = SummaryData[offset + id].link;
     shift = shift + 250;
   end
 
@@ -1015,6 +1116,16 @@ end
 
 -- Update the scroll frame with the detail view.
 function AuctionLite:AuctionFrameBuy_UpdateDetail()
+  if not DetailSort.sorted then
+    self:ApplyDetailSort();
+  end
+
+  local sort;
+  for _, sort in ipairs({ "Item", "BidEach", "BidAll",
+                          "BuyoutEach", "BuyoutAll" }) do
+    self:UpdateSortArrow("Buy", sort, DetailSort.sort, DetailSort.flipped);
+  end
+
   local offset = FauxScrollFrame_GetOffset(BuyScrollFrame);
   local displaySize = BUY_DISPLAY_SIZE - ExpandHeight;
 
@@ -1096,7 +1207,7 @@ function AuctionLite:AuctionFrameBuy_UpdateDetail()
         buyoutFrame:Hide();
       end
 
-      if SelectedItems[offset + i] then
+      if SelectedItems[item] then
         button:LockHighlight();
       else
         button:UnlockHighlight();
@@ -1119,22 +1230,23 @@ end
 
 -- Update the scroll frame with the summary view.
 function AuctionLite:AuctionFrameBuy_UpdateSummary()
+  if not SummarySort.sorted then
+    self:ApplySummarySort();
+  end
+
+  local sort;
+  for _, sort in ipairs({ "ItemSummary", "Listings", "Items",
+                          "Market", "Historical" }) do
+    self:UpdateSortArrow("Buy", sort, SummarySort.sort, SummarySort.flipped);
+  end
+
   local offset = FauxScrollFrame_GetOffset(BuyScrollFrame);
   local displaySize = BUY_DISPLAY_SIZE - ExpandHeight;
 
   local i;
   for i = 1, displaySize do
-    local link = SummaryData[offset + i];
-    if link ~= nil then
-      local result;
-      
-      if BuyMode == BUY_MODE_DEALS or
-         BuyMode == BUY_MODE_SCAN then
-        result = ScanData[link];
-      else
-        result = SearchData[link];
-      end
-
+    local item = SummaryData[offset + i];
+    if item ~= nil then
       local buttonName = "BuyButton" .. i;
       local button = _G[buttonName];
 
@@ -1151,29 +1263,28 @@ function AuctionLite:AuctionFrameBuy_UpdateSummary()
       local marketFrame       = _G[buttonSummaryName .. "MarketPriceFrame"];
       local histFrame         = _G[buttonSummaryName .. "HistPriceFrame"];
 
-      if self.db.profile.favorites[link] then
+      if self.db.profile.favorites[item.link] then
         starButton:GetNormalTexture():SetAlpha(1.0);
       else
         starButton:GetNormalTexture():SetAlpha(0.1);
       end
 
       local name, color, _, _, enchant, jewel1, jewel2, jewel3, jewel4 =
-        self:SplitLink(link);
+        self:SplitLink(item.link);
 
       nameText:SetText("|c" .. color .. name .. "|r");
-      listingsText:SetText("|cffffffff" .. result.listingsAll .. "|r");
-      itemsText:SetText("|cffffffff" .. result.itemsAll .. "|r");
+      listingsText:SetText("|cffffffff" .. item.listingsAll .. "|r");
+      itemsText:SetText("|cffffffff" .. item.itemsAll .. "|r");
 
-      MoneyFrame_Update(marketFrame, math.floor(result.price));
+      MoneyFrame_Update(marketFrame, math.floor(item.price));
 
       if BuyMode == BUY_MODE_DEALS or
          BuyMode == BUY_MODE_SCAN then
-        MoneyFrame_Update(histFrame, math.floor(result.profit));
+        MoneyFrame_Update(histFrame, math.floor(item.profit));
         histFrame:Show();
       else
-        local hist = self:GetHistoricalPrice(link);
-        if hist ~= nil then
-          MoneyFrame_Update(histFrame, math.floor(hist.price));
+        if item.histPrice > 0 then
+          MoneyFrame_Update(histFrame, math.floor(item.histPrice));
           histFrame:Show();
         else
           histFrame:Hide();
@@ -1192,7 +1303,7 @@ function AuctionLite:AuctionFrameBuy_UpdateSummary()
 
       button:UnlockHighlight();
 
-      if result.warning then
+      if item.warning then
         warning:SetAlpha(0.4);
       else
         warning:SetAlpha(0);
@@ -1210,9 +1321,9 @@ function AuctionLite:AuctionFrameBuy_UpdateSummary()
     BuySummaryHeader:Show();
     if BuyMode == BUY_MODE_DEALS or
        BuyMode == BUY_MODE_SCAN then
-      BuyHistPriceText:SetText(L["Potential Profit"]);
+      self:UpdateSortButton("Buy", "Historical", L["Potential Profit"]);
     else
-      BuyHistPriceText:SetText(L["Historical Price"]);
+      self:UpdateSortButton("Buy", "Historical", L["Historical Price"]);
     end
   end
 end
@@ -1249,6 +1360,20 @@ function AuctionLite:ClearBuyFrame(partial)
 
   if not partial then
     BuyMode = BUY_MODE_INTRO;
+
+    SummarySort = {
+      sort = "ItemSummary",
+      flipped = false,
+      justFlipped = false,
+      sorted = false,
+    };
+
+    DetailSort = {
+      sort = "BuyoutEach",
+      flipped = false,
+      justFlipped = false,
+      sorted = false,
+    };
   end
 
   DetailLink = nil;
@@ -1262,12 +1387,12 @@ function AuctionLite:ClearBuyFrame(partial)
   LastClick = nil;
 
   SummaryData = {};
+  SummaryDataByLink = nil;
+  NoResults = false;
+
   PurchaseOrder = nil;
 
   self:ResetSearch();
-
-  SearchData = nil;
-  NoResults = false;
 
   if not partial then
     MultiScanLinks = {};
@@ -1329,20 +1454,24 @@ function AuctionLite:CreateBuyFrame()
   BuyCancelSearchButton:SetText(L["Cancel"]);
   BuyApproveButton:SetText(L["Approve"]);
   BuyCancelPurchaseButton:SetText(L["Cancel"]);
-  BuyItemSummaryText:SetText(L["Item Summary"]);
-  BuyHistPriceText:SetText(L["Historical Price"]);
-  BuyMarketPriceText:SetText(L["Market Price"]);
-  BuyItemsText:SetText(L["Items"]);
-  BuyListingsText:SetText(L["Listings"]);
-  BuyItemText:SetText(L["Item"]);
-  BuyBuyoutAllText:SetText(L["Buyout Total"]);
-  BuyBuyoutEachText:SetText(L["Buyout Per Item"]);
-  BuyBidAllText:SetText(L["Bid Total"]);
-  BuyBidEachText:SetText(L["Bid Per Item"]);
   BuyAdvancedText:SetText(L["Advanced"]);
   BuyScanButton:SetText(L["Full Scan"]);
   BuySearchButton:SetText(L["Search"]);
   BuyCancelAuctionButton:SetText(L["Cancel"]);
+
+  -- Set button text and adjust arrow icons accordingly.
+  BuyItemButton:SetText(L["Item"]);
+  BuyItemSummaryButton:SetText(L["Item Summary"]);
+
+  self:UpdateSortButton("Buy", "BidEach", L["Bid Per Item"]);
+  self:UpdateSortButton("Buy", "BidAll", L["Bid Total"]);
+  self:UpdateSortButton("Buy", "BuyoutEach", L["Buyout Per Item"]);
+  self:UpdateSortButton("Buy", "BuyoutAll", L["Buyout Total"]);
+
+  self:UpdateSortButton("Buy", "Historical", L["Historical Price"]);
+  self:UpdateSortButton("Buy", "Market", L["Market Price"]);
+  self:UpdateSortButton("Buy", "Items", L["Items"]);
+  self:UpdateSortButton("Buy", "Listings", L["Listings"]);
 
   -- Make sure it's pristine.
   self:ClearBuyFrame();
