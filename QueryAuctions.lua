@@ -97,9 +97,6 @@ function AuctionLite:QueryUpdate()
 
       -- Submit the query.
       OurQuery = true;
-      if self.db.profile.debug then
-        self:Print("-> Sending query " .. name .. ", " .. Query.page)
-      end
       QueryAuctionItems(name, 0, 0, 0, 0, 0, Query.page, 0, 0, getAll);
       OurQuery = false;
 
@@ -466,16 +463,6 @@ function AuctionLite:AUCTION_ITEM_LIST_UPDATE()
       Query.data[Query.page * AUCTIONS_PER_PAGE + i] = listing;
     end
 
-    if self.db.profile.debug then
-      local first = "(none)";
-      if Query.batch > 0 then
-        first = Query.data[Query.page * AUCTIONS_PER_PAGE + 1].link;
-      end
-
-      self:Print("-> Got result " .. Query.batch .. ", " .. Query.total ..
-                 ", first " .. first .. ", incomplete " .. incomplete);
-    end
-
     -- If we got an incomplete record, wait.  Otherwise, process the data.
     if Query.wait and incomplete > 0 then
       Query.time = time();
@@ -483,17 +470,5 @@ function AuctionLite:AUCTION_ITEM_LIST_UPDATE()
       Query.time = nil;
       self:QueryNewData();
     end
-  else
-    if self.db.profile.debug then
-      local batch, total = GetNumAuctionItems("list");
-      local first = "(none)";
-      if batch > 0 then
-        first = GetAuctionItemLink("list", 1);
-      end
-
-      self:Print("-> Ignored result " .. batch .. ", " .. total ..
-                 ", first " .. first .. ", incomplete " .. incomplete);
-    end
-
   end
 end
