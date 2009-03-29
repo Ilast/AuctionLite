@@ -211,6 +211,20 @@ function AuctionLite:MatchListing(targetName, target, listing)
           target.owner == listing.owner);
 end
 
+-- Do two pages from an AH scan match exactly?
+function AuctionLite:MatchPages(data, page1, page2)
+  local i;
+  for i = 1, NUM_AUCTION_ITEMS_PER_PAGE do
+    local listing1 = data[page1 * NUM_AUCTION_ITEMS_PER_PAGE + i];
+    local listing2 = data[page2 * NUM_AUCTION_ITEMS_PER_PAGE + i];
+    if not self:MatchListing(listing1.name, listing1, listing2) then
+      return false;
+    end
+  end
+
+  return true;
+end
+
 -- Get the names of all my auctions.
 function AuctionLite:GetMyAuctionLinks()
   local batch = GetNumAuctionItems("owner");

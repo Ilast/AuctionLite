@@ -6,11 +6,11 @@
 
 local L = LibStub("AceLocale-3.0"):GetLocale("AuctionLite", false)
 
--- Number of results returned per query.
-local AUCTIONS_PER_PAGE = 50;
-
 -- Maximum number of bytes in the first argument of QueryAuctionItems().
 local MAX_QUERY_BYTES = 63;
+
+-- Maximum number of retries if we get duplicate pages.
+local MAX_RETRIES = 3;
 
 -- State of our current auction query.
 local QUERY_STATE_SEND    = 1; -- ready to request a new page
@@ -35,6 +35,7 @@ function AuctionLite:StartQuery(newQuery)
     Query = newQuery;
     Query.state = QUERY_STATE_SEND;
     Query.page = 0;
+    Query.retries = 0;
     Query.data = {};
     return true;
   else
@@ -135,6 +136,7 @@ function AuctionLite:QueryNext()
           Query.state == QUERY_STATE_APPROVE));
   Query.state = QUERY_STATE_SEND;
   Query.page = Query.page + 1;
+  Query.retries = 0;
 end
 
 -- Get the current page again.
@@ -373,7 +375,7 @@ function AuctionLite:QueryNewData()
   assert(Query.state == QUERY_STATE_WAIT);
 
   -- We've completed one of our own queries.
-  local seen = Query.page * AUCTIONS_PER_PAGE + Query.batch;
+  local seen = Query.page * NUM_AUCTION_ITEMS_PER_PAGE + Query.batch;
 
   -- If we're running a getAll query, we'd better have seen everything.
   assert(not Query.getAll or seen == Query.total);
@@ -415,7 +417,7 @@ function AuctionLite:QueryNewData()
     -- See if we've found the auction we're looking for.
     local i, j;
     for i = 1, Query.batch do
-      local listing = Query.data[Query.page * AUCTIONS_PER_PAGE + i];
+      local listing = Query.data[Query.page * NUM_AUCTION_ITEMS_PER_PAGE + i];
       for _, target in ipairs(Query.list) do
         if not target.found and
            self:MatchListing(Query.name, target, listing) then
@@ -460,11 +462,20 @@ function AuctionLite:AUCTION_ITEM_LIST_UPDATE()
       end
 
       -- Record the data.
-      Query.data[Query.page * AUCTIONS_PER_PAGE + i] = listing;
+      Query.data[Query.page * NUM_AUCTION_ITEMS_PER_PAGE + i] = listing;
     end
 
-    -- If we got an incomplete record, wait.  Otherwise, process the data.
-    if Query.wait and incomplete > 0 then
+    local duplicate =
+      Query.page > 0 and
+      self:MatchPages(Query.data, Query.page - 1, Query.page);
+
+    -- If we got a duplicate record, request the current one again.
+    -- If it's an incomplete record, wait.
+    -- Otherwise, process the data.
+    if duplicate and Query.retries < MAX_RETRIES then
+      Query.retries = Query.retries + 1;
+      self:QueryCurrent();
+    elseif Query.wait and incomplete > 0 then
       Query.time = time();
     else
       Query.time = nil;

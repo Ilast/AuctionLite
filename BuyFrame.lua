@@ -573,6 +573,7 @@ function AuctionLite:MultiScan(links)
     -- Start the scan.
     local query = {
       link = request,
+      wait = true,
       update = function(pct) AuctionLite:UpdateProgressMulti(pct) end,
       finish = function(data, link) AuctionLite:SetMultiScanData(data, link) end,
     };
