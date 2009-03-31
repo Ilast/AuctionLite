@@ -36,6 +36,10 @@ L["Show full stack prices in tooltips (shift toggles on the fly)."] = true;
 L["Show Full Stack Price"] = true;
 L["Open configuration dialog"] = true;
 L["Configure"] = true;
+L["Default"] = true;
+L["Buy Tab"] = true;
+L["Sell Tab"] = true;
+L["Last Used Tab"] = true;
 L["Always"] = true;
 L["If Applicable"] = true;
 L["Never"] = true;
@@ -152,6 +156,9 @@ L["stacks of"] = true;
 L["Buyout Price"] = true;
 L["Pricing Method"] = true;
 L["Competing Auctions"] = true;
+L["per item"] = true;
+L["per stack"] = true;
+L["%dh"] = true;
 
 -- Tooltip.lua
 

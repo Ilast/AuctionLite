@@ -653,9 +653,6 @@
 					</Anchor>
 				</Anchors>
 				<Scripts>
-					<OnLoad>
-						getglobal(self:GetName().."Text"):SetText("12h");
-					</OnLoad>
 					<OnClick>
 						AuctionLite:ChangeAuctionDuration(self:GetID());
 					</OnClick>
@@ -670,9 +667,6 @@
 					</Anchor>
 				</Anchors>
 				<Scripts>
-					<OnLoad>
-						getglobal(self:GetName().."Text"):SetText("24h");
-					</OnLoad>
 					<OnClick>
 						AuctionLite:ChangeAuctionDuration(self:GetID());
 					</OnClick>
@@ -687,9 +681,6 @@
 					</Anchor>
 				</Anchors>
 				<Scripts>
-					<OnLoad>
-						getglobal(self:GetName().."Text"):SetText("48h");
-					</OnLoad>
 					<OnClick>
 						AuctionLite:ChangeAuctionDuration(self:GetID());
 					</OnClick>
@@ -704,9 +695,6 @@
 					</Anchor>
 				</Anchors>
 				<Scripts>
-					<OnLoad>
-						getglobal(self:GetName().."Text"):SetText("per item");
-					</OnLoad>
 					<OnClick>
 						AuctionLite:ChangePricingMethod(self:GetID());
 					</OnClick>
@@ -721,9 +709,6 @@
 					</Anchor>
 				</Anchors>
 				<Scripts>
-					<OnLoad>
-						getglobal(self:GetName().."Text"):SetText("per stack");
-					</OnLoad>
 					<OnClick>
 						AuctionLite:ChangePricingMethod(self:GetID());
 					</OnClick>
