@@ -73,7 +73,7 @@ function AuctionLite:AddTooltipLine(tooltip, option, getPrice, label,
   if option ~= "c_no" then
     -- Looks like we do, so fetch the price.
     local price = getPrice(link);
-    if price ~= nil then
+    if price ~= nil and price > 0 then
       -- We have price data here, so now we need to show it.
       price = math.floor(price);
       if self.db.profile.coinTooltips then
