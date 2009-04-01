@@ -365,6 +365,7 @@ function AuctionLite:CreateOrder(isBuyout, requested)
       -- Submit the query.  If it goes through, save it here too.
       local query = {
         name = name,
+        wait = true,
         list = order.list,
         isBuyout = isBuyout,
         finish = function() AuctionLite:PurchaseComplete() end,
