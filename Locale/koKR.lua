@@ -1,4 +1,4 @@
-local L = LibStub("AceLocale-3.0"):NewLocale("AuctionLite", "koKR", false);
+﻿local L = LibStub("AceLocale-3.0"):NewLocale("AuctionLite", "koKR", false);
 
 if L then
 
@@ -52,8 +52,8 @@ L["Created %d |4auction:auctions; of %s x%d."] = "[경매 시작]: %d건 (%sx%d)
 L["Current: %s (%.2gx historical)"] = "시세: %s (저장된 가격의 %.2g배)"
 L["Current: %s (%.2gx historical, %.2gx vendor)"] = "시세: %s (저장된 가격의 %.2g배, 상점가의 %.2g배)"
 L["Current: %s (%.2gx vendor)"] = "시세: %s (상점가의 %.2g배)"
-L["Deals must be below the historical price by this much gold."] = "세일품목을 저장된 가격과 비교하여 아래에서 설정한 금액 이상 이익을 볼 수 있는 품목만 표시합니다." -- Needs review
-L["Deals must be below the historical price by this percentage."] = "세일품목 저장된 가격과 비교하여 아래에서 설정한 비율 이상 이익을 볼 수 있는 품목만 표시합니다." -- Needs review
+L["Deals must be below the historical price by this much gold."] = "세일 품목을 저장된 가격과 비교하여 아래에서 설정한 금액 이상 이익을 볼 수 있는 품목만 표시합니다."
+L["Deals must be below the historical price by this percentage."] = "세일 품목을 저장된 가격과 비교하여 아래에서 설정한 비율 이상 이익을 볼 수 있는 품목만 표시합니다."
 L["Default"] = "기본 경매 탭"
 L["%dh"] = "%d시간"
 L["Disable"] = "사용 안 함"
@@ -88,7 +88,7 @@ L["Name"] = "품목명"
 L["Net cost for %d:"] = "%d개의 최종 가격:"
 L["Never"] = "표시하지 않음"
 L["No current auctions"] = "등록한 경매 물품이 없습니다."
-L["No deals found"] = "경매 거래 건을 찾을 수 없습니다."
+L["No deals found"] = "세일 품목을 찾을 수 없습니다."
 L["No items found"] = "검색된 품목이 없습니다."
 L["Note: %d |4listing:listings; of %d |4item was:items were; not purchased."] = "주의: %d 건의 %d|1을;를; 구매하지 못했습니다."
 L["Not enough cash for deposit."] = "경매 보증금이 부족합니다."
@@ -111,7 +111,7 @@ L["Qty"] = "희망수량"
 L["Resell %d:"] = "초과 구입 수량 %d개:"
 L["Round all prices to this granularity, or zero to disable (0-1)."] = "경매장에 등록하는 모든 가격을 반올림합니다. 0으로 설정하면 반올림하지 않습니다."
 L["Round Prices"] = "가격 반올림"
-L["Scan complete.  Try again later to find deals!"] = "검색 완료. 경매 거래로 이익을 낼만한 품목이 없습니다! 다음에 다시 검색하세요."
+L["Scan complete.  Try again later to find deals!"] = "검색 완료. 세일 품목이 없습니다! 다음에 다시 검색하세요."
 L["Scanning:"] = "조사중:"
 L["Scanning..."] = "조사중..."
 L["Search"] = "검색"
@@ -119,7 +119,7 @@ L["Searching:"] = "검색중:"
 L["Sell Tab"] = "경매도우미 - 판매 탭"
 L["Show auction house value in tooltips."] = "툴팁에 경매장 가격을 보여줍니다."
 L["Show Auction Value"] = "경매가 보이기"
-L["Show Deals"] = "세일품목" -- Needs review
+L["Show Deals"] = "세일 품목"
 L["Show Disenchant Value"] = "마력추출 기대 골드 보이기"
 L["Show expected disenchant value in tooltips."] = "툴팁에 아이템을 마력 추출하였을 때 얻을 수 있는 기대 골드를 보여줍니다."
 L["Show Favorites"] = "즐겨찾는 품목"
