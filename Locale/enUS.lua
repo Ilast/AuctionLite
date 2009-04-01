@@ -59,6 +59,8 @@ L["FAST_SCAN_AD"] =
   "can disable fast scanning on the AuctionLite options screen." ..
   "\n\n" ..
   "Enable fast auction scans?";
+L["Enable"] = true;
+L["Disable"] = true;
 L["Fast auction scan enabled."] = true;
 L["Fast auction scan disabled."] = true;
 L["|cffff0000[Error]|r Insufficient funds."] = true;

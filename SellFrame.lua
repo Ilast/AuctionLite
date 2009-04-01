@@ -667,12 +667,12 @@ function AuctionLite:CreateSellFrame()
   SellBuyoutText:SetText(L["Buyout Price"]);
   SellMethodText:SetText(L["Pricing Method"]);
 
-  SellPerItemButton:SetText(L["per item"]);
-  SellPerStackButton:SetText(L["per stack"]);
+  SellPerItemButtonText:SetText(L["per item"]);
+  SellPerStackButtonText:SetText(L["per stack"]);
 
-  SellShortAuctionButton:SetText(L["%dh"], 12);
-  SellMediumAuctionButton:SetText(L["%dh"], 24);
-  SellLongAuctionButton:SetText(L["%dh"], 48);
+  SellShortAuctionButtonText:SetText(L["%dh"]:format(12));
+  SellMediumAuctionButtonText:SetText(L["%dh"]:format(24));
+  SellLongAuctionButtonText:SetText(L["%dh"]:format(48));
 
   -- Set button text and adjust arrows.
   SellItemNameButton:SetText(L["Competing Auctions"]);

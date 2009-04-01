@@ -78,8 +78,8 @@ local MultiScanData = {};
 -- Static popup advertising AL's fast scan.
 StaticPopupDialogs["AL_FAST_SCAN"] = {
 	text = L["FAST_SCAN_AD"],
-	button1 = "Enable",
-  button2 = "Disable",
+	button1 = L["Enable"],
+  button2 = L["Disable"],
 	OnAccept = function(self)
     AuctionLite:Print(L["Fast auction scan enabled."]);
     AuctionLite.db.profile.fastScanAd2 = true;
