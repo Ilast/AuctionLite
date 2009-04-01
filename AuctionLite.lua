@@ -184,6 +184,7 @@ local TooltipOptions = {
       type = "toggle",
       desc = L["Show full stack prices in tooltips (shift toggles on the fly)."],
       name = L["Show Full Stack Price"],
+      width = "double",
       order = 9,
     },
   },
