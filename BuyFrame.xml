@@ -935,7 +935,7 @@
 				<Anchors>
 					<Anchor point="TOPRIGHT">
 						<Offset>
-							<AbsDimension x="-100" y="-44"/>
+							<AbsDimension x="-85" y="-44"/>
 						</Offset>
 					</Anchor>
 				</Anchors>
@@ -947,7 +947,7 @@
 			</Button>
 			<Button name="BuySearchButton" inherits="UIPanelButtonTemplate" text="Search">
 				<Size>
-					<AbsDimension x="80" y="22"/>
+					<AbsDimension x="95" y="22"/>
 				</Size>
 				<Anchors>
 					<Anchor point="TOPRIGHT" relativeTo="BuyScanButton" relativePoint="TOPLEFT">
