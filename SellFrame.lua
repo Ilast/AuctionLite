@@ -116,17 +116,17 @@ function AuctionLite:ShowPriceData(itemLink, itemValue, stackSize)
                       math.floor(0.5 + hist.listings / hist.scans),
                       math.floor(0.5 + hist.items / hist.scans)));
     if itemVendor > 0 then
-      self:Print(L["Current: %s (%.2gx historical, %.2gx vendor)"]:
+      self:Print(L["Current: %s (%.2fx historical, %.2fx vendor)"]:
                  format(self:PrintMoney(stackValue),
                         math.floor(100 * itemValue / hist.price) / 100,
                         math.floor(100 * itemValue / itemVendor) / 100));
     else
-      self:Print(L["Current: %s (%.2gx historical)"]:
+      self:Print(L["Current: %s (%.2fx historical)"]:
                  format(self:PrintMoney(stackValue),
                         math.floor(100 * itemValue / hist.price) / 100));
     end
   elseif itemVendor > 0 then
-    self:Print(L["Current: %s (%.2gx vendor)"]:
+    self:Print(L["Current: %s (%.2fx vendor)"]:
                format(self:PrintMoney(stackValue),
                       math.floor(100 * itemValue / itemVendor) / 100));
   end
@@ -370,7 +370,7 @@ function AuctionLite:SetSellData(results, link)
       local _, _, count, _, _, vendor = GetAuctionSellItemInfo();
       local mult = self.db.profile.vendorMultiplier;
       itemValue = mult * vendor / count;
-      self:SetStatus(L["|cffff0000Using %.1gx vendor price.|r"]:
+      self:SetStatus(L["|cffff0000Using %.3gx vendor price.|r"]:
                      format(mult));
     end
     allowUndercut = false;
