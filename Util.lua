@@ -176,7 +176,7 @@ function AuctionLite:GetListing(kind, i)
   local link = self:RemoveUniqueId(GetAuctionItemLink(kind, i));
   local name, texture, count, quality, canUse, level,
         minBid, minIncrement, buyout, bidAmount,
-        highBidder, owner = GetAuctionItemInfo(kind, i);
+        highBidder, owner, sold = GetAuctionItemInfo(kind, i);
 
   -- Figure out the true minimum bid.
   local bid;
@@ -195,7 +195,7 @@ function AuctionLite:GetListing(kind, i)
     quality = quality, canUse = canUse, level = level,
     bid = bid, minBid = minBid, minIncrement = minIncrement,
     buyout = buyout, bidAmount = bidAmount,
-    highBidder = highBidder, owner = owner
+    highBidder = highBidder, owner = owner, sold = sold
   };
 
   return listing;
@@ -235,7 +235,9 @@ function AuctionLite:GetMyAuctionLinks()
   local i;
   for i = 1, batch do
     local listing = self:GetListing("owner", i);
-    links[listing.link] = true;
+    if listing.sold ~= 1 then
+      links[listing.link] = true;
+    end
   end
 
   return links;
