@@ -100,6 +100,11 @@ StaticPopupDialogs["AL_FAST_SCAN"] = {
 
 -- Set current item to be shown in detail view, and update dependent data.
 function AuctionLite:SetDetailLink(link)
+  -- If there's no data to show, then just set the link to nil.
+  if link ~= nil and table.getn(SummaryDataByLink[link].data) == 0 then
+    link = nil;
+  end
+
   -- If we're leaving the summary view, save our offset.
   if DetailLink == nil then
     SavedOffset = FauxScrollFrame_GetOffset(BuyScrollFrame);
@@ -584,13 +589,6 @@ function AuctionLite:MultiScan(links)
       self:ClearBuyFrame(true);
     end
   else
-    -- Nothing left to scan, so erase any empty objects in our list.
-    for link, results in pairs(MultiScanData) do
-      if results.empty then
-        MultiScanData[link] = nil;
-      end
-    end
-
     -- Show our results.
     self:SetBuyData(MultiScanData);
     MultiScanData = {};
@@ -601,7 +599,12 @@ end
 function AuctionLite:SetMultiScanData(data, searchLink)
   -- Put something in the slot we searched for to make sure we don't
   -- search for it again.
-  MultiScanData[searchLink] = { empty = true };
+  MultiScanData[searchLink] = {
+    link = searchLink,
+    data = {},
+    itemsAll = 0,
+    listingsAll = 0,
+  };
 
   -- Gather all relevant results returned by the search.
   for link, results in pairs(data) do
@@ -1278,19 +1281,26 @@ function AuctionLite:AuctionFrameBuy_UpdateSummary()
       listingsText:SetText("|cffffffff" .. item.listingsAll .. "|r");
       itemsText:SetText("|cffffffff" .. item.itemsAll .. "|r");
 
-      MoneyFrame_Update(marketFrame, math.floor(item.price));
+      if item.price ~= nil and item.price > 0 then
+        MoneyFrame_Update(marketFrame, math.floor(item.price));
+        marketFrame:Show();
+      else
+        marketFrame:Hide();
+      end
 
+      local moreData;
       if BuyMode == BUY_MODE_DEALS or
          BuyMode == BUY_MODE_SCAN then
-        MoneyFrame_Update(histFrame, math.floor(item.profit));
+        moreData = item.profit;
+      else
+        moreData = item.histPrice;
+      end
+
+      if moreData ~= nil and moreData > 0 then
+        MoneyFrame_Update(histFrame, math.floor(moreData));
         histFrame:Show();
       else
-        if item.histPrice > 0 then
-          MoneyFrame_Update(histFrame, math.floor(item.histPrice));
-          histFrame:Show();
-        else
-          histFrame:Hide();
-        end
+        histFrame:Hide();
       end
 
       if enchant ~= 0 or

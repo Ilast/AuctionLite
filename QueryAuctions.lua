@@ -382,7 +382,10 @@ function AuctionLite:QueryNewData()
   assert(not Query.getAll or seen == Query.total);
 
   -- Update status.
-  local pct = math.floor(seen * 100 / Query.total);
+  local pct = 0;
+  if Query.total > 0 then
+    pct = math.floor(seen * 100 / Query.total);
+  end
   if Query.update ~= nil then
     Query.update(pct, Query.getAll);
   end
