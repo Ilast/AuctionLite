@@ -356,6 +356,9 @@ function AuctionLite:SetSellData(results, link)
   local allowUndercut = true;
   if result ~= nil and result.price > 0 then
     itemValue = result.price;
+    if result.priceIsMine then
+      allowUndercut = false;
+    end
     if self.db.profile.printPriceData then
       self:ShowPriceData(link, itemValue, SellSize:GetNumber());
     end

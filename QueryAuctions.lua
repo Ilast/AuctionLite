@@ -253,6 +253,7 @@ function AuctionLite:AnalyzeData(rawData)
     -- price.  By construction of itemData, there is at least one entry.
     if not setPrice then
       result.price = data[1].price;
+      result.priceIsMine = true;
     end
 
     result.data = data;
