@@ -387,36 +387,129 @@ end
 function AuctionLite:StartMassBuyout()
   -- See if the user requested a specific quantity.
   local requested = BuyQuantity:GetNumber();
-  if DetailLink ~= nil and requested > 0 then
+  if DetailLink ~= nil and table.getn(DetailData) > 0 and requested > 0 then
     -- Clear our selected items.  (Should already be done, but what the hey.)
     SelectedItems = {};
 
-    -- Sort the list by per-item buyout.  Then mark it as unsorted so
-    -- that we'll restore the user's preferred sort on next update.
-    local sort = function(a, b)
-      return a.buyout / a.count < b.buyout / b.count;
+    -- Make a list of all items from other sellers with nonzero buyout.
+    -- Also figure out how many items we have available in all.
+    local available = {};
+    local total = 0;
+    local listing;
+    for _, listing in ipairs(DetailData) do
+      if listing.buyout > 0 and listing.owner ~= UnitName("player") then
+        table.insert(available, listing);
+        total = total + listing.count;
+      end
     end
 
-    table.sort(DetailData, sort);
-    DetailSort.sorted = false;
+    -- Are there enough items for sale to satisfy the request?
+    if total <= requested then
+      -- Nope.  Just take everything we can.
+      local listing;
+      for _, listing in ipairs(available) do
+        SelectedItems[listing] = true;
+      end
+    else
+      -- Yep.  So now we have to figure out what to buy.  We use an
+      -- adaptation of the standard dynamic programming algorithm for
+      -- 0-1 knapsack.
 
-    -- Pick the listings with the lowest per-item prices.
-    local i = 1;
-    local count = 0;
-    local warned = false;
-    while i <= table.getn(DetailData) and count < requested do
-      if DetailData[i].buyout > 0 then
-        if DetailData[i].owner ~= UnitName("player") then
-          SelectedItems[DetailData[i]] = true;
-          count = count + DetailData[i].count;
-        elseif not warned then
-          warned = true;
-          self:Print(L["|cffff0000[Warning]|r Skipping your own auctions.  " ..
-                       "You might want to cancel them instead."]);
+      -- The state for this algorithm is as follows:
+      --   results: For any n, what's the best price we can get for exactly
+      --            n items, and what listings do we have to buy to do so?
+      --   indices: A list of valid indices for results, in descending order.
+      -- We initialize these with 0, our base case.
+      local results = { [0] = { price = 0 } };
+      local indices = { 0 };
+
+      -- Determine the maximum number of items we want to consider buying.
+      -- This is the number requested plus the maximum stack size available
+      -- in the AH.  We don't need to consider anything large than this,
+      -- because if we could fill the user's order for a larger count, then
+      -- we must be able to remove one listing to fill the user's order for
+      -- less money overall.
+      local maxCount = 0;
+      local listing;
+      for _, listing in ipairs(available) do
+        if listing.count > maxCount then
+          maxCount = listing.count;
         end
       end
-      i = i + 1;
+      maxCount = maxCount + requested;
+
+      -- Consider each listing in turn.  At each step, the results table
+      -- will have the best results for the set of listings we've considered
+      -- so far.
+      local listing;
+      for _, listing in ipairs(available) do
+        -- Iterate over all counts where we have results so far, in
+        -- descending order so that we can update in place.
+        local count;
+        for _, count in ipairs(indices) do
+          local info = results[count];
+          local newCount = count + listing.count;
+          assert(info ~= nil);
+          -- Add this listing to the best result at this stack size.
+          -- Do we care about the resulting set of items?
+          if newCount < maxCount then
+            -- If this is the first option at this new stack size, or if it's
+            -- cheaper than our previous best effort, update the data.
+            local newInfo = results[newCount];
+            local newPrice = info.price + listing.buyout;
+            if newInfo == nil or newPrice < newInfo.price then
+              -- The new data consists of the current result's listings plus
+              -- the listing we just added.
+              results[newCount] = {
+                price = newPrice,
+                listing = listing,
+                info = info,
+              };
+            end
+            -- If we added a new index to the results table, add it to our
+            -- list of indices too, and make sure it's still sorted.
+            if newInfo == nil then
+              table.insert(indices, newCount);
+              table.sort(indices, function(a, b) return a > b end);
+            end
+          end
+        end
+      end
+
+      -- We've computed our best options for all stack sizes.  Now find the
+      -- cheapest way to buy the requested number of items.
+      local bestCount = nil;
+      local bestInfo = nil;
+      local count;
+      local info;
+      for count, info in pairs(results) do
+        if count >= requested and
+           (bestInfo == nil or info.price < bestInfo.price or
+            (info.price == bestInfo.price and count > bestCount)) then
+          bestCount = count;
+          bestInfo = info;
+        end
+      end
+
+      -- Update SelectedItems with the final results.  We should always
+      -- find a result here, but we'll be defensive anyway.
+      while bestInfo ~= nil and bestInfo.listing ~= nil do
+        SelectedItems[bestInfo.listing] = true;
+        bestInfo = bestInfo.info;
+      end
+
+      -- Sort by selectedness in order to pull selected items to the
+      -- top, and mark the list as unsorted so that they will be sorted
+      -- properly (and stably) on the next update.
+      local sort = function(a, b)
+        return SelectedItems[a] and not SelectedItems[b];
+      end
+      table.sort(DetailData, sort);
+      DetailSort.sorted = false;
     end
+
+    --self:Print(L["|cffff0000[Warning]|r Skipping your own auctions.  " ..
+    --             "You might want to cancel them instead."]);
 
     -- Now create our buyout order.
     self:CreateOrder(true, requested);
