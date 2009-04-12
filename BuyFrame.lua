@@ -806,6 +806,7 @@ function AuctionLite:SetMultiScanData(data, searchLink)
   MultiScanData[searchLink] = {
     link = searchLink,
     data = {},
+    price = 0,
     itemsAll = 0,
     listingsAll = 0,
   };
