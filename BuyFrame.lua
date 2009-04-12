@@ -299,12 +299,20 @@ function AuctionLite:CancelItems()
 
     self:CancelAuctions(name, list);
 
+    local summary = SummaryDataByLink[DetailLink];
     local i = table.getn(DetailData);
     while i > 0 do
-      if DetailData[i].cancelled then
+      local listing = DetailData[i];
+      if listing.cancelled then
         table.remove(DetailData, i);
+        summary.itemsAll = summary.itemsAll - listing.count;
+        summary.listingsAll = summary.listingsAll - 1;
       end
       i = i - 1;
+    end
+
+    if table.getn(DetailData) == 0 then
+      self:SetDetailLink(nil);
     end
 
     SelectedItems = {};
@@ -623,29 +631,36 @@ end
 function AuctionLite:PurchaseComplete()
   -- Update our display according to the purchase.
   if DetailData ~= nil then
+    local summary = SummaryDataByLink[DetailLink];
     local i = table.getn(DetailData);
     while i > 0 do
-      DetailData[i].found = nil;
-      if DetailData[i].purchased then
+      local listing = DetailData[i];
+      listing.found = nil;
+      if listing.purchased then
         if PurchaseOrder.isBuyout then
           -- If we bought an item, remove it.
           table.remove(DetailData, i);
+          summary.itemsAll = summary.itemsAll - listing.count;
+          summary.listingsAll = summary.listingsAll - 1;
           -- The selected items map is going to get all screwed up, so
           -- just nuke it.  (TODO: Do a better job here!)
           SelectedItems = {};
         else
           -- If we bid on an item, update the minimum bid.
-          local increment = math.floor(DetailData[i].bid / 100) * 5;
-          DetailData[i].purchased = false;
-          DetailData[i].bidder = 1;
-          DetailData[i].bid = DetailData[i].bid + increment;
-          if DetailData[i].bid > DetailData[i].buyout and
-             DetailData[i].buyout > 0 then
-            DetailData[i].bid = DetailData[i].buyout;
+          local increment = math.floor(listing.bid / 100) * 5;
+          listing.purchased = false;
+          listing.bidder = 1;
+          listing.bid = listing.bid + increment;
+          if listing.bid > listing.buyout and listing.buyout > 0 then
+            listing.bid = listing.buyout;
           end
         end
       end
       i = i - 1;
+    end
+
+    if table.getn(DetailData) == 0 then
+      self:SetDetailLink(nil);
     end
   end
 
