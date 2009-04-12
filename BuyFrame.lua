@@ -861,9 +861,9 @@ function AuctionLite:ApplySummarySort()
       end
     end
   elseif info.sort == "Listings" then
-    cmp = function(a, b) return a.listings < b.listings end;
+    cmp = function(a, b) return a.listingsAll < b.listingsAll end;
   elseif info.sort == "Items" then
-    cmp = function(a, b) return a.items < b.items end;
+    cmp = function(a, b) return a.itemsAll < b.itemsAll end;
   elseif info.sort == "Market" then
     cmp = function(a, b) return a.price < b.price end;
   elseif info.sort == "Historical" then
