@@ -92,12 +92,19 @@ local Options = {
       width = "double",
       order = 8,
     },
+    considerResale = {
+      type = "toggle",
+      desc = L["Consider resale value of excess items when filling an order on the \"Buy\" tab."],
+      name = L["Consider Resale Value When Buying"],
+      width = "double",
+      order = 9,
+    },
     printPriceData = {
       type = "toggle",
       desc = L["Print detailed price data when selling an item."],
       name = L["Print Detailed Price Data"],
       width = "double",
-      order = 9,
+      order = 10,
     },
     startTab = {
       type = "select",
@@ -226,6 +233,7 @@ local Defaults = {
     minDiscount = 0.25,
     getAll = false,
     openBags = false,
+    considerResale = false,
     printPriceData = false,
     showVendor = "a_yes",
     showAuction = "b_maybe",

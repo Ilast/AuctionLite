@@ -394,12 +394,27 @@ function AuctionLite:StartMassBuyout()
     -- Make a list of all items from other sellers with nonzero buyout.
     -- Also figure out how many items we have available in all.
     local available = {};
+    local cheapest = nil;
+    local cheapestOwned = nil;
     local total = 0;
     local listing;
     for _, listing in ipairs(DetailData) do
-      if listing.buyout > 0 and listing.owner ~= UnitName("player") then
-        table.insert(available, listing);
-        total = total + listing.count;
+      if listing.buyout > 0 then
+        local price = listing.buyout / listing.count;
+        if listing.owner == UnitName("player") then
+          -- Remember the cheapest auction that we own.
+          if cheapestOwned == nil or price < cheapestOwned then
+            cheapestOwned = price;
+          end
+        else
+          -- Remember the cheapest auction that we don't own.
+          if cheapest == nil or price < cheapest then
+            cheapest = price;
+          end
+          -- Keep track of all other auctions with buyouts.
+          table.insert(available, listing);
+          total = total + listing.count;
+        end
       end
     end
 
@@ -438,11 +453,23 @@ function AuctionLite:StartMassBuyout()
       end
       maxCount = maxCount + requested;
 
+      -- Sort by count, which improves the speed of the algorithm below.
+      table.sort(available, function(a, b) return a.count > b.count end);
+
+      -- Save our start time.
+      local start = time();
+
       -- Consider each listing in turn.  At each step, the results table
       -- will have the best results for the set of listings we've considered
       -- so far.
+      local timeout = false;
       local listing;
       for _, listing in ipairs(available) do
+        -- If we've taken more than 1-2 seconds, bail.
+        if start + 1 < time() then
+          timeout = true;
+          break;
+        end
         -- Iterate over all counts where we have results so far, in
         -- descending order so that we can update in place.
         local count;
@@ -476,40 +503,109 @@ function AuctionLite:StartMassBuyout()
         end
       end
 
-      -- We've computed our best options for all stack sizes.  Now find the
-      -- cheapest way to buy the requested number of items.
-      local bestCount = nil;
-      local bestInfo = nil;
-      local count;
-      local info;
-      for count, info in pairs(results) do
-        if count >= requested and
-           (bestInfo == nil or info.price < bestInfo.price or
-            (info.price == bestInfo.price and count > bestCount)) then
-          bestCount = count;
-          bestInfo = info;
+      if timeout then
+        -- We hit a timeout, so just do things the fast way.
+        -- First sort by per-item buyout.
+        local sort = function(a, b)
+          return a.buyout / a.count < b.buyout / b.count;
         end
-      end
+        table.sort(available, sort);
 
-      -- Update SelectedItems with the final results.  We should always
-      -- find a result here, but we'll be defensive anyway.
-      while bestInfo ~= nil and bestInfo.listing ~= nil do
-        SelectedItems[bestInfo.listing] = true;
-        bestInfo = bestInfo.info;
+        -- Get the cheapest items until the order is filled.
+        local selected = {};
+        local count = 0;
+        local i = 1;
+        while i < table.getn(available) and count < requested do
+          local listing = available[i];
+          table.insert(selected, listing);
+          count = count + listing.count;
+          i = i + 1;
+        end
+
+        -- Go over the selected items in reverse order and remove any
+        -- that aren't actually necessary.
+        local i = table.getn(selected);
+        while i > 0 do
+          local listing = selected[i];
+          if count - listing.count >= requested then
+            table.remove(selected, i);
+            count = count - listing.count;
+          end
+          i = i - 1;
+        end
+
+        -- Update the selected items list as appropriate.
+        local listing;
+        for _, listing in ipairs(selected) do
+          SelectedItems[listing] = true;
+        end
+      else
+        -- We've computed our best options for all stack sizes.
+
+        -- Figure out the resale value for this item.  We use the lesser
+        -- of the cheapest price and the historical price.
+        local resale = cheapest - 1;
+        local hist = self:GetHistoricalPrice(DetailLink);
+        if hist ~= nil and hist.price > 0 and hist.price < resale then
+          resale = hist.price;
+        end
+
+        -- Now find the cheapest way to buy the requested number of items.
+        local bestCount = nil;
+        local bestInfo = nil;
+        local count;
+        local info;
+        for count, info in pairs(results) do
+          if count >= requested then
+            -- If the user wants us to, adjust for resale price.
+            if self.db.profile.considerResale then
+              info.price = info.price - (resale * (count - requested));
+            end
+            -- Is this the best option we've seen?
+            if bestInfo == nil or info.price < bestInfo.price or
+               (info.price == bestInfo.price and count > bestCount) then
+              bestCount = count;
+              bestInfo = info;
+            end
+          end
+        end
+
+        -- Update SelectedItems with the final results.  We should always
+        -- find a result here, but we'll be defensive anyway.
+        while bestInfo ~= nil and bestInfo.listing ~= nil do
+          SelectedItems[bestInfo.listing] = true;
+          bestInfo = bestInfo.info;
+        end
       end
 
       -- Sort by selectedness in order to pull selected items to the
       -- top, and mark the list as unsorted so that they will be sorted
       -- properly (and stably) on the next update.
       local sort = function(a, b)
-        return SelectedItems[a] and not SelectedItems[b];
+        return SelectedItems[b] and not SelectedItems[a];
       end
       table.sort(DetailData, sort);
       DetailSort.sorted = false;
     end
 
-    --self:Print(L["|cffff0000[Warning]|r Skipping your own auctions.  " ..
-    --             "You might want to cancel them instead."]);
+    -- Do we have any listings for this item?
+    if cheapestOwned ~= nil then
+      -- Find the worst price we're paying.
+      local worstBought = nil;
+      local listing;
+      for listing, _ in pairs(SelectedItems) do
+        local price = listing.buyout / listing.count;
+        if worstBought == nil or worstBought < price then
+          worstBought = price;
+        end
+      end
+
+      -- If it's above the price for our cheapest listing, warn the user.
+      if cheapestOwned < worstBought then
+        self:Print(L["|cffff0000[Warning]|r Skipping your own auctions.  " ..
+                     "You might want to cancel them instead."]);
+      end
+    end
 
     -- Now create our buyout order.
     self:CreateOrder(true, requested);
@@ -1047,6 +1143,11 @@ function AuctionLite:AuctionFrameBuy_OnUpdate()
 
   if StartTime ~= nil then
     self:UpdateProgressSearch();
+  end
+
+  if XCoro ~= nil and XRestart ~= nil and XRestart <= time() then
+    self:Print("resuming");
+    coroutine.resume(XCoro);
   end
 end
 
