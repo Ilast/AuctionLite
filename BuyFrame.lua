@@ -630,7 +630,7 @@ end
 -- Notification that a purchase has completed.
 function AuctionLite:PurchaseComplete()
   -- Update our display according to the purchase.
-  if DetailData ~= nil then
+  if DetailLink ~= nil then
     local summary = SummaryDataByLink[DetailLink];
     local i = table.getn(DetailData);
     while i > 0 do
@@ -1609,7 +1609,7 @@ function AuctionLite:ClearBuyFrame(partial)
   LastClick = nil;
 
   SummaryData = {};
-  SummaryDataByLink = nil;
+  SummaryDataByLink = {};
   NoResults = false;
 
   PurchaseOrder = nil;
