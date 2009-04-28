@@ -184,6 +184,11 @@ function AuctionLite:SetBuyData(results)
   -- If we've searched for our own auctions, find undercuts.
   if BuyMode == BUY_MODE_MY_AUCTIONS then
     for link, results in pairs(results) do
+      -- Sort by per-item buyout price.
+      table.sort(results.data,
+        function(a, b) return a.buyout / a.count < b.buyout / b.count end);
+      -- Find the first listing with non-zero buyout.  If it's not ours,
+      -- we've been undercut.
       for _, listing in ipairs(results.data) do
         if listing.buyout > 0 then
           results.warning = (listing.owner ~= UnitName("player"));
@@ -1159,11 +1164,6 @@ function AuctionLite:AuctionFrameBuy_OnUpdate()
 
   if StartTime ~= nil then
     self:UpdateProgressSearch();
-  end
-
-  if XCoro ~= nil and XRestart ~= nil and XRestart <= time() then
-    self:Print("resuming");
-    coroutine.resume(XCoro);
   end
 end
 
