@@ -111,10 +111,13 @@ function AuctionLite:CreateAuctionsCore()
 
     local stacks = SellStacks:GetNumber();
     local size = SellSize:GetNumber();
+    local origSize = size;
 
     local bid = MoneyInputFrame_GetCopper(SellBidPrice);
     local buyout = MoneyInputFrame_GetCopper(SellBuyoutPrice);
     local time = self:GetDuration();
+
+    local numItems = self:CountItems(link);
 
     -- If we're pricing per item, then get the stack price.
     if self.db.profile.method == 1 then
@@ -131,7 +134,7 @@ function AuctionLite:CreateAuctionsCore()
       self:Print(L["Buyout cannot be less than starting bid."]);
     elseif GetMoney() < self:CalculateDeposit() then
       self:Print(L["Not enough cash for deposit."]);
-    elseif self:CountItems(link) < stacks * size then
+    elseif stacks > math.ceil(numItems / size) then
       self:Print(L["Not enough items available."]);
     elseif count ~= nil and stacks > 0 then
       local created = 0;
@@ -159,6 +162,18 @@ function AuctionLite:CreateAuctionsCore()
       if container ~= nil then
         -- Create the remaining auctions.
         while created < stacks do
+          -- If we have an uneven number of items to sell, reduce the
+          -- size of the last stack.
+          if created == stacks - 1 then
+            local remaining = numItems - (created * size);
+            assert(remaining > 0);
+            if remaining < size then
+              size = remaining;
+              bid = bid * size / origSize;
+              buyout = buyout * size / origSize;
+            end
+          end
+
           -- Create a stack of the appropriate size.
           self:MakeStackInSlot(link, size, container, slot);
 
@@ -169,21 +184,21 @@ function AuctionLite:CreateAuctionsCore()
 
           -- One final sanity check.
           local auctionName, _, auctionCount = GetAuctionSellItemInfo();
-          if auctionName == name and auctionCount == size then
-            -- And away she goes!
-            StartAuction(bid, buyout, time);
-            self:WaitForEmpty(container, slot);
-          else
+          if auctionName ~= name or auctionCount ~= size then
             self:Print(L["Error when creating auctions."]);
             break;
           end
+
+          -- And away she goes!
+          StartAuction(bid, buyout, time);
+          self:WaitForEmpty(container, slot);
 
           created = created + 1;
           SellStacks:SetNumber(stacks - created);
         end
 
         self:ClearSellFrame();
-      elseif created < stocks then
+      elseif created < stacks then
         -- Couldn't find an empty bag slot.
         self:Print(L["Need an empty bag slot to create auctions."]);
       else
@@ -191,8 +206,15 @@ function AuctionLite:CreateAuctionsCore()
         self:ClearSellFrame();
       end
 
-      self:Print(L["Created %d |4auction:auctions; of %s x%d."]:
-                 format(created, name, size));
+      if size == origSize then
+        self:Print(L["Created %d |4auction:auctions; of %s x%d."]:
+                   format(created, name, size));
+      else
+        self:Print(L["Created %d |4auction:auctions; of %s x%d."]:
+                   format(created - 1, name, origSize));
+        self:Print(L["Created %d |4auction:auctions; of %s x%d."]:
+                   format(1, name, size));
+      end
     end
 
     Selling = false;

@@ -190,6 +190,8 @@ function AuctionLite:ValidateAuction()
     local stacks = SellStacks:GetNumber();
     local size = SellSize:GetNumber();
 
+    local numItems = self:CountItems(link);
+
     -- If we're pricing by item, get the full stack price.
     if self.db.profile.method == METHOD_PER_ITEM then
       bid = bid * size;
@@ -201,7 +203,7 @@ function AuctionLite:ValidateAuction()
       StatusError = true;
       SellStatusText:SetText(L["|cffff0000Invalid stack size/count.|r"]);
       SellCreateAuctionButton:Disable();
-    elseif self:CountItems(link) < stacks * size then
+    elseif stacks > math.ceil(numItems / size) then
       StatusError = true;
       SellStatusText:SetText(L["|cffff0000Not enough items available.|r"]);
       SellCreateAuctionButton:Disable();
@@ -221,6 +223,10 @@ function AuctionLite:ValidateAuction()
       StatusError = true;
       SellStatusText:SetText(L["|cffff0000Buyout less than vendor price.|r"]);
       SellCreateAuctionButton:Disable();
+    elseif numItems < size * stacks then
+      StatusError = true;
+      SellStatusText:SetText(L["|cffffd000Last stack will be partial.|r"]);
+      SellCreateAuctionButton:Enable();
     else
       StatusError = false;
       SellStatusText:SetText(StatusMessage);
