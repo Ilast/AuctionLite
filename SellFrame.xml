@@ -561,8 +561,7 @@
 				</Anchors>
 				<Scripts>
 					<OnTextChanged>
-						AuctionLite:UpdateDeposit();
-						AuctionLite:ValidateAuction();
+						AuctionLite:UserChangedStacks();
 					</OnTextChanged>
 					<OnTabPressed>
 						if IsShiftKeyDown() then
@@ -591,9 +590,7 @@
 				</Anchors>
 				<Scripts>
 					<OnTextChanged>
-						AuctionLite:UpdateDeposit();
-						AuctionLite:UpdatePrices();
-						AuctionLite:ValidateAuction();
+						AuctionLite:UserChangedSize();
 					</OnTextChanged>
 					<OnTabPressed>
 						if IsShiftKeyDown() then

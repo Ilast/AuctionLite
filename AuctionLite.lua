@@ -21,6 +21,74 @@ local Options = {
   get = function(item) return AuctionLite.db.profile[item[#item]] end,
   set = function(item, value) AuctionLite.db.profile[item[#item]] = value end,
   args = {
+    openBags = {
+      type = "toggle",
+      desc = L["Open all your bags when you visit the auction house."],
+      name = L["Open All Bags at AH"],
+      width = "double",
+      order = 8,
+    },
+    startTab = {
+      type = "select",
+      desc = L["Choose which tab is selected when opening the auction house."],
+      name = L["Start Tab"],
+      style = "dropdown",
+      values = {
+        a_default = L["Default"],
+        b_buy = L["Buy Tab"],
+        c_sell = L["Sell Tab"],
+        d_last = L["Last Used Tab"],
+      },
+    },
+  },
+};
+
+local BuyOptions = {
+  type = "group",
+  get = function(item) return AuctionLite.db.profile[item[#item]] end,
+  set = function(item, value) AuctionLite.db.profile[item[#item]] = value end,
+  args = {
+    minProfit = {
+      type = "range",
+      desc = L["Deals must be below the historical price by this much gold."],
+      name = L["Minimum Profit (Gold)"],
+      min = 0,
+      max = 1000,
+      step = 10,
+      order = 5,
+    },
+    minDiscount = {
+      type = "range",
+      desc = L["Deals must be below the historical price by this percentage."],
+      name = L["Minimum Profit (Pct)"],
+      isPercent = true,
+      min = 0,
+      max = 1,
+      step = 0.01,
+      order = 6,
+    },
+    getAll = {
+      type = "toggle",
+      desc = L["Use fast method for full scans (may cause disconnects)."],
+      name = L["Fast Auction Scan"],
+      width = "double",
+      order = 7,
+    },
+    considerResale = {
+      type = "toggle",
+      desc = L["Consider resale value of excess items when filling an order on the \"Buy\" tab."],
+      name = L["Consider Resale Value When Buying"],
+      width = "double",
+      order = 9,
+    },
+  },
+};
+
+local SellOptions = {
+  type = "group",
+  get = function(item) return AuctionLite.db.profile[item[#item]] end,
+  set = function(item, value) AuctionLite.db.profile[item[#item]] = value end,
+  args = {
     bidUndercut = {
       type = "range",
       desc = L["Percent to undercut market value for bid prices (0-100)."],
@@ -59,67 +127,39 @@ local Options = {
       step = 0.01,
       order = 4,
     },
-    minProfit = {
-      type = "range",
-      desc = L["Deals must be below the historical price by this much gold."],
-      name = L["Minimum Profit (Gold)"],
-      min = 0,
-      max = 1000,
-      step = 10,
+    defaultStacks = {
+      type = "select",
+      desc = L["Number of stacks suggested when an item is first placed in the \"Sell\" tab."],
+      name = L["Default Number of Stacks"],
+      style = "dropdown",
+      values = {
+        a_one = L["One Stack"],
+        b_full = L["Max Stacks"],
+        c_excess = L["Max Stacks + Excess"],
+      },
       order = 5,
     },
-    minDiscount = {
-      type = "range",
-      desc = L["Deals must be below the historical price by this percentage."],
-      name = L["Minimum Profit (Pct)"],
-      isPercent = true,
-      min = 0,
-      max = 1,
-      step = 0.01,
+    defaultSize = {
+      type = "select",
+      desc = L["Stack size suggested when an item is first placed in the \"Sell\" tab."],
+      name = L["Default Stack Size"],
+      style = "dropdown",
+      values = {
+        a_one = L["One Item"],
+        b_stack = L["Selected Stack Size"],
+        c_full = L["Full Stack"],
+      },
       order = 6,
-    },
-    getAll = {
-      type = "toggle",
-      desc = L["Use fast method for full scans (may cause disconnects)."],
-      name = L["Fast Auction Scan"],
-      width = "double",
-      order = 7,
-    },
-    openBags = {
-      type = "toggle",
-      desc = L["Open all your bags when you visit the auction house."],
-      name = L["Open All Bags at AH"],
-      width = "double",
-      order = 8,
-    },
-    considerResale = {
-      type = "toggle",
-      desc = L["Consider resale value of excess items when filling an order on the \"Buy\" tab."],
-      name = L["Consider Resale Value When Buying"],
-      width = "double",
-      order = 9,
     },
     printPriceData = {
       type = "toggle",
       desc = L["Print detailed price data when selling an item."],
       name = L["Print Detailed Price Data"],
       width = "double",
-      order = 10,
-    },
-    startTab = {
-      type = "select",
-      desc = L["Choose which tab is selected when opening the auction house."],
-      name = L["Start Tab"],
-      style = "dropdown",
-      values = {
-        a_default = L["Default"],
-        b_buy = L["Buy Tab"],
-        c_sell = L["Sell Tab"],
-        d_last = L["Last Used Tab"],
-      },
+      order = 7,
     },
   },
-}
+};
 
 local YesNoMaybe = {
   a_yes = L["Always"],
@@ -234,6 +274,8 @@ local Defaults = {
     getAll = false,
     openBags = false,
     considerResale = false,
+    defaultStacks = "a_one",
+    defaultSize = "b_stack",
     printPriceData = false,
     showVendor = "a_yes",
     showAuction = "b_maybe",
@@ -328,12 +370,18 @@ function AuctionLite:OnInitialize()
 
   local registry = LibStub("AceConfigRegistry-3.0");
   registry:RegisterOptionsTable("AuctionLite Options", Options);
+  registry:RegisterOptionsTable("AuctionLite Buy", BuyOptions);
+  registry:RegisterOptionsTable("AuctionLite Sell", SellOptions);
   registry:RegisterOptionsTable("AuctionLite Tooltips", TooltipOptions);
   registry:RegisterOptionsTable("AuctionLite Profiles", profiles);
 
   local dialog = LibStub("AceConfigDialog-3.0");
   self.optionFrames = {
     main     = dialog:AddToBlizOptions("AuctionLite Options", L["AuctionLite"]),
+    buy      = dialog:AddToBlizOptions("AuctionLite Buy", L["Buy Tab"],
+                                       L["AuctionLite"]);
+    sell     = dialog:AddToBlizOptions("AuctionLite Sell", L["Sell Tab"],
+                                       L["AuctionLite"]);
     tooltips = dialog:AddToBlizOptions("AuctionLite Tooltips", L["Tooltips"],
                                        L["AuctionLite"]);
     profiles = dialog:AddToBlizOptions("AuctionLite Profiles", L["Profiles"],

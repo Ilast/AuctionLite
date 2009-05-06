@@ -1656,6 +1656,7 @@ function AuctionLite:AdvancedMenuInit(menu)
   local info = UIDropDownMenu_CreateInfo();
   info.text = L["Configure AuctionLite"];
   info.func = function()
+    InterfaceOptionsFrame_OpenToCategory(AuctionLite.optionFrames.tooltips);
     InterfaceOptionsFrame_OpenToCategory(self.optionFrames.main);
   end
   UIDropDownMenu_AddButton(info);

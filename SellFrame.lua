@@ -44,6 +44,9 @@ local AllowUndercut = nil;
 local StatusMessage = "";
 local StatusError = false;
 
+-- Number of times the user has edited the size box.
+local ChangedSize = 0;
+
 -- Previous prices set by the user.
 local SavedPrices = {};
 
@@ -149,6 +152,49 @@ function AuctionLite:SetItemBidBuyout(bid, buyout)
   ItemBuyout = buyout;
 end
 
+-- Indicate that the user has messed with the stack size.
+function AuctionLite:UserChangedSize()
+  ChangedSize = ChangedSize + 1;
+
+  self:UpdateDeposit();
+  self:UpdatePrices();
+
+  self:ValidateAuction();
+end
+
+-- Update the stack size based on a change in the number of stacks.
+function AuctionLite:UserChangedStacks()
+  -- If the user hasn't already specified a size, adjust the size to
+  -- fit the number of stacks entered.
+  if ChangedSize <= 0 then
+    local _, _, _, _, _, _, link =
+      self:GetAuctionSellItemInfoAndLink();
+
+    if link ~= nil then
+      local size = SellSize:GetNumber();
+      local stacks = SellStacks:GetNumber();
+
+      local numItems = self:CountItems(link);
+
+      if stacks > math.ceil(numItems / size) then
+        size = math.floor(numItems / stacks);
+        if size == 0 or stacks <= math.ceil(numItems / (size + 1)) then
+          size = size + 1;
+        end
+
+        if size ~= SellSize:GetNumber() then
+          ChangedSize = ChangedSize - 1;
+        end
+
+        SellSize:SetText(size);
+      end
+    end
+  end
+
+  self:UpdateDeposit();
+  self:ValidateAuction();
+end
+
 -- Fill in suggested prices based on a query result or a change in the
 -- stack size.
 function AuctionLite:UpdatePrices()
@@ -225,7 +271,9 @@ function AuctionLite:ValidateAuction()
       SellCreateAuctionButton:Disable();
     elseif numItems < size * stacks then
       StatusError = true;
-      SellStatusText:SetText(L["|cffffd000Last stack will be partial.|r"]);
+      SellStatusText:SetText(
+        L["|cffff7030Stack %d will have %d |4item:items;.|r"]:
+        format(stacks, numItems % size));
       SellCreateAuctionButton:Enable();
     else
       StatusError = false;
@@ -247,6 +295,8 @@ function AuctionLite:ClickAuctionSellItemButton_Hook()
       self:GetAuctionSellItemInfoAndLink();
 
     if name ~= nil then
+      local _, _, _, _, _, _, _, maxStack = GetItemInfo(link);
+
       SellItemButton:SetNormalTexture(texture);
       SellItemButtonName:SetText(name);
 
@@ -257,12 +307,38 @@ function AuctionLite:ClickAuctionSellItemButton_Hook()
         SellItemButtonCount:Hide();
       end
 
-      SellStacks:SetText(1);
-      SellSize:SetText(count);
+      local total = self:CountItems(link);
+
+      local size = count;
+      if self.db.profile.defaultSize == "a_one" then
+        size = 1;
+      elseif self.db.profile.defaultSize == "b_stack" then
+        size = count;
+      elseif self.db.profile.defaultSize == "c_full" then
+        size = maxStack;
+        if size > total then
+          size = total;
+        end
+      end
+
+      local stacks = 1;
+      if self.db.profile.defaultStacks == "a_one" then
+        stacks = 1;
+      elseif self.db.profile.defaultStacks == "b_full" then
+        stacks = math.floor(total / size);
+      elseif self.db.profile.defaultStacks == "c_excess" then
+        stacks = math.ceil(total / size);
+      end
+
+      if size ~= SellSize:GetNumber() then
+        ChangedSize = ChangedSize - 1;
+      end
+
+      SellStacks:SetText(stacks);
+      SellSize:SetText(size);
 
       SellStacks:SetFocus();
 
-      local total = self:CountItems(link);
       SellStackText:SetText(
         L["Number of Items |cff808080(max %d)|r"]:format(total));
 
@@ -302,6 +378,8 @@ function AuctionLite:ClearSellFrame()
   ItemBid = nil;
   ItemBuyout = nil;
   AllowUndercut = nil;
+
+  ChangedSize = 0;
 
   SellItemButton:SetNormalTexture(nil);
   SellItemButtonName:SetText("");
