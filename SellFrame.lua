@@ -394,6 +394,7 @@ function AuctionLite:ClearSellFrame()
 
   SellCreateAuctionButton:Disable();
 
+  StatusError = false;
   self:SetStatus("");
   self:UpdateDeposit();
 
