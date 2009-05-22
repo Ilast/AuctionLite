@@ -13,6 +13,7 @@ Locale\enUS.lua
 Locale\frFR.lua
 Locale\deDE.lua
 Locale\koKR.lua
+Locale\ruRU.lua
 Locale\zhCN.lua
 Locale\zhTW.lua
 
