@@ -5,28 +5,9 @@
 -------------------------------------------------------------------------------
 
 -- External interface for vendor values.
--- Based on Tekkub's GetSellValue sample on WowWiki.
-function AuctionLite:GetVendorValue(arg1)
-  -- If we got a number, a string, or a link, get the item id.
-  local id =
-    (type(arg1) == "number" and arg1) or
-    (type(arg1) == "string" and tonumber(arg1:match("item:(%d+)")));
-
-  -- Convert item name to itemid.
-  -- Only works if the player has the item in his bags.
-  if not id and type(arg1) == "string" then
-    local _, link = GetItemInfo(arg1);
-    id = link and tonumber(link:match("item:(%d+)")) ;
-  end
-
-  return id and self.VendorData[id];
-end
-
--- Implement Tekkub's GetSellValue.
-local origGetSellValue = GetSellValue;
-function GetSellValue(item)
-  return AuctionLite:GetVendorValue(item) or
-         (origGetSellValue and origGetSellValue(item));
+-- Deprecated due to addition of built-in vendor values.
+function AuctionLite:GetVendorValue()
+  return nil;
 end
 
 -- External interface for auction values.

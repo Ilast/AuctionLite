@@ -11,6 +11,7 @@ local MAX_BANK_ROWS = 14;
 
 local LinkTooltips = true;
 
+local CurrentSellPrice = nil;
 local ShownMoneyFrames = {};
 
 MoneyTypeInfo["AUCTIONLITE_TOOLTIP"] = {
@@ -19,8 +20,12 @@ MoneyTypeInfo["AUCTIONLITE_TOOLTIP"] = {
   collapse = 1,
 };
 
--- Hide all of our private money frames.
+-- Clean up after showing a tooltip with money.
 function AuctionLite:GameTooltip_ClearMoney_Hook(tooltip)
+  -- Forget the price we saw.
+  CurrentSellPrice = nil;
+
+  -- Hide all private money frames.
   local shownFrames = ShownMoneyFrames[tooltip];
   if shownFrames ~= nil then
     local i;
@@ -31,6 +36,17 @@ function AuctionLite:GameTooltip_ClearMoney_Hook(tooltip)
       end
     end
     ShownMoneyFrames[tooltip] = nil;
+  end
+end
+
+-- Hook the money callback to find out how expensive the item is.
+function AuctionLite:GameTooltip_OnTooltipAddMoney_Hook(tooltip, cost, maxcost)
+  if self.db.profile.showVendor ~= "c_no" then
+    -- We're handling the vendor display, so just remember the price.
+    CurrentSellPrice = cost;
+  else
+    -- We're not handling it, so pass the request on.
+    return self.hooks["GameTooltip_OnTooltipAddMoney"](tooltip, cost, maxcost);
   end
 end
 
@@ -109,9 +125,14 @@ end
 -- for the upper and lower bound on the number of items; count2 may be nil.
 function AuctionLite:AddTooltipData(tooltip, link, count1, count2)
   if link ~= nil and count1 ~= nil and
-     (self.db.profile.showVendor or
-      self.db.profile.showDisenchant or
-      self.db.profile.showAuction) then
+     (self.db.profile.showVendor ~= "c_no" or
+      self.db.profile.showDisenchant ~= "c_no" or
+      self.db.profile.showAuction ~= "c_no") then
+
+    -- Adjust the observed sell value.
+    if CurrentSellPrice ~= nil and count1 ~= nil and count1 > 0 then
+      CurrentSellPrice = CurrentSellPrice / count1;
+    end
 
     -- Do we multiply by the stack size?
     local stackPrice = self.db.profile.showStackPrice;
@@ -134,7 +155,7 @@ function AuctionLite:AddTooltipData(tooltip, link, count1, count2)
 
     -- Add lines for vendor, auction, and disenchant as appropriate.
     self:AddTooltipLine(tooltip, self.db.profile.showVendor,
-      function(link) return AuctionLite:GetVendorValue(link) end,
+      function(link) return CurrentSellPrice end,
       "|cffffd000" .. L["Vendor"] .. "|r" .. suffix, link, count1, count2);
 
     self:AddTooltipLine(tooltip, self.db.profile.showDisenchant,
@@ -396,5 +417,11 @@ end
 function AuctionLite:HookTooltips()
   self:AddHooksToTooltip(GameTooltip);
   self:AddHooksToTooltip(ItemRefTooltip);
-  self:SecureHook("GameTooltip_ClearMoney", "GameTooltip_ClearMoney_Hook");
+
+  self:SecureHook("GameTooltip_ClearMoney",
+                  "GameTooltip_ClearMoney_Hook");
+
+  self:RawHook("GameTooltip_OnTooltipAddMoney",
+               "GameTooltip_OnTooltipAddMoney_Hook",
+               true);
 end

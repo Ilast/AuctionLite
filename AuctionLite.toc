@@ -1,8 +1,8 @@
-## Interface: 30100
+## Interface: 30200
 ## Title: AuctionLite
 ## Notes: A lightweight addon that tracks auction house data and improves the auction house interface.
 ## Author: merial.kilrogg@gmail.com
-## Version: 1.2.1
+## Version: 1.3
 ## OptionalDeps: Ace3
 ## SavedVariables: AuctionLiteDB
 ## X-Category: Interface Enhancements
@@ -35,7 +35,6 @@ QueryAuctions.lua
 Disenchant.lua
 External.lua
 History.lua
-VendorData.lua
 Tooltip.lua
 
 Util.lua
