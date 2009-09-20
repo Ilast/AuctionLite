@@ -290,6 +290,10 @@ function AuctionLite:QueryApprove()
       end
       if price <= GetMoney() then
         PlaceAuctionBid("list", listing.index, price);
+        self:IgnoreMessage(ERR_AUCTION_BID_PLACED);
+        if Query.isBuyout then
+          self:IgnoreMessage(ERR_AUCTION_WON_S:format(Query.name));
+        end
         listing.target.purchased = true;
       end
     end

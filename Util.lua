@@ -319,3 +319,28 @@ function AuctionLite:UpdateSortArrow(prefix, buttonSort, sort, flipped)
     arrow:Hide();
   end
 end
+
+-- Table of ignored chat messages (msg -> count).
+local IgnoreTable = {};
+
+-- Hook the message handler to filter out "ignored" messages.
+function AuctionLite:ChatFrame_MessageEventHandler_Hook(frame, kind, msg, ...)
+  if frame == DEFAULT_CHAT_FRAME and kind == "CHAT_MSG_SYSTEM" then
+    for str, count in pairs(IgnoreTable) do
+      if str == msg then
+        IgnoreTable[str] = (count > 1) and (count - 1) or nil;
+        return;
+      end
+    end
+  end
+
+  self.hooks["ChatFrame_MessageEventHandler"](frame, kind, msg, ...);
+end
+
+-- Ignore "count" instances of "msg" in the chat window.
+function AuctionLite:IgnoreMessage(msg, count)
+  count = count or 1;
+  cur = IgnoreTable[msg] or 0;
+  IgnoreTable[msg] = cur + count;
+end
+

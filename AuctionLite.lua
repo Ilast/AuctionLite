@@ -301,6 +301,8 @@ local AUCTIONLITE_VERSION = "1.3";
 -- Hook some AH/GB functions and UI widgets when the AH/GB gets loaded.
 function AuctionLite:ADDON_LOADED(_, name)
   if name == "Blizzard_AuctionUI" then
+    self:RawHook("ChatFrame_MessageEventHandler",
+                 "ChatFrame_MessageEventHandler_Hook", true);
     self:RawHook("ChatEdit_InsertLink", "ChatEdit_InsertLink_Hook", true);
     self:SecureHook("ContainerFrameItemButton_OnModifiedClick",
                     "ContainerFrameItemButton_OnModifiedClick_Hook");

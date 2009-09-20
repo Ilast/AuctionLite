@@ -147,6 +147,7 @@ function AuctionLite:CreateAuctionsCore()
       -- room for the real thing.
       if count == size then
         StartAuction(bid, buyout, time);
+        self:IgnoreMessage(ERR_AUCTION_STARTED);
         self:WaitForEmpty(sellContainer, sellSlot);
         created = created + 1;
         SellStacks:SetNumber(stacks - created);
@@ -191,6 +192,7 @@ function AuctionLite:CreateAuctionsCore()
 
           -- And away she goes!
           StartAuction(bid, buyout, time);
+          self:IgnoreMessage(ERR_AUCTION_STARTED);
           self:WaitForEmpty(container, slot);
 
           created = created + 1;
