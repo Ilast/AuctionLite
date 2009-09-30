@@ -1487,9 +1487,20 @@ function AuctionLite:AuctionFrameBuy_UpdateSummary()
       local name, color, _, _, enchant, jewel1, jewel2, jewel3, jewel4 =
         self:SplitLink(item.link);
 
+      local countStr = function(mine, all)
+        
+        local prefix;
+        if mine > 0 and self.db.profile.countMyListings then
+          prefix = "(" .. mine .. ") ";
+        else
+          prefix = "";
+        end
+        return prefix .. "|cffffffff" .. all .. "|r";
+      end
+
       nameText:SetText("|c" .. color .. name .. "|r");
-      listingsText:SetText("|cffffffff" .. item.listingsAll .. "|r");
-      itemsText:SetText("|cffffffff" .. item.itemsAll .. "|r");
+      listingsText:SetText(countStr(item.listingsMine, item.listingsAll));
+      itemsText:SetText(countStr(item.itemsMine, item.itemsAll));
 
       if item.price ~= nil and item.price > 0 then
         MoneyFrame_Update(marketFrame, math.floor(item.price));

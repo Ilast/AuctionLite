@@ -233,6 +233,7 @@ function AuctionLite:AnalyzeData(rawData)
 
     -- We've converged.  Compute our min price and other stats.
     local result = { price = 1000000000, items = 0, listings = 0,
+                     itemsMine = 0, listingsMine = 0,
                      itemsAll = 0, listingsAll = 0 };
     local setPrice = false;
 
@@ -244,6 +245,10 @@ function AuctionLite:AnalyzeData(rawData)
           result.price = listing.price;
           setPrice = true;
         end
+      end
+      if listing.owner == UnitName("player") then
+        result.itemsMine = result.itemsMine + listing.count;
+        result.listingsMine = result.listingsMine + 1;
       end
       result.itemsAll = result.itemsAll + listing.count;
       result.listingsAll = result.listingsAll + 1;

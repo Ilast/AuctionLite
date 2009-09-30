@@ -74,6 +74,12 @@ local BuyOptions = {
       width = "double",
       order = 7,
     },
+    countMyListings = {
+      type = "toggle",
+      desc = L["On the summary view, show how many listings/items are yours."],
+      name = L["Show How Many Listings are Mine"],
+      order = 8,
+    },
     considerResale = {
       type = "toggle",
       desc = L["Consider resale value of excess items when filling an order on the \"Buy\" tab."],
@@ -272,6 +278,7 @@ local Defaults = {
     minProfit = 10,
     minDiscount = 0.25,
     getAll = false,
+    countMyListings = true,
     openBags = false,
     considerResale = false,
     defaultStacks = "a_one",

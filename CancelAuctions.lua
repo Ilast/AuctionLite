@@ -34,6 +34,7 @@ function AuctionLite:CancelAuctions(name, targets)
   local listingsCancelled = 0;
   for _, index in ipairs(cancel) do
     CancelAuction(index);
+    self:IgnoreMessage(ERR_AUCTION_REMOVED);
     listingsCancelled = listingsCancelled + 1;
   end
 
