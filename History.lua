@@ -4,6 +4,8 @@
 -- Track historical information about auction prices.
 -------------------------------------------------------------------------------
 
+local L = LibStub("AceLocale-3.0"):GetLocale("AuctionLite", false)
+
 local MIN_TIME_BETWEEN_SCANS = 0;
 local HALF_LIFE = 604800; -- 1 week
 local INDEPENDENT_SCANS = 172800; -- 2 days
@@ -84,28 +86,51 @@ end
 -- Update historical price data for an item given a price (per item) and
 -- the number of listings seen in the latest scan.
 function AuctionLite:UpdateHistoricalPrice(link, data)
-  -- Get the current data.
-  local info = self:GetHistoricalPrice(link)
+  if self.db.profile.storePrices then
+    -- Get the current data.
+    local info = self:GetHistoricalPrice(link)
 
-  -- If we have no data for this item, start a new one.
-  if info == nil then
-    info = { price = 0, listings = 0, scans = 0, time = 0, items = 0 };
-    self:SetHistoricalPrice(link, info);
-  end
+    -- If we have no data for this item, start a new one.
+    if info == nil then
+      info = { price = 0, listings = 0, scans = 0, time = 0, items = 0 };
+      self:SetHistoricalPrice(link, info);
+    end
 
-  -- Update the current data with our new data.
-  local time = time();
-  if info.time + MIN_TIME_BETWEEN_SCANS < time and data.listings > 0 then
-    local pastDiscountFactor = 0.5 ^ ((time - info.time) / HALF_LIFE);
-    local presentDiscountFactor = 1 - 0.5 ^ ((time - info.time) / INDEPENDENT_SCANS);
-    info.price = (data.price * data.listings * presentDiscountFactor +
-                  info.price * info.listings * pastDiscountFactor) /
-                 (data.listings * presentDiscountFactor +
-                  info.listings * pastDiscountFactor);
-    info.listings = data.listings * presentDiscountFactor +
-                    info.listings * pastDiscountFactor;
-    info.items = data.items * presentDiscountFactor + info.items * pastDiscountFactor;
-    info.scans = 1 * presentDiscountFactor + info.scans * pastDiscountFactor;
-    info.time = time;
+    -- Update the current data with our new data.
+    local time = time();
+    if info.time + MIN_TIME_BETWEEN_SCANS < time and data.listings > 0 then
+      local pastDiscountFactor = 0.5 ^ ((time - info.time) / HALF_LIFE);
+      local presentDiscountFactor = 1 - 0.5 ^ ((time - info.time) / INDEPENDENT_SCANS);
+      info.price = (data.price * data.listings * presentDiscountFactor +
+                    info.price * info.listings * pastDiscountFactor) /
+                   (data.listings * presentDiscountFactor +
+                    info.listings * pastDiscountFactor);
+      info.listings = data.listings * presentDiscountFactor +
+                      info.listings * pastDiscountFactor;
+      info.items = data.items * presentDiscountFactor + info.items * pastDiscountFactor;
+      info.scans = 1 * presentDiscountFactor + info.scans * pastDiscountFactor;
+      info.time = time;
+    end
   end
+end
+
+-- Static popup warning for clearing data.
+StaticPopupDialogs["AL_CLEAR_DATA"] = {
+  text = L["CLEAR_DATA_WARNING"],
+  button1 = L["Do it!"],
+  button2 = L["Cancel"],
+  OnAccept = function(self)
+    AuctionLite.db.factionrealm.prices = {};
+    AuctionLite:Print(L["Auction house data cleared."]);
+    collectgarbage("collect");
+  end,
+  showAlert = 1,
+  timeout = 0,
+  exclusive = 1,
+  hideOnEscape = 1
+};
+
+-- The user requested to clear all AH data.
+function AuctionLite:ClearData()
+  StaticPopup_Show("AL_CLEAR_DATA");
 end

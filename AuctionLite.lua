@@ -21,6 +21,20 @@ local Options = {
   get = function(item) return AuctionLite.db.profile[item[#item]] end,
   set = function(item, value) AuctionLite.db.profile[item[#item]] = value end,
   args = {
+    storePrices = {
+      type = "toggle",
+      desc = L["Store price data for all items seen (disable to save memory)."],
+      name = L["Store Price Data"],
+      order = 4,
+    },
+    clearData = {
+      type = "execute",
+      handler = AuctionLite,
+      func = "ClearData",
+      desc = L["Clear all auction house price data."],
+      name = L["Clear All Data"],
+      order = 6,
+    },
     openBags = {
       type = "toggle",
       desc = L["Open all your bags when you visit the auction house."],
@@ -39,6 +53,7 @@ local Options = {
         c_sell = L["Sell Tab"],
         d_last = L["Last Used Tab"],
       },
+      order = 12,
     },
   },
 };
@@ -289,6 +304,7 @@ local Defaults = {
     showDisenchant = "b_maybe",
     coinTooltips = true,
     showStackPrice = true,
+    storePrices = true,
     startTab = "a_default",
     lastTab = 1,
     fastScanAd = false,

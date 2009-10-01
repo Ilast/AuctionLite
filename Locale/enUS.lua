@@ -20,6 +20,10 @@ L["Use fast method for full scans (may cause disconnects)."] = true;
 L["Fast Auction Scan"] = true;
 L["On the summary view, show how many listings/items are yours."] = true;
 L["Show How Many Listings are Mine"] = true;
+L["Store price data for all items seen (disable to save memory)."] = true;
+L["Store Price Data"] = true;
+L["Clear all auction house price data."] = true;
+L["Clear All Data"] = true;
 L["Open all your bags when you visit the auction house."] = true;
 L["Open All Bags at AH"] = true;
 L["Consider resale value of excess items when filling an order on the \"Buy\" tab."] = true;
@@ -136,6 +140,15 @@ L["Error when creating auctions."] = true;
 L["Need an empty bag slot to create auctions."] = true;
 L["Created %d |4auction:auctions; of %s x%d."] = true;
 L["Auction creation is already in progress."] = true;
+
+-- History.lua
+
+
+L["CLEAR_DATA_WARNING"] =
+  "Do you really want to delete all auction house " ..
+  "price data gathered by AuctionLite?";
+L["Do it!"] = true;
+L["Auction house data cleared."] = true;
 
 -- QueryAuctions.lua
 
