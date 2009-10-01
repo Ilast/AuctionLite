@@ -130,7 +130,7 @@ L["Search"] = true;
 
 -- CancelAuctions.lua
 
-L["Cancelled %d listings of %s"] = true;
+L["Cancelled %d |4listing:listings; of %s."] = true;
 L["Error locating item in bags.  Please try again!"] = true;
 L["Invalid starting bid."] = true;
 L["Buyout cannot be less than starting bid."] = true;

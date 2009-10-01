@@ -39,5 +39,5 @@ function AuctionLite:CancelAuctions(name, targets)
   end
 
   -- Print a summary.
-  self:Print(L["Cancelled %d listings of %s"]:format(listingsCancelled, name));
+  self:Print(L["Cancelled %d |4listing:listings; of %s."]:format(listingsCancelled, name));
 end
