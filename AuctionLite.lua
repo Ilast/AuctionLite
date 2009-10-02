@@ -1,5 +1,5 @@
 -------------------------------------------------------------------------------
--- AuctionLite 1.4
+-- AuctionLite 1.4.1
 --
 -- Lightweight addon to determine accurate market prices and to simplify
 -- the process of posting auctions.
@@ -315,7 +315,7 @@ local Defaults = {
 
 local DBName = "AuctionLiteDB";
 
-local AUCTIONLITE_VERSION = "1.4";
+local AUCTIONLITE_VERSION = "1.4.1";
 
 -------------------------------------------------------------------------------
 -- Hooks and boostrap code

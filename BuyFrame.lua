@@ -813,7 +813,9 @@ function AuctionLite:SetMultiScanData(data, searchLink)
     data = {},
     price = 0,
     itemsAll = 0,
+    itemsMine = 0,
     listingsAll = 0,
+    listingsMine = 0,
   };
 
   -- Gather all relevant results returned by the search.
@@ -1488,7 +1490,6 @@ function AuctionLite:AuctionFrameBuy_UpdateSummary()
         self:SplitLink(item.link);
 
       local countStr = function(mine, all)
-        
         local prefix;
         if mine > 0 and self.db.profile.countMyListings then
           prefix = "(" .. mine .. ") ";
