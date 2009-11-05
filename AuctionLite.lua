@@ -93,6 +93,7 @@ local BuyOptions = {
       type = "toggle",
       desc = L["On the summary view, show how many listings/items are yours."],
       name = L["Show How Many Listings are Mine"],
+      width = "double",
       order = 8,
     },
     considerResale = {

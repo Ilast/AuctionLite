@@ -167,26 +167,26 @@ function AuctionLite:UserChangedStacks()
   -- If the user hasn't already specified a size, adjust the size to
   -- fit the number of stacks entered.
   if ChangedSize <= 0 then
-    local _, _, _, _, _, _, link =
-      self:GetAuctionSellItemInfoAndLink();
+    local _, _, _, _, _, _, link = self:GetAuctionSellItemInfoAndLink();
 
     if link ~= nil then
       local size = SellSize:GetNumber();
       local stacks = SellStacks:GetNumber();
-
       local numItems = self:CountItems(link);
 
-      if stacks > math.ceil(numItems / size) then
-        size = math.floor(numItems / stacks);
-        if size == 0 or stacks <= math.ceil(numItems / (size + 1)) then
-          size = size + 1;
-        end
+      -- Get our new stack size, and round up since we might want to sell
+      -- the excess as a partial stack.
+      local newSize = math.ceil(numItems / stacks);
 
-        if size ~= SellSize:GetNumber() then
-          ChangedSize = ChangedSize - 1;
-        end
+      -- If the excess is more than a single stack, then reduce by one,
+      -- which is the same thing as taking floor instead of ceil above.
+      if newSize * stacks - numItems >= newSize and newSize > 1 then
+        newSize = newSize - 1;
+      end
 
-        SellSize:SetText(size);
+      if newSize ~= size then
+        ChangedSize = ChangedSize - 1;
+        SellSize:SetText(newSize);
       end
     end
   end
