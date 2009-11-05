@@ -167,6 +167,9 @@ L["Note: %d |4listing:listings; of %d |4item was:items were; not purchased."] = 
 
 -- SellFrame.lua
 
+L["VENDOR_WARNING"] =
+  "Your buyout price is below the vendor price.  " ..
+  "Do you still want to create this auction?";
 L["|cff8080ffData for %s x%d|r"] = true;
 L["Vendor: %s"] = true;
 L["Historical: %s (%d |4listing:listings;/scan, %d |4item:items;/scan)"] = true;
@@ -178,7 +181,7 @@ L["|cffff0000Not enough items available.|r"] = true;
 L["|cffff0000No bid price set.|r"] = true;
 L["|cffff0000Buyout less than bid.|r"] = true;
 L["|cffff0000Not enough cash for deposit.|r"] = true;
-L["|cffff0000Buyout less than vendor price.|r"] = true;
+L["|cffff7030Buyout less than vendor price.|r"] = true;
 L["|cffff7030Stack %d will have %d |4item:items;.|r"] = true;
 L["|cff00ff00Scanned %d listings.|r"] = true;
 L["|cffffd000Using historical data.|r"] = true;

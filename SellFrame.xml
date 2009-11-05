@@ -571,8 +571,7 @@
 						end
 					</OnTabPressed>
 					<OnEnterPressed>
-						AuctionLite:RecordSellPrices();
-						AuctionLite:CreateAuctions();
+						AuctionLite:SellCreateAuctionButton_OnClick();
 						self:ClearFocus();
 					</OnEnterPressed>
 				</Scripts>
@@ -600,8 +599,7 @@
 						end
 					</OnTabPressed>
 					<OnEnterPressed>
-						AuctionLite:RecordSellPrices();
-						AuctionLite:CreateAuctions();
+						AuctionLite:SellCreateAuctionButton_OnClick();
 						self:ClearFocus();
 					</OnEnterPressed>
 				</Scripts>
@@ -738,8 +736,7 @@
 				</Anchors>
 				<Scripts>
 					<OnClick>
-						AuctionLite:RecordSellPrices();
-						AuctionLite:CreateAuctions();
+						AuctionLite:SellCreateAuctionButton_OnClick();
 					</OnClick>
 				</Scripts>
 			</Button>

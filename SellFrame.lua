@@ -267,8 +267,8 @@ function AuctionLite:ValidateAuction()
       SellCreateAuctionButton:Disable();
     elseif 0 < buyout and buyout <= (vendor * size / count) then
       StatusError = true;
-      SellStatusText:SetText(L["|cffff0000Buyout less than vendor price.|r"]);
-      SellCreateAuctionButton:Disable();
+      SellStatusText:SetText(L["|cffff7030Buyout less than vendor price.|r"]);
+      SellCreateAuctionButton:Enable();
     elseif numItems < size * stacks then
       StatusError = true;
       SellStatusText:SetText(
@@ -484,6 +484,35 @@ function AuctionLite:RecordSellPrices()
     if link then
       SavedPrices[link] = { bid = ItemBid, buyout = ItemBuyout };
     end
+  end
+end
+
+-- Static popup warning for clearing data.
+StaticPopupDialogs["AL_VENDOR_WARNING"] = {
+  text = L["VENDOR_WARNING"],
+  button1 = L["Do it!"],
+  button2 = L["Cancel"],
+  OnAccept = function(self)
+    AuctionLite:RecordSellPrices();
+    AuctionLite:CreateAuctions();
+  end,
+  showAlert = 1,
+  timeout = 0,
+  exclusive = 1,
+  hideOnEscape = 1
+};
+
+-- We've clicked the "Create" button (or pressed enter).
+function AuctionLite:SellCreateAuctionButton_OnClick()
+  local _, _, count, _, _, vendor = GetAuctionSellItemInfo();
+  local buyout = MoneyInputFrame_GetCopper(SellBuyoutPrice);
+  local size = SellSize:GetNumber();
+
+  if 0 < buyout and buyout <= (vendor * size / count) then
+    StaticPopup_Show("AL_VENDOR_WARNING");
+  else
+    self:RecordSellPrices();
+    self:CreateAuctions();
   end
 end
 
