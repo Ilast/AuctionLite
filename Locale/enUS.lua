@@ -138,7 +138,7 @@ L["Not enough cash for deposit."] = true;
 L["Not enough items available."] = true;
 L["Error when creating auctions."] = true;
 L["Need an empty bag slot to create auctions."] = true;
-L["Created %d |4auction:auctions; of %s x%d."] = true;
+L["Created %d |4auction:auctions; of %s x%d (%s total)."] = true;
 L["Auction creation is already in progress."] = true;
 
 -- History.lua

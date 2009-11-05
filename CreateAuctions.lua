@@ -111,7 +111,6 @@ function AuctionLite:CreateAuctionsCore()
 
     local stacks = SellStacks:GetNumber();
     local size = SellSize:GetNumber();
-    local origSize = size;
 
     local bid = MoneyInputFrame_GetCopper(SellBidPrice);
     local buyout = MoneyInputFrame_GetCopper(SellBuyoutPrice);
@@ -124,6 +123,10 @@ function AuctionLite:CreateAuctionsCore()
       bid = bid * size;
       buyout = buyout * size;
     end
+
+    -- Save our original values for later use.
+    local origBuyout = buyout;
+    local origSize = size;
 
     -- Now do some sanity checks.
     if name == nil then
@@ -209,13 +212,15 @@ function AuctionLite:CreateAuctionsCore()
       end
 
       if size == origSize then
-        self:Print(L["Created %d |4auction:auctions; of %s x%d."]:
-                   format(created, name, size));
+        self:Print(L["Created %d |4auction:auctions; of %s x%d (%s total)."]:
+                   format(created, name, size,
+                          self:PrintMoney(created * buyout)));
       else
-        self:Print(L["Created %d |4auction:auctions; of %s x%d."]:
-                   format(created - 1, name, origSize));
-        self:Print(L["Created %d |4auction:auctions; of %s x%d."]:
-                   format(1, name, size));
+        self:Print(L["Created %d |4auction:auctions; of %s x%d (%s total)."]:
+                   format(created - 1, name, origSize,
+                          self:PrintMoney((created - 1) * origBuyout)));
+        self:Print(L["Created %d |4auction:auctions; of %s x%d (%s total)."]:
+                   format(1, name, size, self:PrintMoney(buyout)));
       end
     end
 
