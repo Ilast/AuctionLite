@@ -303,7 +303,12 @@ function AuctionLite:CancelItems()
     local name = self:SplitLink(DetailLink);
 
     self:CancelAuctions(name, list);
+  end
+end
 
+-- Update the display now that we've finished cancelling.
+function AuctionLite:CancelComplete()
+  if DetailLink ~= nil then
     local summary = SummaryDataByLink[DetailLink];
     local i = table.getn(DetailData);
     while i > 0 do
@@ -322,6 +327,9 @@ function AuctionLite:CancelItems()
 
     SelectedItems = {};
   end
+
+  -- Update the display.
+  self:AuctionFrameBuy_Update();
 end
 
 -- Create a purchase order based on the current selection.  The first

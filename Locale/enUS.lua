@@ -130,6 +130,12 @@ L["Search"] = true;
 
 -- CancelAuctions.lua
 
+L["CANCEL_CONFIRM_TEXT"] =
+  "Some of your auctions have bids on them.  Do you want to cancel " ..
+  "all auctions, cancel only those with no bids, or do nothing?";
+L["Cancel All"] = true;
+L["Cancel Unbid"] = true;
+L["Do Nothing"] = true;
 L["Cancelled %d |4listing:listings; of %s."] = true;
 L["Error locating item in bags.  Please try again!"] = true;
 L["Invalid starting bid."] = true;
