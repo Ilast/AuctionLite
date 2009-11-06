@@ -508,6 +508,12 @@ function AuctionLite:SellCreateAuctionButton_OnClick()
   local buyout = MoneyInputFrame_GetCopper(SellBuyoutPrice);
   local size = SellSize:GetNumber();
 
+  -- If we're pricing by item, get the full stack price.
+  if self.db.profile.method == METHOD_PER_ITEM then
+    buyout = buyout * size;
+  end
+
+  -- If we're below vendor price, warn; otherwise, sell.
   if 0 < buyout and buyout <= (vendor * size / count) then
     StaticPopup_Show("AL_VENDOR_WARNING");
   else
