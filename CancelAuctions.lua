@@ -28,7 +28,7 @@ StaticPopupDialogs["AL_CANCEL_CONFIRM"] = {
 };
 
 -- Cancel all auctions for "name" listed in "targets".
-function AuctionLite:CancelAuctions(name, targets)
+function AuctionLite:CancelAuctions(targets)
   local batch = GetNumAuctionItems("owner");
   local cancel = {};
   local bidsDetected = false;
@@ -40,7 +40,7 @@ function AuctionLite:CancelAuctions(name, targets)
 
     for _, target in ipairs(targets) do
       if not target.found and
-         self:MatchListing(name, target, listing) then
+         self:MatchListing(target.name, target, listing) then
 
         target.found = true;
 
@@ -66,39 +66,44 @@ function AuctionLite:CancelAuctions(name, targets)
 
   -- If we found any bids, show our confirmation dialog.
   -- Otherwise, just cancel the auctions.
-  local data = { name = name, cancel = cancel };
   if bidsDetected then
     local dialog = StaticPopup_Show("AL_CANCEL_CONFIRM");
     if dialog ~= nil then
-      dialog.data = data;
+      dialog.data = cancel;
     end
   else
-    self:FinishCancel(data, false);
+    self:FinishCancel(cancel, false);
   end
 end
 
 -- Actually cancel the selected auctions.
-function AuctionLite:FinishCancel(data, cancelBid)
-  local name = data.name;
-  local cancel = data.cancel;
-
+function AuctionLite:FinishCancel(cancel, cancelBid)
   -- Sort them from highest to lowest so that we can cancel the higher
   -- ones without throwing off the indices of the remaining ones.
   table.sort(cancel, function(a, b) return a.index > b.index end);
 
   -- Cancel them!
-  local listingsCancelled = 0;
+  local summary = {};
   for _, item in ipairs(cancel) do
     if cancelBid or not item.hasBid then
       item.target.cancelled = true;
       CancelAuction(item.index);
       self:IgnoreMessage(ERR_AUCTION_REMOVED);
-      listingsCancelled = listingsCancelled + 1;
+
+      local name = item.target.name;
+      if summary[name] ~= nil then
+        summary[name] = summary[name] + 1;
+      else
+        summary[name] = 1;
+      end
     end
   end
 
   -- Print a summary.
-  self:Print(L["Cancelled %d |4listing:listings; of %s."]:format(listingsCancelled, name));
+  for name, listingsCancelled in pairs(summary) do
+    self:Print(L["Cancelled %d |4listing:listings; of %s."]:
+               format(listingsCancelled, name));
+  end
 
   -- Notify the "Buy" frame.
   self:CancelComplete();

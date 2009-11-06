@@ -299,6 +299,7 @@
 			<OnLoad>
 				self.UpdateTooltip =
 					function() AuctionLite:BuyButton_OnEnter(self) end;
+				self:RegisterForClicks("LeftButtonUp", "RightButtonUp");
 			</OnLoad>
 			<OnEnter>
 				AuctionLite:BuyButton_OnEnter(self);
@@ -307,7 +308,7 @@
 				AuctionLite:BuyButton_OnLeave(self);
 			</OnLeave>
 			<OnClick>
-				AuctionLite:BuyButton_OnClick(self:GetID());
+				AuctionLite:BuyButton_OnClick(self:GetID(), button);
 			</OnClick>
 		</Scripts>
 		<NormalTexture name="$parentWarning" file="Interface\HelpFrame\HelpFrameButton-Highlight" alphaMode="ADD">
@@ -1161,6 +1162,12 @@
 					<OnClick>
 						AuctionLite:BuyCancelAuctionButton_OnClick();
 					</OnClick>
+					<OnEnter>
+						AuctionLite:BuyCancelAuctionButton_OnEnter(self);
+					</OnEnter>
+					<OnLeave>
+						AuctionLite:BuyCancelAuctionButton_OnLeave(self);
+					</OnLeave>
 				</Scripts>
 			</Button>
 			<Button name="BuyBuyoutButton" inherits="UIPanelButtonTemplate" text="BUYOUT">

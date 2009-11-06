@@ -75,6 +75,9 @@ local ScanData = nil;
 local MultiScanLinks = {};
 local MultiScanData = {};
 
+-- Link for context menu.
+local ContextLink = nil;
+
 -- Static popup advertising AL's fast scan.
 StaticPopupDialogs["AL_FAST_SCAN"] = {
   text = L["FAST_SCAN_AD"],
@@ -181,22 +184,8 @@ function AuctionLite:SetBuyData(results)
   SummarySort.sorted = false;
   SummarySort.justFlipped = false;
 
-  -- If we've searched for our own auctions, find undercuts.
-  if BuyMode == BUY_MODE_MY_AUCTIONS then
-    for link, results in pairs(results) do
-      -- Sort by per-item buyout price.
-      table.sort(results.data,
-        function(a, b) return a.buyout / a.count < b.buyout / b.count end);
-      -- Find the first listing with non-zero buyout.  If it's not ours,
-      -- we've been undercut.
-      for _, listing in ipairs(results.data) do
-        if listing.buyout > 0 then
-          results.warning = (listing.owner ~= UnitName("player"));
-          break;
-        end
-      end
-    end
-  end
+  -- Set up warning markers for undercuts.
+  self:SetWarnings();
 
   -- If we found our last-selected item, then select it again.
   -- If we found only one item, select it.  Otherwise, select nothing.
@@ -259,6 +248,62 @@ function AuctionLite:SetScanData(results)
   self:SetBuyData(ScanData, true);
 end
 
+-- Helper that finds user's listings.  Return value indicates whether we've
+-- been undercut.  (If that's all you care about, omit the last three args.)
+function AuctionLite:FindMyListings(listings, list, name, onlyUndercut)
+  -- Sort by per-item buyout price.
+  table.sort(listings,
+    function(a, b) return a.buyout / a.count < b.buyout / b.count end);
+
+  -- We may have messed up the current sort, so make sure it gets re-sorted.
+  DetailSort.sorted = false;
+
+  -- Iterate over listings.
+  local undercut = false;
+  local foundOther = false;
+  local listing;
+  for _, listing in ipairs(listings) do
+    if listing.buyout > 0 then
+      if listing.owner == UnitName("player") then
+        if foundOther then
+          undercut = true;
+          if list == nil then
+            break;
+          end
+        end
+        if list ~= nil then
+          if foundOther or not onlyUndercut then
+            listing.name = name;
+            table.insert(list, listing);
+          end
+        end
+      else
+        foundOther = true;
+      end
+    end
+  end
+
+  return undercut;
+end
+
+-- Set undercut warnings for all auctions.
+function AuctionLite:SetWarnings()
+  if BuyMode == BUY_MODE_MY_AUCTIONS then
+    for link, result in pairs(SummaryDataByLink) do
+      -- Sort by per-item buyout price.
+      table.sort(result.data,
+        function(a, b) return a.buyout / a.count < b.buyout / b.count end);
+
+      -- Invalidate the current sort.
+      DetailSort.sorted = false;
+
+      -- Find the first listing with non-zero buyout.  If it's not ours,
+      -- we've been undercut.
+      result.warning = self:FindMyListings(result.data);
+    end
+  end
+end
+
 -- Determine whether the selected items are biddable/buyable.
 function AuctionLite:GetSelectionStatus()
   local biddable = true;
@@ -266,7 +311,18 @@ function AuctionLite:GetSelectionStatus()
   local cancellable = true;
   local found = false;
 
+  -- Helper to determine whether we have any listings.
+  local findMine = function(data)
+    for _, listing in ipairs(data) do
+      if listing.owner == UnitName("player") then
+        return true;
+      end
+    end
+    return false;
+  end
+
   if DetailLink ~= nil then
+    -- Check all selected items.
     for listing, _ in pairs(SelectedItems) do
       -- We can't bid/buy our own auctions.
       if listing.owner == UnitName("player") then
@@ -282,51 +338,96 @@ function AuctionLite:GetSelectionStatus()
       -- We must find at least one selected item.
       found = true;
     end
+
+    -- Nothing's selected, so check all items.
+    if not found then
+      cancellable = findMine(DetailData);
+    end
+  elseif SummaryDataByLink ~= nil then
+    -- We're at the summary screen, so check all items.
+    cancellable = false;
+    for link, result in pairs(SummaryDataByLink) do
+      if findMine(result.data) then
+        cancellable = true;
+        break;
+      end
+    end
+  else
+    cancellable = false;
   end
 
-  return (found and biddable), (found and buyable), (found and cancellable);
+  return (found and biddable), (found and buyable), cancellable;
 end
 
 -- Cancel the selected items.
-function AuctionLite:CancelItems()
-  if DetailLink ~= nil then
-    -- Create purchase order object to be filled out.
-    local list = {};
+function AuctionLite:CancelItems(onlyUndercut, link)
+  -- List of items to be cancelled.
+  local list = {};
+
+  -- If we didn't specify data, try using DetailData.
+  if link == nil then
+    link = DetailLink;
+  end
+
+  -- Now find the items to cancel.
+  if link ~= nil then
+    local data = SummaryDataByLink[link].data;
+    local name = self:SplitLink(link);
 
     -- Add information about each selected item.
     local i;
     for listing, _ in pairs(SelectedItems) do
       assert(listing.owner == UnitName("player"));
+      listing.name = name;
       table.insert(list, listing);
     end
 
-    local name = self:SplitLink(DetailLink);
+    -- If we don't have any selected items, cancel all.
+    if table.getn(list) == 0 then
+      self:FindMyListings(data, list, name, onlyUndercut);
+    end
+  else
+    -- We're at the summary screen, so do this for all items.
+    for link, result in pairs(SummaryDataByLink) do
+      local name = self:SplitLink(link);
+      self:FindMyListings(result.data, list, name, onlyUndercut);
+    end
+  end
 
-    self:CancelAuctions(name, list);
+  -- If we found some items to cancel, do it.
+  if table.getn(list) > 0 then
+    self:CancelAuctions(list);
   end
 end
 
 -- Update the display now that we've finished cancelling.
 function AuctionLite:CancelComplete()
-  if DetailLink ~= nil then
-    local summary = SummaryDataByLink[DetailLink];
-    local i = table.getn(DetailData);
+  -- Go through all listings and remove the ones that were cancelled.
+  for link, summary in pairs(SummaryDataByLink) do
+    local data = summary.data;
+    local i = table.getn(data);
     while i > 0 do
-      local listing = DetailData[i];
+      local listing = data[i];
       if listing.cancelled then
-        table.remove(DetailData, i);
+        table.remove(data, i);
         summary.itemsAll = summary.itemsAll - listing.count;
+        summary.itemsMine = summary.itemsMine - listing.count;
         summary.listingsAll = summary.listingsAll - 1;
+        summary.listingsMine = summary.listingsMine - 1;
       end
       i = i - 1;
     end
-
-    if table.getn(DetailData) == 0 then
-      self:SetDetailLink(nil);
-    end
-
-    SelectedItems = {};
   end
+
+  -- Reevaluate "warning" status.
+  self:SetWarnings();
+
+  -- Cleanup.
+  if table.getn(DetailData) == 0 then
+    self:SetDetailLink(nil);
+  end
+
+  SelectedItems = {};
 
   -- Update the display.
   self:AuctionFrameBuy_Update();
@@ -929,52 +1030,73 @@ function AuctionLite:FavoritesButton_OnClick(id)
 end
 
 -- Handles clicks on the buttons in the "Buy" scroll frame.
-function AuctionLite:BuyButton_OnClick(id)
-  local offset = FauxScrollFrame_GetOffset(BuyScrollFrame);
+function AuctionLite:BuyButton_OnClick(id, button)
+  if button == "LeftButton" then
+    local offset = FauxScrollFrame_GetOffset(BuyScrollFrame);
 
-  if DetailLink ~= nil then
-    -- We're in detail view, so select the item.
+    if DetailLink ~= nil then
+      -- We're in detail view, so select the item.
 
-    -- Unless we're holding control, this is a new selection.
-    if not IsControlKeyDown() then
-      SelectedItems = {};
-    end
-
-    if LastClick ~= nil and IsShiftKeyDown() then
-      -- Shift is down and we have a previous click.
-      -- Add all items in this range to the selection.
-      local lower = offset + id;
-      local upper = offset + id;
-
-      if LastClick < offset + id then
-        lower = LastClick;
-      else
-        upper = LastClick;
+      -- Unless we're holding control, this is a new selection.
+      if not IsControlKeyDown() then
+        SelectedItems = {};
       end
 
-      local i;
-      for i = lower, upper do
-        SelectedItems[DetailData[i]] = true;
+      if LastClick ~= nil and IsShiftKeyDown() then
+        -- Shift is down and we have a previous click.
+        -- Add all items in this range to the selection.
+        local lower = offset + id;
+        local upper = offset + id;
+
+        if LastClick < offset + id then
+          lower = LastClick;
+        else
+          upper = LastClick;
+        end
+
+        local i;
+        for i = lower, upper do
+          SelectedItems[DetailData[i]] = true;
+        end
+      else
+        -- No shift, or first click; add only the current item to the selection.
+        -- If control is down, toggle the item.
+        LastClick = offset + id;
+
+        local listing = DetailData[offset + id];
+        if IsControlKeyDown() and SelectedItems[listing] then
+          SelectedItems[listing] = nil;
+        else
+          SelectedItems[listing] = true;
+        end
       end
     else
-      -- No shift, or first click; add only the current item to the selection.
-      -- If control is down, toggle the item.
-      LastClick = offset + id;
-
-      local listing = DetailData[offset + id];
-      if IsControlKeyDown() and SelectedItems[listing] then
-        SelectedItems[listing] = nil;
-      else
-        SelectedItems[listing] = true;
-      end
+      -- We're in summary view, so switch to detail view.
+      self:SetDetailLink(SummaryData[offset + id].link);
+      self:StartMassBuyout();
     end
-  else
-    -- We're in summary view, so switch to detail view.
-    self:SetDetailLink(SummaryData[offset + id].link);
-    self:StartMassBuyout();
-  end
 
-  self:AuctionFrameBuy_Update();
+    self:AuctionFrameBuy_Update();
+  elseif button == "RightButton" then
+    local offset = FauxScrollFrame_GetOffset(BuyScrollFrame);
+
+    if DetailLink == nil then
+      local link = SummaryData[offset + id].link;
+      local menuList = {
+        {
+          text = L["Cancel Undercut Auctions"],
+          func = function() AuctionLite:CancelItems(true, link) end,
+        },
+        {
+          text = L["Cancel All Auctions"],
+          func = function() AuctionLite:CancelItems(false, link) end,
+        },
+      };
+      local menuFrame = CreateFrame("Frame", "BuyContextMenu", UIParent,
+                                    "UIDropDownMenuTemplate");
+      EasyMenu(menuList, menuFrame, "cursor", 0, 0, "MENU");
+    end
+  end
 end
 
 -- Mouse has entered a row in the scrolling frame.
@@ -1065,8 +1187,19 @@ end
 
 -- Cancel the currently-selected item.
 function AuctionLite:BuyCancelAuctionButton_OnClick()
-  self:CancelItems();
+  self:CancelItems(IsControlKeyDown());
   self:AuctionFrameBuy_Update();
+end
+
+-- Show the cancel tooltip.
+function AuctionLite:BuyCancelAuctionButton_OnEnter(widget)
+  GameTooltip:SetOwner(widget, "ANCHOR_TOPLEFT");
+  GameTooltip:SetText(L["CANCEL_TOOLTIP"]);
+end
+
+-- Hide the cancel tooltip.
+function AuctionLite:BuyCancelAuctionButton_OnLeave(widget)
+  GameTooltip:Hide();
 end
 
 -- Starts a full scan of the auction house.
@@ -1640,6 +1773,8 @@ function AuctionLite:ClearBuyFrame(partial)
     MultiScanLinks = {};
   end
   MultiScanData = {};
+
+  ContextLink = nil;
 
   if not partial then
     BuyName:SetText("");

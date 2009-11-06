@@ -202,6 +202,7 @@ function AuctionLite:GetListing(kind, i)
 end
 
 -- Does a target from the "Buy" frame match an auction listing?
+-- TODO: Get rid of the targetName hackery.
 function AuctionLite:MatchListing(targetName, target, listing)
   return targetName == listing.name and
          target.count == listing.count and

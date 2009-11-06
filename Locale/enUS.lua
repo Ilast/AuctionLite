@@ -79,6 +79,9 @@ L["FAST_SCAN_AD"] =
   "can disable fast scanning on the AuctionLite options screen." ..
   "\n\n" ..
   "Enable fast auction scans?";
+L["CANCEL_TOOLTIP"] =
+  "|cffffffffClick:|r Cancel all auctions\n" ..
+  "|cffffffffCtrl-Click:|r Cancel undercut auctions";
 L["Enable"] = true;
 L["Disable"] = true;
 L["Fast auction scan enabled."] = true;
@@ -97,6 +100,8 @@ L["Net cost for %d:"] = true;
 L["Batch %d: %d at %s"] = true;
 L["Potential Profit"] = true;
 L["Historical Price"] = true;
+L["Cancel Undercut Auctions"] = true;
+L["Cancel All Auctions"] = true;
 L["Show Deals"] = true;
 L["Show Favorites"] = true;
 L["Show My Auctions"] = true;
