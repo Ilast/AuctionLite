@@ -118,6 +118,8 @@ function AuctionLite:CreateAuctionsCore()
 
     local numItems = self:CountItems(link);
 
+    local _, _, _, _, _, _, _, maxSize = GetItemInfo(link);
+
     -- If we're pricing per item, then get the stack price.
     if self.db.profile.method == 1 then
       bid = bid * size;
@@ -139,6 +141,8 @@ function AuctionLite:CreateAuctionsCore()
       self:Print(L["Not enough cash for deposit."]);
     elseif stacks > math.ceil(numItems / size) then
       self:Print(L["Not enough items available."]);
+    elseif maxSize < size then
+      self:Print(L["Stack size too large."]);
     elseif count ~= nil and stacks > 0 then
       local created = 0;
 

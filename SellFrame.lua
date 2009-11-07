@@ -188,6 +188,12 @@ function AuctionLite:UserChangedStacks()
           newSize = newSize - 1;
         end
 
+        -- Make sure the stack is not too large.
+        local _, _, _, _, _, _, _, maxSize = GetItemInfo(link);
+        if maxSize < newSize then
+          newSize = maxSize;
+        end
+
         -- Update the size.
         if newSize ~= size then
           ChangedSize = ChangedSize - 1;
@@ -244,6 +250,8 @@ function AuctionLite:ValidateAuction()
 
     local numItems = self:CountItems(link);
 
+    local _, _, _, _, _, _, _, maxSize = GetItemInfo(link);
+
     -- If we're pricing by item, get the full stack price.
     if self.db.profile.method == METHOD_PER_ITEM then
       bid = bid * size;
@@ -258,6 +266,10 @@ function AuctionLite:ValidateAuction()
     elseif stacks > math.ceil(numItems / size) then
       StatusError = true;
       SellStatusText:SetText(L["|cffff0000Not enough items available.|r"]);
+      SellCreateAuctionButton:Disable();
+    elseif maxSize < size then
+      StatusError = true;
+      SellStatusText:SetText(L["|cffff0000Stack size too large.|r"]);
       SellCreateAuctionButton:Disable();
     elseif bid == 0 then
       StatusError = true;
@@ -301,7 +313,7 @@ function AuctionLite:ClickAuctionSellItemButton_Hook()
       self:GetAuctionSellItemInfoAndLink();
 
     if name ~= nil then
-      local _, _, _, _, _, _, _, maxStack = GetItemInfo(link);
+      local _, _, _, _, _, _, _, maxSize = GetItemInfo(link);
 
       SellItemButton:SetNormalTexture(texture);
       SellItemButtonName:SetText(name);
@@ -321,7 +333,7 @@ function AuctionLite:ClickAuctionSellItemButton_Hook()
       elseif self.db.profile.defaultSize == "b_stack" then
         size = count;
       elseif self.db.profile.defaultSize == "c_full" then
-        size = maxStack;
+        size = maxSize;
         if size > total then
           size = total;
         end
