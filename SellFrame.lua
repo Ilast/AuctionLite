@@ -263,13 +263,13 @@ function AuctionLite:ValidateAuction()
       StatusError = true;
       SellStatusText:SetText(L["|cffff0000Invalid stack size/count.|r"]);
       SellCreateAuctionButton:Disable();
-    elseif stacks > math.ceil(numItems / size) then
-      StatusError = true;
-      SellStatusText:SetText(L["|cffff0000Not enough items available.|r"]);
-      SellCreateAuctionButton:Disable();
     elseif maxSize < size then
       StatusError = true;
       SellStatusText:SetText(L["|cffff0000Stack size too large.|r"]);
+      SellCreateAuctionButton:Disable();
+    elseif stacks > math.ceil(numItems / size) then
+      StatusError = true;
+      SellStatusText:SetText(L["|cffff0000Not enough items available.|r"]);
       SellCreateAuctionButton:Disable();
     elseif bid == 0 then
       StatusError = true;
