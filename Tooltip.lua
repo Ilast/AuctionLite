@@ -11,7 +11,6 @@ local MAX_BANK_ROWS = 14;
 
 local LinkTooltips = true;
 
-local CurrentSellPrice = nil;
 local ShownMoneyFrames = {};
 
 MoneyTypeInfo["AUCTIONLITE_TOOLTIP"] = {
@@ -22,9 +21,6 @@ MoneyTypeInfo["AUCTIONLITE_TOOLTIP"] = {
 
 -- Clean up after showing a tooltip with money.
 function AuctionLite:GameTooltip_ClearMoney_Hook(tooltip)
-  -- Forget the price we saw.
-  CurrentSellPrice = nil;
-
   -- Hide all private money frames.
   local shownFrames = ShownMoneyFrames[tooltip];
   if shownFrames ~= nil then
@@ -41,10 +37,7 @@ end
 
 -- Hook the money callback to find out how expensive the item is.
 function AuctionLite:GameTooltip_OnTooltipAddMoney_Hook(tooltip, cost, maxcost)
-  if self.db.profile.showVendor ~= "c_no" then
-    -- We're handling the vendor display, so just remember the price.
-    CurrentSellPrice = cost;
-  else
+  if self.db.profile.showVendor == "c_no" then
     -- We're not handling it, so pass the request on.
     return self.hooks["GameTooltip_OnTooltipAddMoney"](tooltip, cost, maxcost);
   end
@@ -129,9 +122,12 @@ function AuctionLite:AddTooltipData(tooltip, link, count1, count2)
       self.db.profile.showDisenchant ~= "c_no" or
       self.db.profile.showAuction ~= "c_no") then
 
+    -- Get vendor price.
+    local _, _, _, _, _, _, _, _, _, _, vendor = GetItemInfo(link);
+
     -- Adjust the observed sell value.
-    if CurrentSellPrice ~= nil and count1 ~= nil and count1 > 0 then
-      CurrentSellPrice = CurrentSellPrice / count1;
+    if vendor ~= nil and count1 ~= nil and count1 > 0 then
+      vendor = vendor / count1;
     end
 
     -- Do we multiply by the stack size?
@@ -155,7 +151,7 @@ function AuctionLite:AddTooltipData(tooltip, link, count1, count2)
 
     -- Add lines for vendor, auction, and disenchant as appropriate.
     self:AddTooltipLine(tooltip, self.db.profile.showVendor,
-      function(link) return CurrentSellPrice end,
+      function(link) return vendor end,
       "|cffffd000" .. L["Vendor"] .. "|r" .. suffix, link, count1, count2);
 
     self:AddTooltipLine(tooltip, self.db.profile.showDisenchant,
