@@ -58,6 +58,7 @@ end
 -- in the bag slot designated by 'container' and 'slot'.  Must be called
 -- from within a fresh coroutine.
 function AuctionLite:MakeStackInSlot(targetLink, size, container, slot)
+  local total = 0;
   local i, j;
 
   for i = 0, 4 do
@@ -75,18 +76,20 @@ function AuctionLite:MakeStackInSlot(targetLink, size, container, slot)
         if link == targetLink then
           -- It's the item we're looking for, and it's unlocked.
           -- Pick up as many as we need.
-          local moved = math.min(count, size);
+          local moved = math.min(count, size - total);
           SplitContainerItem(i, j, moved);
 
           -- Drop the item in the target slot.
           self:WaitForUnlock(container, slot);
           PickupContainerItem(container, slot);
+          total = total + moved;
 
-          -- Wait for the operation to complete.
+          -- Wait for the operation to complete (specifically, the old
+          -- location is unlocked, and the new location has the items).
           self:WaitForUnlock(i, j);
+          self:WaitForQuantity(container, slot, total);
 
-          size = size - moved;
-          if size == 0 then
+          if total == size then
             return;
           end
         end
@@ -243,25 +246,38 @@ end
 -- Coroutine functions
 -------------------------------------------------------------------------------
 
--- Wait for a bag slot to become unlocked.  Should be called from a
--- separate coroutine, and should expect that the item will become
--- unlocked soon.
+-- Wait for a bag slot to become unlocked.  Must be called from a
+-- coroutine, and must expect that this condition will soon become true.
 function AuctionLite:WaitForUnlock(container, slot)
-  local _, _, locked = GetContainerItemInfo(container, slot);
-  while locked do
-    coroutine.yield();
-    _, _, locked = GetContainerItemInfo(container, slot);
-  end
+  self:WaitUntil(function()
+    local _, _, locked = GetContainerItemInfo(container, slot);
+    return (not locked);
+  end);
 end
 
--- Wait for a bag slot to become empty.  Should be called from a
--- separate coroutine, and should expect that the bag slot will soon
--- become empty (e.g., the item has been submitted to the AH).
+-- Wait for a bag slot to become empty.  Must be called from a
+-- coroutine, and must expect that this condition will soon become true.
 function AuctionLite:WaitForEmpty(container, slot)
-  local name = GetContainerItemInfo(container, slot);
-  while name ~= nil do
+  self:WaitUntil(function()
+    local name = GetContainerItemInfo(container, slot);
+    return (name == nil);
+  end);
+end
+
+-- Wait for a bag slot to have a specified number of items.  Must be
+-- called from a coroutine, and must expect that this condition will
+-- soon become true.
+function AuctionLite:WaitForQuantity(container, slot, qty)
+  self:WaitUntil(function()
+    local _, count = GetContainerItemInfo(container, slot);
+    return (count == qty);
+  end);
+end
+
+-- Yield until a condition is true.
+function AuctionLite:WaitUntil(cond)
+  while not cond() do
     coroutine.yield();
-    name = GetContainerItemInfo(container, slot);
   end
 end
 
@@ -275,7 +291,7 @@ end
 
 -- Resume the stalled coroutine.
 function AuctionLite:ResumeCoroutine()
-  if Coro ~= nil then
+  if Coro ~= nil and coroutine.status(Coro) == "suspended" then
     coroutine.resume(Coro)
     if coroutine.status(Coro) == "dead" then
       Coro = nil;

@@ -59,11 +59,17 @@ MoneyTypeInfo["AUCTIONLITE_DEPOSIT"] = {
 -- Determine the correct deposit for a single item.
 function AuctionLite:CalculateDeposit()
   local time = self:GetDuration();
+
+  local _, _, _, _, _, _, link = self:GetAuctionSellItemInfoAndLink();
+  local numItems = self:CountItems(link);
   local stacks = SellStacks:GetNumber();
   local size = SellSize:GetNumber();
+
+  local numPosted = math.min(numItems, stacks * size);
+
   local _, _, count = GetAuctionSellItemInfo();
 
-  return math.floor(CalculateAuctionDeposit(time) * stacks * size / count);
+  return math.floor(CalculateAuctionDeposit(time) * numPosted / count);
 end
 
 -- Update the deposit field.
