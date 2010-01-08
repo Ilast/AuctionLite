@@ -125,11 +125,6 @@ function AuctionLite:AddTooltipData(tooltip, link, count1, count2)
     -- Get vendor price.
     local _, _, _, _, _, _, _, _, _, _, vendor = GetItemInfo(link);
 
-    -- Adjust the observed sell value.
-    if vendor ~= nil and count1 ~= nil and count1 > 0 then
-      vendor = vendor / count1;
-    end
-
     -- Do we multiply by the stack size?
     local stackPrice = self.db.profile.showStackPrice;
     if (stackPrice and IsShiftKeyDown()) or
