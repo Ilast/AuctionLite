@@ -324,24 +324,33 @@ end
 -- Table of ignored chat messages (msg -> count).
 local IgnoreTable = {};
 
--- Hook the message handler to filter out "ignored" messages.
-function AuctionLite:ChatFrame_MessageEventHandler_Hook(frame, kind, msg, ...)
-  if frame == DEFAULT_CHAT_FRAME and kind == "CHAT_MSG_SYSTEM" then
-    for str, count in pairs(IgnoreTable) do
-      if str == msg then
-        IgnoreTable[str] = (count > 1) and (count - 1) or nil;
-        return;
-      end
-    end
+-- Filter out "ignored" messages.
+function AuctionLite:MessageEventFilter(frame, event, arg1, ...)
+  local count = IgnoreTable[arg1];
+  if count ~= nil then
+    IgnoreTable[arg1] = (count > 1) and (count - 1) or nil;
+    return true;
+  else
+    return false, arg1, ...;
   end
-
-  self.hooks["ChatFrame_MessageEventHandler"](frame, kind, msg, ...);
 end
 
 -- Ignore "count" instances of "msg" in the chat window.
 function AuctionLite:IgnoreMessage(msg, count)
+  -- Find out how many windows listen for this message.
+  local mult = 0;
+  for i = 1, NUM_CHAT_WINDOWS do
+    local messages = { GetChatWindowMessages(i) };
+    for _, message in ipairs(messages) do
+      if message == "SYSTEM" then
+        mult = mult + 1;
+        break;
+      end
+    end
+  end
+
+  -- Increment the ignore table entry by an appropriate amount.
   count = count or 1;
   cur = IgnoreTable[msg] or 0;
-  IgnoreTable[msg] = cur + count;
+  IgnoreTable[msg] = cur + (count * mult);
 end
-
