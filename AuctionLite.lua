@@ -283,6 +283,7 @@ local SlashCmds = {
 local Defaults = {
   factionrealm = {
     prices = {},
+    prefs = {},
   },
   profile = {
     method = 1,

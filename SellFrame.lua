@@ -154,8 +154,13 @@ end
 
 -- Set the user-specified bid and buyout.
 function AuctionLite:SetItemBidBuyout(bid, buyout)
-  ItemBid = bid;
-  ItemBuyout = buyout;
+  if bid ~= nil then
+    ItemBid = bid;
+  end
+
+  if buyout ~= nil then
+    ItemBuyout = buyout;
+  end
 end
 
 -- Indicate that the user has messed with the stack size.
@@ -217,11 +222,12 @@ end
 -- stack size.
 function AuctionLite:UpdatePrices()
   if ItemValue ~= nil then
-    local bid, buyout;
-    if ItemBid ~= nil and ItemBuyout ~= nil then
-      bid, buyout = ItemBid, ItemBuyout;
-    else
-      bid, buyout = self:GeneratePrice(ItemValue, AllowUndercut);
+    local bid, buyout = self:GeneratePrice(ItemValue, AllowUndercut);
+    if ItemBid ~= nil then
+      bid = ItemBid;
+    end
+    if ItemBuyout ~= nil then
+      buyout = ItemBuyout;
     end
 
     -- If we're pricing by stack, multiply by our stack size.
@@ -332,9 +338,12 @@ function AuctionLite:ClickAuctionSellItemButton_Hook()
       end
 
       local total = self:CountItems(link);
+      local prefs = self:GetSavedPrices(link);
 
       local size = count;
-      if self.db.profile.defaultSize == "a_one" then
+      if prefs ~= nil and prefs.stackSize ~= nil then
+        size = prefs.stackSize;
+      elseif self.db.profile.defaultSize == "a_one" then
         size = 1;
       elseif self.db.profile.defaultSize == "b_stack" then
         size = count;
@@ -346,7 +355,9 @@ function AuctionLite:ClickAuctionSellItemButton_Hook()
       end
 
       local stacks = 1;
-      if self.db.profile.defaultStacks == "a_one" then
+      if prefs ~= nil and prefs.stackCount ~= nil then
+        stacks = prefs.stackCount;
+      elseif self.db.profile.defaultStacks == "a_one" then
         stacks = 1;
       elseif self.db.profile.defaultStacks == "b_full" then
         stacks = math.floor(total / size);
@@ -417,6 +428,7 @@ function AuctionLite:ClearSellFrame()
   MoneyInputFrame_ResetMoney(SellBuyoutPrice);
 
   SellCreateAuctionButton:Disable();
+  SellRememberButton:Disable();
 
   StatusError = false;
   self:SetStatus("");
@@ -495,6 +507,15 @@ function AuctionLite:SetSellData(results, link)
     self:SetStatus(L["|cff00ff00Using previous price.|r"]);
     self:SetItemBidBuyout(saved.bid, saved.buyout);
   end
+
+  -- Load long-term saved prices.
+  local prefs = self:GetSavedPrices(link);
+  if prefs ~= nil then
+    self:SetItemBidBuyout(prefs.bid, prefs.buyout);
+  end
+
+  -- Active the remember menu.
+  SellRememberButton:Enable();
 
   -- Update the UI.
   self:UpdatePrices();
@@ -585,6 +606,100 @@ end
 -- Mouse has left a row in the scrolling frame.
 function AuctionLite:SellButton_OnLeave(widget)
   GameTooltip:Hide();
+end
+
+-- Handles clicks on "Remember" button.
+function AuctionLite:SellRememberButton_OnClick(widget)
+  local _, _, _, _, _, _, link = self:GetAuctionSellItemInfoAndLink();
+
+  if link ~= nil then
+    local prefs = self:GetSavedPrices(link);
+
+    local menuList = {
+      {
+        text = "Saved Item Settings",
+        isTitle = true,
+      },
+    };
+
+    -- Add items for each of our saved variables, including the
+    -- current saved value if there is one.
+    local addMenuItem = function(name, field, isMoney, fn)
+      local menuItem = {
+        text = name,
+        func = function()
+          if prefs[field] ~= nil then
+            prefs[field] = nil;
+          else
+            prefs[field] = fn();
+          end
+          self:SetSavedPrices(link, prefs);
+        end,
+      };
+      if prefs[field] ~= nil then
+        local value = prefs[field];
+        if isMoney then
+          value = self:PrintMoney(value);
+        end
+        menuItem.text = name .. ": " .. value;
+        menuItem.checked = true;
+      end
+      table.insert(menuList, menuItem);
+    end
+
+    addMenuItem("Stack Count", "stackCount", false, function()
+      return SellStacks:GetNumber();
+    end);
+
+    addMenuItem("Stack Size", "stackSize", false, function()
+      return SellSize:GetNumber();
+    end);
+
+    addMenuItem("Bid Price", "bid", true, function()
+      return MoneyInputFrame_GetCopper(SellBidPrice);
+    end);
+
+    addMenuItem("Buyout Price", "buyout", true, function()
+      return MoneyInputFrame_GetCopper(SellBuyoutPrice);
+    end);
+
+    -- Add the save/clear all items.
+    table.insert(menuList, {
+      text = "",
+    });
+
+    table.insert(menuList, {
+      text = "Save All",
+      func = function()
+        local i;
+        for i = 2, 5 do
+          local item = menuList[i];
+          if not item.checked then
+            item.func();
+          end
+        end
+      end,
+    });
+
+    table.insert(menuList, {
+      text = "Clear All",
+      func = function()
+        local i;
+        for i = 2, 5 do
+          local item = menuList[i];
+          if item.checked then
+            item.func();
+          end
+        end
+      end,
+    });
+
+    -- Now show/hide the menu.
+    SellRememberDropDown.displayMode = "MENU";
+    SellRememberDropDown.initialize = EasyMenu_Initialize;
+    ToggleDropDownMenu(1, nil, SellRememberDropDown,
+                       "SellRememberButton", 0, 0, menuList);
+  end
 end
 
 -- Get the auction duration.

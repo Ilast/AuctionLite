@@ -114,6 +114,62 @@ function AuctionLite:UpdateHistoricalPrice(link, data)
   end
 end
 
+-- Get saved item info for the sell frame.
+function AuctionLite:GetSavedPrices(link)
+  local name, _, id, suffix = self:SplitLink(link);
+  local info = self.db.factionrealm.prefs[id];
+
+  -- Check whether this item has sub-tables for each item suffix.
+  if info ~= nil then
+    if suffix == nil then
+      suffix = 0;
+    end
+    if suffix ~= 0 or info.suffix then
+      if suffix ~= 0 and info.suffix then
+        info = info[suffix];
+      else
+        info = nil;
+      end
+    end
+  end
+
+  if info == nil then
+    info = {};
+  end
+
+  return info;
+end
+
+-- Set saved item info for the sell frame.
+function AuctionLite:SetSavedPrices(link, info)
+  local _, _, id, suffix = self:SplitLink(link);
+
+  -- Set info to nil if there are no saved prices.
+  if info ~= nil then
+    local hasPrices = false;
+    for _, _ in pairs(info) do
+      hasPrices = true;
+      break;
+    end
+    if not hasPrices then
+      info = nil;
+    end
+  end
+
+  if suffix == 0 then
+    -- This item has no suffix, so just use the id.
+    self.db.factionrealm.prefs[id] = info;
+  else
+    -- This item has a suffix, so index by suffix as well.
+    local parent = self.db.factionrealm.prefs[id];
+    if parent == nil or not parent.suffix then
+      parent = { suffix = true };
+      self.db.factionrealm.prefs[id] = parent;
+    end
+    parent[suffix] = info;
+  end
+end
+
 -- Static popup warning for clearing data.
 StaticPopupDialogs["AL_CLEAR_DATA"] = {
   text = L["CLEAR_DATA_WARNING"],
