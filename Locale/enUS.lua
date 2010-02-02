@@ -218,12 +218,19 @@ L["AuctionLite - Sell"] = true;
 L["Number of Items |cff808080(max %d)|r"] = true;
 L["Number of Items"] = true;
 L["stacks of"] = true;
-L["Buyout Price"] = true;
 L["Pricing Method"] = true;
 L["Competing Auctions"] = true;
 L["per item"] = true;
 L["per stack"] = true;
 L["%dh"] = true;
+L["Saved Item Settings"] = true;
+L["(none set)"] = true;
+L["Stack Count"] = true;
+L["Stack Size"] = true;
+L["Bid Price"] = true;
+L["Buyout Price"] = true;
+L["Save All"] = true;
+L["Clear All"] = true;
 
 -- Tooltip.lua
 

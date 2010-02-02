@@ -6,6 +6,8 @@
 
 local L = LibStub("AceLocale-3.0"):GetLocale("AuctionLite", false)
 
+local DBName = "AuctionLiteDB";
+
 -------------------------------------------------------------------------------
 -- First, tables of options
 -------------------------------------------------------------------------------
@@ -578,6 +580,58 @@ end
 -------------------------------------------------------------------------------
 -- Initialization code
 -------------------------------------------------------------------------------
+
+-- If we see an Ace2 database, convert it to Ace3.
+function AuctionLite:ConvertDB()
+  local db = _G[DBName];
+
+  -- It's Ace2 if it uses "realms" instead of "factionrealm".
+  if db ~= nil and db.realms ~= nil and db.factionrealm == nil then
+    -- Change "Realm - Faction" keys to "Faction - Realm" keys.
+    db.factionrealm = {}
+    for k, v in pairs(db.realms) do
+      db.factionrealm[k:gsub("(.*) %- (.*)", "%2 - %1")] = v;
+    end
+
+    -- Now unlink the old DB.
+    db.realms = nil;
+  end
+end
+
+-- Load our settings database.
+function AuctionLite:LoadDB()
+  self.db = LibStub("AceDB-3.0"):New(DBName, Defaults, "Default");
+end
+
+-- If any of the options are outdated, convert them.
+function AuctionLite:ConvertOptions()
+  for _, profile in pairs(self.db.profiles) do
+    -- Convert tooltip options.
+    if type(profile.showAuction) == "boolean" then
+      if profile.showAuction then
+        profile.showAuction = "b_maybe";
+      else
+        profile.showAuction = "c_no";
+      end
+    end
+    if type(profile.showVendor) == "boolean" then
+      if profile.showVendor then
+        profile.showVendor = "a_yes";
+      else
+        profile.showVendor = "c_no";
+      end
+    end
+    -- Convert favorites.
+    local value = true;
+    for _, v in pairs(profile.favorites) do
+      value = v;
+      break;
+    end
+    if type(value) == "boolean" then
+      profile.favorites = { [L["Favorites"]] = profile.favorites };
+    end
+  end
+end
 
 -- Set up all the config screens.
 function AuctionLite:InitConfig()

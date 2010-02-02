@@ -617,7 +617,7 @@ function AuctionLite:SellRememberButton_OnClick(widget)
 
     local menuList = {
       {
-        text = "Saved Item Settings",
+        text = L["Saved Item Settings"],
         isTitle = true,
       },
     };
@@ -625,8 +625,16 @@ function AuctionLite:SellRememberButton_OnClick(widget)
     -- Add items for each of our saved variables, including the
     -- current saved value if there is one.
     local addMenuItem = function(name, field, isMoney, fn)
+      local value = prefs[field];
+      if value ~= nil then
+        if isMoney then
+          value = self:PrintMoney(value);
+        end
+      else
+        value = "|cffc0c0c0" .. L["(none set)"] .. "|r";
+      end
       local menuItem = {
-        text = name,
+        text = name .. ": " .. value,
         func = function()
           if prefs[field] ~= nil then
             prefs[field] = nil;
@@ -637,29 +645,24 @@ function AuctionLite:SellRememberButton_OnClick(widget)
         end,
       };
       if prefs[field] ~= nil then
-        local value = prefs[field];
-        if isMoney then
-          value = self:PrintMoney(value);
-        end
-        menuItem.text = name .. ": " .. value;
         menuItem.checked = true;
       end
       table.insert(menuList, menuItem);
     end
 
-    addMenuItem("Stack Count", "stackCount", false, function()
+    addMenuItem(L["Stack Count"], "stackCount", false, function()
       return SellStacks:GetNumber();
     end);
 
-    addMenuItem("Stack Size", "stackSize", false, function()
+    addMenuItem(L["Stack Size"], "stackSize", false, function()
       return SellSize:GetNumber();
     end);
 
-    addMenuItem("Bid Price", "bid", true, function()
+    addMenuItem(L["Bid Price"], "bid", true, function()
       return MoneyInputFrame_GetCopper(SellBidPrice);
     end);
 
-    addMenuItem("Buyout Price", "buyout", true, function()
+    addMenuItem(L["Buyout Price"], "buyout", true, function()
       return MoneyInputFrame_GetCopper(SellBuyoutPrice);
     end);
 
@@ -669,7 +672,7 @@ function AuctionLite:SellRememberButton_OnClick(widget)
     });
 
     table.insert(menuList, {
-      text = "Save All",
+      text = L["Save All"],
       func = function()
         local i;
         for i = 2, 5 do
@@ -682,7 +685,7 @@ function AuctionLite:SellRememberButton_OnClick(widget)
     });
 
     table.insert(menuList, {
-      text = "Clear All",
+      text = L["Clear All"],
       func = function()
         local i;
         for i = 2, 5 do
