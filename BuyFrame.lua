@@ -72,7 +72,9 @@ local Scanning = nil;
 local ScanData = nil;
 
 -- Links and data for multi-item scan.
-local MultiScanLinks = {};
+local MultiScanCurrent = nil;
+local MultiScanOriginal = {};
+local MultiScanItems = {};
 local MultiScanData = {};
 
 -- Link for context menu.
@@ -863,44 +865,53 @@ function AuctionLite:UpdateProgressMulti(pct)
     numDone = numDone + 1;
   end
 
-  local numLinks = 0;
-  for _, _ in pairs(MultiScanLinks) do
-    numLinks = numLinks + 1;
+  local numItems = 0;
+  for _, _ in pairs(MultiScanItems) do
+    numItems = numItems + 1;
   end
 
-  local overall = math.floor(((100 * numDone) + pct) / numLinks);
+  local overall = math.floor(((100 * numDone) + pct) / numItems);
   self:UpdateProgressSearch(overall);
 end
 
 -- Take the next step in a multi-item scan.  If we need to scan for another
 -- item, do it; if there are no items left, display our results.
-function AuctionLite:MultiScan(links)
+function AuctionLite:MultiScan(items)
   -- Are we starting a new multi-item scan?
   local first = false;
-  if links ~= nil then
-    MultiScanLinks = links;
+  if items ~= nil then
+    MultiScanOriginal = items;
+    MultiScanItems = {};
     MultiScanData = {};
+    for item, _ in pairs(items) do
+      MultiScanItems[item] = true;
+    end
     first = true;
   end
 
   -- Find an unscanned favorite.
-  local request = nil;
-  local link;
-  for link, _ in pairs(MultiScanLinks) do
-    if MultiScanData[link] == nil then
-      request = link;
+  MultiScanCurrent = nil;
+  local item;
+  for item, _ in pairs(MultiScanItems) do
+    if MultiScanItems[item] then
+      MultiScanCurrent = item;
       break;
     end
   end
 
-  if request ~= nil then
+  if MultiScanCurrent ~= nil then
     -- Start the scan.
     local query = {
-      link = request,
       wait = true,
       update = function(pct) AuctionLite:UpdateProgressMulti(pct) end,
-      finish = function(data, link) AuctionLite:SetMultiScanData(data, link) end,
+      finish = function(data) AuctionLite:SetMultiScanData(data) end,
     };
+
+    if self:IsLink(MultiScanCurrent) then
+      query.link = MultiScanCurrent;
+    else
+      query.name = MultiScanCurrent;
+    end
 
     if self:StartQuery(query) and first then
       DetailLinkPrev = nil;
@@ -914,24 +925,53 @@ function AuctionLite:MultiScan(links)
 end
 
 -- Get the results for a multi-item scan.
-function AuctionLite:SetMultiScanData(data, searchLink)
-  -- Put something in the slot we searched for to make sure we don't
-  -- search for it again.
-  MultiScanData[searchLink] = {
-    link = searchLink,
-    data = {},
-    price = 0,
-    itemsAll = 0,
-    itemsMine = 0,
-    listingsAll = 0,
-    listingsMine = 0,
-  };
-
+function AuctionLite:SetMultiScanData(data)
   -- Gather all relevant results returned by the search.
+  local found = false;
   for link, results in pairs(data) do
-    if MultiScanLinks[link] then
+    local item = self:IsFavorite(link, MultiScanItems);
+
+    if item then
+      -- We were looking for this one.  Save the data and mark it as found.
+      MultiScanItems[link] = false;
+      MultiScanItems[item] = false;
       MultiScanData[link] = results;
+
+      -- We now have a link to use, so swap it in if we just had a name before.
+      if MultiScanOriginal[item] then
+        MultiScanOriginal[item] = nil;
+        MultiScanOriginal[link] = true;
+      end
     end
+
+    -- Did we find the actual search term?
+    if MultiScanCurrent == link or MultiScanCurrent == item then
+      found = true;
+    end
+  end
+
+  -- We didn't find the item we were looking for, so add a fake entry to
+  -- the list so that it shows up with zero results.
+  if not found then
+    local link;
+    if self:IsLink(MultiScanCurrent) then
+      link = MultiScanCurrent;
+    else
+      link = "|cffffffff|Hitem:0:0:0:0:0:0:0:0|h[" ..
+             MultiScanCurrent ..
+             "]|h|r";
+    end
+
+    MultiScanItems[MultiScanCurrent] = false;
+    MultiScanData[link] = {
+      link = link,
+      data = {},
+      price = 0,
+      itemsAll = 0,
+      itemsMine = 0,
+      listingsAll = 0,
+      listingsMine = 0,
+    };
   end
 
   -- Continue the scan.
@@ -969,8 +1009,8 @@ function AuctionLite:ApplySummarySort()
   local cmp;
   if info.sort == "ItemSummary" then
     cmp = function(a, b)
-      local aFav = self.db.profile.favorites[a.link];
-      local bFav = self.db.profile.favorites[b.link];
+      local aFav = (self:IsFavorite(a.link) ~= nil);
+      local bFav = (self:IsFavorite(b.link) ~= nil);
       if aFav == bFav then
         return a.name < b.name;
       else
@@ -1020,13 +1060,54 @@ function AuctionLite:FavoritesButton_OnClick(id)
   local offset = FauxScrollFrame_GetOffset(BuyScrollFrame);
   local link = SummaryData[offset + id].link;
 
-  if self.db.profile.favorites[link] == nil then
-    self.db.profile.favorites[link] = true;
-  else
-    self.db.profile.favorites[link] = nil;
+  local toggle = function(list)
+    -- Pop open any fake links.
+    local item;
+    local name, _, id = self:SplitLink(link);
+    if id == 0 then
+      item = name;
+    else
+      item = link;
+    end
+    
+    -- Toggle the favorite.
+    if list[item] == nil then
+      list[item] = true;
+    else
+      list[item] = nil;
+    end
+    self:AuctionFrameBuy_Update();
   end
 
-  self:AuctionFrameBuy_Update();
+  local single = self:GetSingleFavoritesList();
+  if single ~= nil then
+    -- Just toggle the list.
+    toggle(single);
+  else
+    -- Make a more detailed menu showing the available lists.
+    if BuyFavoritesDropDown == nil then
+      CreateFrame("Frame", "BuyFavoritesDropDown", UIParent,
+                  "UIDropDownMenuTemplate");
+    end
+
+    BuyFavoritesDropDown.displayMode = "MENU";
+    BuyFavoritesDropDown.initialize = function(menu)
+      local info = UIDropDownMenu_CreateInfo();
+      info.text = L["Member Of"];
+      info.isTitle = true;
+      UIDropDownMenu_AddButton(info);
+
+      for name, list in pairs(self.db.profile.favorites) do
+        local info = UIDropDownMenu_CreateInfo();
+        info.text = name;
+        info.func = function() toggle(list) end;
+        info.checked = (self:IsFavorite(link, list) ~= nil);
+        UIDropDownMenu_AddButton(info);
+      end
+    end
+
+    ToggleDropDownMenu(1, nil, BuyFavoritesDropDown, "cursor");
+  end
 end
 
 -- Handles clicks on the buttons in the "Buy" scroll frame.
@@ -1092,9 +1173,13 @@ function AuctionLite:BuyButton_OnClick(id, button)
           func = function() AuctionLite:CancelItems(false, link) end,
         },
       };
-      local menuFrame = CreateFrame("Frame", "BuyContextMenu", UIParent,
-                                    "UIDropDownMenuTemplate");
-      EasyMenu(menuList, menuFrame, "cursor", 0, 0, "MENU");
+
+      if BuyContextDropDown == nil then
+        CreateFrame("Frame", "BuyContextDropDown", UIParent,
+                    "UIDropDownMenuTemplate");
+      end
+
+      EasyMenu(menuList, BuyContextDropDown, "cursor", 0, 0, "MENU");
     end
   end
 end
@@ -1130,7 +1215,9 @@ function AuctionLite:BuyButton_OnEnter(widget)
     self:SetHyperlinkTooltips(false);
     GameTooltip:SetOwner(widget, "ANCHOR_TOPLEFT", shift);
     GameTooltip:SetHyperlink(link);
-    self:AddTooltipData(GameTooltip, link, count);
+    if GameTooltip:NumLines() > 0 then
+      self:AddTooltipData(GameTooltip, link, count);
+    end
     self:SetHyperlinkTooltips(true);
   end
 end
@@ -1138,6 +1225,63 @@ end
 -- Mouse has left a row in the scrolling frame.
 function AuctionLite:BuyButton_OnLeave(widget)
   GameTooltip:Hide();
+end
+
+-- Click the advanced menu button.
+function AuctionLite:BuyAdvancedButton_OnClick()
+  BuyAdvancedDropDown.displayMode = "MENU";
+  BuyAdvancedDropDown.initialize = function(menu, level)
+    UIDropDownMenu_SetWidth(BuyAdvancedDropDown, 140);
+
+    if level == 1 then
+      local info = UIDropDownMenu_CreateInfo();
+      info.text = L["Show Deals"];
+      info.func = function() AuctionLite:AuctionFrameBuy_Deals() end;
+      UIDropDownMenu_AddButton(info, level);
+
+      local info = UIDropDownMenu_CreateInfo();
+      info.text = L["Show Favorites"];
+      local single = self:GetSingleFavoritesList();
+      if single == nil then
+        info.hasArrow = true;
+      else
+        info.func = function()
+          BuyMode = BUY_MODE_FAVORITES;
+          self:MultiScan(single);
+        end
+      end
+      UIDropDownMenu_AddButton(info, level);
+
+      local info = UIDropDownMenu_CreateInfo();
+      info.text = L["Show My Auctions"];
+      info.func = function()
+        BuyMode = BUY_MODE_MY_AUCTIONS;
+        self:MultiScan(self:GetMyAuctionLinks());
+      end
+      UIDropDownMenu_AddButton(info, level);
+
+      local info = UIDropDownMenu_CreateInfo();
+      info.text = L["Configure AuctionLite"];
+      info.func = function()
+        InterfaceOptionsFrame_OpenToCategory(AuctionLite.optionFrames.tooltips);
+        InterfaceOptionsFrame_OpenToCategory(self.optionFrames.main);
+      end
+      UIDropDownMenu_AddButton(info, level);
+    elseif level == 2 then
+      for name, favs in pairs(self.db.profile.favorites) do
+        local info = UIDropDownMenu_CreateInfo();
+        info.text = name;
+        info.func = function()
+          BuyMode = BUY_MODE_FAVORITES;
+          self:MultiScan(favs);
+          CloseDropDownMenus();
+        end
+        UIDropDownMenu_AddButton(info, level);
+      end
+    end
+  end
+
+  ToggleDropDownMenu(1, nil, BuyAdvancedDropDown);
 end
 
 -- Returns to the summary page.
@@ -1237,20 +1381,6 @@ function AuctionLite:AuctionFrameBuy_Deals()
   else
     self:StartFullScan();
   end
-end
-
--- Query and display favorites.
-function AuctionLite:AuctionFrameBuy_Favorites()
-  BuyMode = BUY_MODE_FAVORITES;
-
-  self:MultiScan(self.db.profile.favorites);
-end
-
--- Show my auctions.
-function AuctionLite:AuctionFrameBuy_MyAuctions()
-  BuyMode = BUY_MODE_MY_AUCTIONS;
-
-  self:MultiScan(self:GetMyAuctionLinks());
 end
 
 -- Submit a search query.
@@ -1621,7 +1751,7 @@ function AuctionLite:AuctionFrameBuy_UpdateSummary()
       local marketFrame       = _G[buttonSummaryName .. "MarketPriceFrame"];
       local histFrame         = _G[buttonSummaryName .. "HistPriceFrame"];
 
-      if self.db.profile.favorites[item.link] then
+      if self:IsFavorite(item.link) then
         starButton:GetNormalTexture():SetAlpha(1.0);
       else
         starButton:GetNormalTexture():SetAlpha(0.1);
@@ -1770,7 +1900,9 @@ function AuctionLite:ClearBuyFrame(partial)
   self:ResetSearch();
 
   if not partial then
-    MultiScanLinks = {};
+    MultiScanCurrent = nil;
+    MultiScanOriginal = {};
+    MultiScanItems = {};
   end
   MultiScanData = {};
 
@@ -1789,32 +1921,6 @@ function AuctionLite:ClearBuyFrame(partial)
   BuyScrollFrameScrollBar:SetValue(0);
 
   self:AuctionFrameBuy_Update();
-end
-
--- Populate the advanced menu.
-function AuctionLite:AdvancedMenuInit(menu)
-  local info = UIDropDownMenu_CreateInfo();
-  info.text = L["Show Deals"];
-  info.func = function() AuctionLite:AuctionFrameBuy_Deals() end;
-  UIDropDownMenu_AddButton(info);
-
-  local info = UIDropDownMenu_CreateInfo();
-  info.text = L["Show Favorites"];
-  info.func = function() AuctionLite:AuctionFrameBuy_Favorites() end;
-  UIDropDownMenu_AddButton(info);
-
-  local info = UIDropDownMenu_CreateInfo();
-  info.text = L["Show My Auctions"];
-  info.func = function() AuctionLite:AuctionFrameBuy_MyAuctions() end;
-  UIDropDownMenu_AddButton(info);
-
-  local info = UIDropDownMenu_CreateInfo();
-  info.text = L["Configure AuctionLite"];
-  info.func = function()
-    InterfaceOptionsFrame_OpenToCategory(AuctionLite.optionFrames.tooltips);
-    InterfaceOptionsFrame_OpenToCategory(self.optionFrames.main);
-  end
-  UIDropDownMenu_AddButton(info);
 end
 
 -- Create the "Buy" tab.

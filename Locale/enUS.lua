@@ -4,6 +4,10 @@ if L then
 
 -- AuctionLite.lua
 
+L["AuctionLite v%s loaded!"] = true;
+
+-- Config.lua
+
 L["Percent to undercut market value for bid prices (0-100)."] = true;
 L["Bid Undercut"] = true;
 L["Percent to undercut market value for buyout prices (0-100)."] = true;
@@ -54,6 +58,16 @@ L["Uses the standard gold/silver/copper icons in tooltips."] = true;
 L["Use Coin Icons in Tooltips"] = true;
 L["Show full stack prices in tooltips (shift toggles on the fly)."] = true;
 L["Show Full Stack Price"] = true;
+L["Select a Favorites List"] = true;
+L["Choose a favorites list to edit."] = true;
+L["New..."] = true;
+L["Create a new favorites list."] = true;
+L["Delete"] = true;
+L["Delete the selected favorites list."] = true;
+L["Add an Item"] = true;
+L["Add a new item to a favorites list by entering the name here."] = true;
+L["Remove Items"] = true;
+L["Remove the selected items from the current favorites list."] = true;
 L["Open configuration dialog"] = true;
 L["Configure"] = true;
 L["Default"] = true;
@@ -63,10 +77,13 @@ L["Last Used Tab"] = true;
 L["Always"] = true;
 L["If Applicable"] = true;
 L["Never"] = true;
+L["Enter the name of the new favorites list:"] = true;
+L["Accept"] = true;
+L["Cancel"] = true;
+L["Favorites"] = true;
 L["Tooltips"] = true;
 L["Profiles"] = true;
 L["AuctionLite"] = true;
-L["AuctionLite v%s loaded!"] = true;
 
 -- BuyFrame.lua
 
@@ -100,6 +117,7 @@ L["Net cost for %d:"] = true;
 L["Batch %d: %d at %s"] = true;
 L["Potential Profit"] = true;
 L["Historical Price"] = true;
+L["Member Of"] = true;
 L["Cancel Undercut Auctions"] = true;
 L["Cancel All Auctions"] = true;
 L["Show Deals"] = true;
@@ -118,7 +136,6 @@ L["Searching:"] = true;
 L["Time Elapsed:"] = true;
 L["Time Remaining:"] = true;
 L["Approve"] = true;
-L["Cancel"] = true;
 L["Item Summary"] = true;
 L["Historical Price"] = true;
 L["Market Price"] = true;

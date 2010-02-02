@@ -851,7 +851,7 @@
 				</Scripts>
 				<FontString inherits="ChatFontNormal" bytes="64"/>
 			</EditBox>
-			<Button name="BuyAdvanced">
+			<Button name="BuyAdvancedButton">
 				<Size>
 					<AbsDimension x="24" y="24"/>
 				</Size>
@@ -864,7 +864,7 @@
 				</Anchors>
 				<Scripts>
 					<OnClick>
-						ToggleDropDownMenu(nil, nil, BuyAdvancedDropDown);
+						AuctionLite:BuyAdvancedButton_OnClick();
 					</OnClick>
 				</Scripts>
 				<Layers>
@@ -915,19 +915,12 @@
 			</Button>
 			<Frame name="BuyAdvancedDropDown" inherits="UIDropDownMenuTemplate" id="1" hidden="true">
 				<Anchors>
-					<Anchor point="TOPRIGHT" relativeTo="BuyAdvanced">
+					<Anchor point="TOPRIGHT" relativeTo="BuyAdvancedButton">
 						<Offset>
-							<AbsDimension x="0" y="0"/>
+							<AbsDimension x="10" y="0"/>
 						</Offset>
 					</Anchor>
 				</Anchors>
-				<Scripts>
-					<OnLoad>
-						local func = function(menu) AuctionLite:AdvancedMenuInit(menu) end;
-						UIDropDownMenu_SetWidth(self, 140);
-						UIDropDownMenu_Initialize(self, func, "MENU");
-					</OnLoad>
-				</Scripts>
 			</Frame>
 			<Button name="BuyScanButton" inherits="UIPanelButtonTemplate" text="Full Scan">
 				<Size>

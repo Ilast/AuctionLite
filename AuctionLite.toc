@@ -20,6 +20,9 @@ Locale\zhTW.lua
 AuctionLite.lua
 AuctionFrame.lua
 
+Config.lua
+ListBox.lua
+
 Templates.xml
 
 BuyFrame.lua

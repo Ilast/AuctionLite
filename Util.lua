@@ -60,10 +60,18 @@ function AuctionLite:PrintMoney(money)
   return result;
 end
 
+-- Regular expression for parsing links.
+local LinkRegexp = "|c(.*)|H(.*)|h%[(.*)%]";
+
+-- Is this string a link?
+function AuctionLite:IsLink(str)
+  return (str:find(LinkRegexp) ~= nil);
+end
+
 -- Dissect an item link or item string.
 function AuctionLite:SplitLink(link)
   -- Parse the link.
-  local _, _, color, str, name = link:find("|c(.*)|H(.*)|h%[(.*)%]");
+  local _, _, color, str, name = link:find(LinkRegexp);
 
   -- If we failed, then assume it's actually an item string.
   if str == nil then
@@ -242,6 +250,70 @@ function AuctionLite:GetMyAuctionLinks()
   end
 
   return links;
+end
+
+-- Is the specified item (name or link) a favorite, optionally in a specific
+-- favorites list?
+function AuctionLite:IsFavorite(item, list)
+  local name = self:SplitLink(item);
+  local link;
+
+  if name == nil then
+    name = item;
+    link = nil;
+  else
+    link = item;
+  end
+  name = strlower(name);
+
+  local searchList = function(list)
+    if list[link] ~= nil then
+      return link;
+    else
+      for item, _ in pairs(list) do
+        local itemName = self:SplitLink(item);
+        if itemName == nil then
+          itemName = item;
+        end
+        if strlower(itemName) == name then
+          return item;
+        end
+      end
+      return nil;
+    end
+  end
+
+  if list ~= nil then
+    return searchList(list);
+  else
+    for _, list in pairs(self.db.profile.favorites) do
+      local result = searchList(list);
+      if result then
+        return result;
+      end
+    end
+    return nil;
+  end
+end
+
+-- If there's exactly one favorites list, get it.  Otherwise, return nil.
+function AuctionLite:GetSingleFavoritesList()
+  local found = nil;
+  for _, list in pairs(self.db.profile.favorites) do
+    if found == nil then
+      found = list;
+    else
+      return nil;
+    end
+  end
+
+  -- Sanity check: If there are no favorites lists, make one.
+  if found == nil then
+    found = {};
+    self.db.profile.favorites = { [L["Favorites"]] = found };
+  end
+
+  return found;
 end
 
 -- Sort the columns by the designated sort type.
