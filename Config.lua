@@ -379,6 +379,7 @@ local Defaults = {
 local CurrentList = nil;
 local SelectedItems = {};
 local IndexKeys = {};
+local ResetFocus = false;
 
 -- Return the current favorites list.
 function AuctionLite:GetCurrentList()
@@ -390,6 +391,7 @@ function AuctionLite:SetCurrentList(info, list)
   if CurrentList ~= list then
     CurrentList = list;
     SelectedItems = {};
+    ResetFocus = true;
   end
 end
 
@@ -442,6 +444,7 @@ function AuctionLite:CreateList(name)
     favorites[name] = {};
     CurrentList = name;
     SelectedItems = {};
+    ResetFocus = true;
     InterfaceOptionsFrame_OpenToCategory(self.optionFrames.favs);
   end
 end
@@ -475,7 +478,7 @@ end
 
 -- Add an item to a favorites list.
 function AuctionLite:AddListItem(info, value)
-  if CurrentList ~= nil then
+  if CurrentList ~= nil and value ~= "" then
     local items = self.db.profile.favorites[CurrentList];
 
     -- Did we get a link or a name?
@@ -515,6 +518,8 @@ function AuctionLite:AddListItem(info, value)
         items[value] = true;
       end
     end
+
+    ResetFocus = true;
   end
 end
 
@@ -557,6 +562,25 @@ function AuctionLite:GetListItems()
       IndexKeys = {};
       for index, display in ipairs(result) do
         IndexKeys[index] = keys[display];
+      end
+    end
+
+    -- Massive hack: Move the focus to the "Add an Item" box.  This needs
+    -- to be done whenever we get a list of items because AceConfig
+    -- rebuilds the entire panel on every event.
+    if ResetFocus then
+      ResetFocus = false;
+
+      local i = 1;
+      while true do
+        local editBox = _G["AceGUI-3.0EditBox" .. i];
+        if editBox == nil then
+          break;
+        elseif editBox.obj:GetUserDataTable().options == FavoritesOptions then
+          editBox:SetFocus();
+          break;
+        end
+        i = i + 1;
       end
     end
   end

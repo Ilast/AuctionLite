@@ -700,6 +700,9 @@ function AuctionLite:SellRememberButton_OnClick(widget)
     -- Now show/hide the menu.
     SellRememberDropDown.displayMode = "MENU";
     SellRememberDropDown.initialize = EasyMenu_Initialize;
+    SellRememberDropDown.point = "TOPRIGHT";
+    SellRememberDropDown.relativeTo = "SellRememberButton";
+    SellRememberDropDown.relativePoint = "BOTTOMRIGHT";
     ToggleDropDownMenu(1, nil, SellRememberDropDown,
                        "SellRememberButton", 0, 0, menuList);
   end

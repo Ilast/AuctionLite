@@ -85,10 +85,12 @@ end
 -- Set (and show/hide) the widget label.
 function ListBox:SetLabel(text)
   if (text or "") == "" then
+    self.frame:SetHeight(196);
     self.box:SetPoint("TOPLEFT", self.frame, "TOPLEFT", 0, 0);
     self.label:Hide();
     self.label:SetText("");
   else
+    self.frame:SetHeight(216);
     self.box:SetPoint("TOPLEFT", self.frame, "TOPLEFT", 0, -20);
     self.label:Show();
     self.label:SetText(text);
@@ -128,14 +130,14 @@ local function Constructor()
   self.frame = frame;
   frame.obj = self;
   
-  frame:SetHeight(208);
+  frame:SetHeight(216);
 
   local box = CreateFrame("Frame", "AceGUI30ListBoxBox" .. num, frame,
                           "OptionsFrameListTemplate");
   box.update = ListBox_Update;
   box:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, -20);
   box:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0);
-  box:SetHeight(188);
+  box:SetHeight(196);
 
   local buttons = box.buttons;
   local maxButtons = math.floor((box:GetHeight() - 8) / box.buttonHeight);
