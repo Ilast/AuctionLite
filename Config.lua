@@ -622,13 +622,15 @@ function AuctionLite:ConvertOptions()
       end
     end
     -- Convert favorites.
-    local value = true;
-    for _, v in pairs(profile.favorites) do
-      value = v;
-      break;
-    end
-    if type(value) == "boolean" then
-      profile.favorites = { [L["Favorites"]] = profile.favorites };
+    if profile.favorites ~= nil then
+      local value = true;
+      for _, v in pairs(profile.favorites) do
+        value = v;
+        break;
+      end
+      if type(value) == "boolean" then
+        profile.favorites = { [L["Favorites"]] = profile.favorites };
+      end
     end
   end
 end
