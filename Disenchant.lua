@@ -1,9 +1,9 @@
 -------------------------------------------------------------------------------
 -- Disenchant.lua
 --
--- Compute expected disenchant value.  Data source:
---   http://www.wowwiki.com/Disenchanting_tables
--- Thanks, WowWiki!
+-- Compute expected disenchant value.  The data here is based on info from
+-- WowWiki (http://www.wowwiki.com/Disenchanting_tables) with some updates
+-- based on Wowhead queries.
 -------------------------------------------------------------------------------
 
 -- Item ids for disenchanting materials.
@@ -49,280 +49,280 @@ local UncommonArmor = {
     minlvl = 5,
     maxlvl = 15,
     shards = {
-      { id = StrangeDust_Id, p = 0.8, min = 1, max = 2, },
-      { id = LesserMagicEssence_Id, p = 0.2, min = 1, max = 2, },
+      { p = 0.80, min = 1, max = 2, id = StrangeDust_Id, },
+      { p = 0.20, min = 1, max = 2, id = LesserMagicEssence_Id, },
     },
   },
   {
     minlvl = 16,
     maxlvl = 20,
     shards = {
-      { id = StrangeDust_Id, p = 0.75, min = 2, max = 3, },
-      { id = GreaterMagicEssence_Id, p = 0.2, min = 1, max = 2, },
-      { id = SmallGlimmeringShard_Id, p = 0.05, min = 1, max = 1, },
+      { p = 0.75, min = 2, max = 3, id = StrangeDust_Id, },
+      { p = 0.20, min = 1, max = 2, id = GreaterMagicEssence_Id, },
+      { p = 0.05, min = 1, max = 1, id = SmallGlimmeringShard_Id, },
     },
   },
   {
     minlvl = 21,
     maxlvl = 25,
     shards = {
-      { id = StrangeDust_Id, p = 0.75, min = 4, max = 6, },
-      { id = LesserAstralEssence_Id, p = 0.15, min = 1, max = 2, },
-      { id = SmallGlimmeringShard_Id, p = 0.1, min = 1, max = 1, },
+      { p = 0.75, min = 4, max = 6, id = StrangeDust_Id, },
+      { p = 0.15, min = 1, max = 2, id = LesserAstralEssence_Id, },
+      { p = 0.10, min = 1, max = 1, id = SmallGlimmeringShard_Id, },
     },
   },
   {
     minlvl = 26,
     maxlvl = 30,
     shards = {
-      { id = SoulDust_Id, p = 0.75, min = 1, max = 2, },
-      { id = GreaterAstralEssence_Id, p = 0.2, min = 1, max = 2, },
-      { id = LargeGlimmeringShard_Id, p = 0.05, min = 1, max = 1, },
+      { p = 0.75, min = 1, max = 2, id = SoulDust_Id, },
+      { p = 0.20, min = 1, max = 2, id = GreaterAstralEssence_Id, },
+      { p = 0.05, min = 1, max = 1, id = LargeGlimmeringShard_Id, },
     },
   },
   {
     minlvl = 31,
     maxlvl = 35,
     shards = {
-      { id = SoulDust_Id, p = 0.75, min = 2, max = 5, },
-      { id = LesserMysticEssence_Id, p = 0.2, min = 1, max = 2, },
-      { id = SmallGlowingShard_Id, p = 0.05, min = 1, max = 1, },
+      { p = 0.75, min = 2, max = 5, id = SoulDust_Id, },
+      { p = 0.20, min = 1, max = 2, id = LesserMysticEssence_Id, },
+      { p = 0.05, min = 1, max = 1, id = SmallGlowingShard_Id, },
     },
   },
   {
     minlvl = 36,
     maxlvl = 40,
     shards = {
-      { id = VisionDust_Id, p = 0.75, min = 1, max = 2, },
-      { id = GreaterMysticEssence_Id, p = 0.2, min = 1, max = 2, },
-      { id = LargeGlowingShard_Id, p = 0.05, min = 1, max = 1, },
+      { p = 0.75, min = 1, max = 2, id = VisionDust_Id, },
+      { p = 0.20, min = 1, max = 2, id = GreaterMysticEssence_Id, },
+      { p = 0.05, min = 1, max = 1, id = LargeGlowingShard_Id, },
     },
   },
   {
     minlvl = 41,
     maxlvl = 45,
     shards = {
-      { id = VisionDust_Id, p = 0.75, min = 2, max = 5, },
-      { id = LesserNetherEssence_Id, p = 0.2, min = 1, max = 2, },
-      { id = SmallRadiantShard_Id, p = 0.05, min = 1, max = 1, },
+      { p = 0.75, min = 2, max = 5, id = VisionDust_Id, },
+      { p = 0.20, min = 1, max = 2, id = LesserNetherEssence_Id, },
+      { p = 0.05, min = 1, max = 1, id = SmallRadiantShard_Id, },
     },
   },
   {
     minlvl = 46,
     maxlvl = 50,
     shards = {
-      { id = DreamDust_Id, p = 0.75, min = 1, max = 2, },
-      { id = GreaterNetherEssence_Id, p = 0.2, min = 1, max = 2, },
-      { id = LargeRadiantShard_Id, p = 0.05, min = 1, max = 1, },
+      { p = 0.75, min = 1, max = 2, id = DreamDust_Id, },
+      { p = 0.20, min = 1, max = 2, id = GreaterNetherEssence_Id, },
+      { p = 0.05, min = 1, max = 1, id = LargeRadiantShard_Id, },
     },
   },
   {
     minlvl = 51,
     maxlvl = 55,
     shards = {
-      { id = DreamDust_Id, p = 0.75, min = 2, max = 5, },
-      { id = LesserEternalEssence_Id, p = 0.2, min = 1, max = 2, },
-      { id = SmallBrilliantShard_Id, p = 0.05, min = 1, max = 1, },
+      { p = 0.75, min = 2, max = 5, id = DreamDust_Id, },
+      { p = 0.20, min = 1, max = 2, id = LesserEternalEssence_Id, },
+      { p = 0.05, min = 1, max = 1, id = SmallBrilliantShard_Id, },
     },
   },
   {
     minlvl = 56,
     maxlvl = 60,
     shards = {
-      { id = IllusionDust_Id, p = 0.75, min = 1, max = 2, },
-      { id = GreaterEternalEssence_Id, p = 0.2, min = 1, max = 2, },
-      { id = LargeBrilliantShard_Id, p = 0.05, min = 1, max = 1, },
+      { p = 0.75, min = 1, max = 2, id = IllusionDust_Id, },
+      { p = 0.20, min = 1, max = 2, id = GreaterEternalEssence_Id, },
+      { p = 0.05, min = 1, max = 1, id = LargeBrilliantShard_Id, },
     },
   },
   {
     minlvl = 61,
     maxlvl = 65,
     shards = {
-      { id = IllusionDust_Id, p = 0.75, min = 2, max = 5, },
-      { id = GreaterEternalEssence_Id, p = 0.2, min = 2, max = 3, },
-      { id = LargeBrilliantShard_Id, p = 0.05, min = 1, max = 1, },
+      { p = 0.75, min = 2, max = 5, id = IllusionDust_Id, },
+      { p = 0.20, min = 2, max = 3, id = GreaterEternalEssence_Id, },
+      { p = 0.05, min = 1, max = 1, id = LargeBrilliantShard_Id, },
     },
   },
   {
-    minlvl = 66,
+    minlvl = 79,
     maxlvl = 80,
     shards = {
-      { id = ArcaneDust_Id, p = 0.75, min = 1, max = 3, },
-      { id = LesserPlanarEssence_Id, p = 0.22, min = 1, max = 3, },
-      { id = SmallPrismaticShard_Id, p = 0.03, min = 1, max = 1, },
+      { p = 0.75, min = 1, max = 2, id = ArcaneDust_Id, },
+      { p = 0.22, min = 1, max = 2, id = LesserPlanarEssence_Id, },
+      { p = 0.03, min = 1, max = 1, id = SmallPrismaticShard_Id, },
     },
   },
   {
     minlvl = 81,
     maxlvl = 100,
     shards = {
-      { id = ArcaneDust_Id, p = 0.75, min = 2, max = 3, },
-      { id = LesserPlanarEssence_Id, p = 0.22, min = 2, max = 3, },
-      { id = SmallPrismaticShard_Id, p = 0.03, min = 1, max = 1, },
+      { p = 0.75, min = 2, max = 3, id = ArcaneDust_Id, },
+      { p = 0.22, min = 2, max = 3, id = LesserPlanarEssence_Id, },
+      { p = 0.03, min = 1, max = 1, id = SmallPrismaticShard_Id, },
     },
   },
   {
     minlvl = 101,
     maxlvl = 120,
     shards = {
-      { id = ArcaneDust_Id, p = 0.75, min = 2, max = 5, },
-      { id = GreaterPlanarEssence_Id, p = 0.22, min = 1, max = 2, },
-      { id = LargePrismaticShard_Id, p = 0.03, min = 1, max = 1, },
+      { p = 0.75, min = 2, max = 5, id = ArcaneDust_Id, },
+      { p = 0.22, min = 1, max = 2, id = GreaterPlanarEssence_Id, },
+      { p = 0.03, min = 1, max = 1, id = LargePrismaticShard_Id, },
     },
   },
   {
-    minlvl = 121,
+    minlvl = 130,
     maxlvl = 151,
     shards = {
-      { id = InfiniteDust_Id, p = 0.75, min = 1, max = 2, },
-      { id = LesserCosmicEssence_Id, p = 0.22, min = 1, max = 2, },
-      { id = SmallDreamShard_Id, p = 0.03, min = 1, max = 1, },
+      { p = 0.75, min = 1, max = 3, id = InfiniteDust_Id, },
+      { p = 0.22, min = 1, max = 2, id = LesserCosmicEssence_Id, },
+      { p = 0.03, min = 1, max = 1, id = SmallDreamShard_Id, },
     },
   },
   {
     minlvl = 152,
-    maxlvl = 200,
+    maxlvl = 182,
     shards = {
-      { id = InfiniteDust_Id, p = 0.75, min = 2, max = 5, },
-      { id = GreaterCosmicEssence_Id, p = 0.22, min = 1, max = 2, },
-      { id = DreamShard_Id, p = 0.03, min = 1, max = 1, },
+      { p = 0.75, min = 2, max = 7, id = InfiniteDust_Id, },
+      { p = 0.22, min = 1, max = 2, id = GreaterCosmicEssence_Id, },
+      { p = 0.03, min = 1, max = 1, id = DreamShard_Id, },
     },
   },
 };
 
 local UncommonWeapon = {
   {
-    minlvl = 6,
+    minlvl = 10,
     maxlvl = 15,
     shards = {
-      { id = StrangeDust_Id, p = 0.2, min = 1, max = 2, },
-      { id = LesserMagicEssence_Id, p = 0.8, min = 1, max = 2, },
+      { p = 0.80, min = 1, max = 2, id = LesserMagicEssence_Id, },
+      { p = 0.20, min = 1, max = 2, id = StrangeDust_Id, },
     },
   },
   {
     minlvl = 16,
     maxlvl = 20,
     shards = {
-      { id = StrangeDust_Id, p = 0.2, min = 2, max = 3, },
-      { id = GreaterMagicEssence_Id, p = 0.75, min = 1, max = 2, },
-      { id = SmallGlimmeringShard_Id, p = 0.05, min = 1, max = 1, },
+      { p = 0.75, min = 1, max = 2, id = GreaterMagicEssence_Id, },
+      { p = 0.20, min = 2, max = 3, id = StrangeDust_Id, },
+      { p = 0.05, min = 1, max = 1, id = SmallGlimmeringShard_Id, },
     },
   },
   {
     minlvl = 21,
     maxlvl = 25,
     shards = {
-      { id = StrangeDust_Id, p = 0.15, min = 4, max = 6, },
-      { id = LesserAstralEssence_Id, p = 0.75, min = 1, max = 2, },
-      { id = SmallGlimmeringShard_Id, p = 0.1, min = 1, max = 1, },
+      { p = 0.75, min = 1, max = 2, id = LesserAstralEssence_Id, },
+      { p = 0.15, min = 4, max = 6, id = StrangeDust_Id, },
+      { p = 0.10, min = 1, max = 1, id = SmallGlimmeringShard_Id, },
     },
   },
   {
     minlvl = 26,
     maxlvl = 30,
     shards = {
-      { id = SoulDust_Id, p = 0.2, min = 1, max = 2, },
-      { id = GreaterAstralEssence_Id, p = 0.75, min = 1, max = 2, },
-      { id = LargeGlimmeringShard_Id, p = 0.05, min = 1, max = 1, },
+      { p = 0.75, min = 1, max = 2, id = GreaterAstralEssence_Id, },
+      { p = 0.20, min = 1, max = 2, id = SoulDust_Id, },
+      { p = 0.05, min = 1, max = 1, id = LargeGlimmeringShard_Id, },
     },
   },
   {
     minlvl = 31,
     maxlvl = 35,
     shards = {
-      { id = SoulDust_Id, p = 0.2, min = 2, max = 5, },
-      { id = LesserMysticEssence_Id, p = 0.75, min = 1, max = 2, },
-      { id = SmallGlowingShard_Id, p = 0.05, min = 1, max = 1, },
+      { p = 0.75, min = 1, max = 2, id = LesserMysticEssence_Id, },
+      { p = 0.20, min = 2, max = 5, id = SoulDust_Id, },
+      { p = 0.05, min = 1, max = 1, id = SmallGlowingShard_Id, },
     },
   },
   {
     minlvl = 36,
     maxlvl = 40,
     shards = {
-      { id = VisionDust_Id, p = 0.2, min = 1, max = 2, },
-      { id = GreaterMysticEssence_Id, p = 0.75, min = 1, max = 2, },
-      { id = LargeGlowingShard_Id, p = 0.05, min = 1, max = 1, },
+      { p = 0.75, min = 1, max = 2, id = GreaterMysticEssence_Id, },
+      { p = 0.20, min = 1, max = 2, id = VisionDust_Id, },
+      { p = 0.05, min = 1, max = 1, id = LargeGlowingShard_Id, },
     },
   },
   {
     minlvl = 41,
     maxlvl = 45,
     shards = {
-      { id = VisionDust_Id, p = 0.2, min = 2, max = 5, },
-      { id = LesserNetherEssence_Id, p = 0.75, min = 1, max = 2, },
-      { id = SmallRadiantShard_Id, p = 0.05, min = 1, max = 1, },
+      { p = 0.75, min = 1, max = 2, id = LesserNetherEssence_Id, },
+      { p = 0.20, min = 2, max = 5, id = VisionDust_Id, },
+      { p = 0.05, min = 1, max = 1, id = SmallRadiantShard_Id, },
     },
   },
   {
     minlvl = 46,
     maxlvl = 50,
     shards = {
-      { id = DreamDust_Id, p = 0.2, min = 1, max = 2, },
-      { id = GreaterNetherEssence_Id, p = 0.75, min = 1, max = 2, },
-      { id = LargeRadiantShard_Id, p = 0.05, min = 1, max = 1, },
+      { p = 0.75, min = 1, max = 2, id = GreaterNetherEssence_Id, },
+      { p = 0.20, min = 1, max = 2, id = DreamDust_Id, },
+      { p = 0.05, min = 1, max = 1, id = LargeRadiantShard_Id, },
     },
   },
   {
     minlvl = 51,
     maxlvl = 55,
     shards = {
-      { id = DreamDust_Id, p = 0.22, min = 2, max = 5, },
-      { id = LesserEternalEssence_Id, p = 0.75, min = 1, max = 2, },
-      { id = SmallBrilliantShard_Id, p = 0.03, min = 1, max = 1, },
+      { p = 0.75, min = 1, max = 2, id = LesserEternalEssence_Id, },
+      { p = 0.22, min = 2, max = 5, id = DreamDust_Id, },
+      { p = 0.03, min = 1, max = 1, id = SmallBrilliantShard_Id, },
     },
   },
   {
     minlvl = 56,
     maxlvl = 60,
     shards = {
-      { id = IllusionDust_Id, p = 0.22, min = 1, max = 2, },
-      { id = GreaterEternalEssence_Id, p = 0.75, min = 1, max = 2, },
-      { id = LargeBrilliantShard_Id, p = 0.03, min = 1, max = 1, },
+      { p = 0.75, min = 1, max = 2, id = GreaterEternalEssence_Id, },
+      { p = 0.22, min = 1, max = 2, id = IllusionDust_Id, },
+      { p = 0.03, min = 1, max = 1, id = LargeBrilliantShard_Id, },
     },
   },
   {
     minlvl = 61,
     maxlvl = 65,
     shards = {
-      { id = IllusionDust_Id, p = 0.22, min = 2, max = 5, },
-      { id = GreaterEternalEssence_Id, p = 0.75, min = 2, max = 3, },
-      { id = LargeBrilliantShard_Id, p = 0.03, min = 1, max = 1, },
+      { p = 0.75, min = 2, max = 3, id = GreaterEternalEssence_Id, },
+      { p = 0.22, min = 2, max = 5, id = IllusionDust_Id, },
+      { p = 0.03, min = 1, max = 1, id = LargeBrilliantShard_Id, },
     },
   },
   {
-    minlvl = 66,
+    minlvl = 80,
     maxlvl = 100,
     shards = {
-      { id = ArcaneDust_Id, p = 0.22, min = 2, max = 3, },
-      { id = LesserPlanarEssence_Id, p = 0.75, min = 2, max = 3, },
-      { id = SmallPrismaticShard_Id, p = 0.03, min = 1, max = 1, },
+      { p = 0.75, min = 2, max = 3, id = LesserPlanarEssence_Id, },
+      { p = 0.22, min = 2, max = 3, id = ArcaneDust_Id, },
+      { p = 0.03, min = 1, max = 1, id = SmallPrismaticShard_Id, },
     },
   },
   {
     minlvl = 101,
     maxlvl = 120,
     shards = {
-      { id = ArcaneDust_Id, p = 0.22, min = 2, max = 5, },
-      { id = GreaterPlanarEssence_Id, p = 0.75, min = 1, max = 2, },
-      { id = LargePrismaticShard_Id, p = 0.03, min = 1, max = 1, },
+      { p = 0.75, min = 1, max = 2, id = GreaterPlanarEssence_Id, },
+      { p = 0.22, min = 2, max = 5, id = ArcaneDust_Id, },
+      { p = 0.03, min = 1, max = 1, id = LargePrismaticShard_Id, },
     },
   },
   {
-    minlvl = 121,
+    minlvl = 130,
     maxlvl = 151,
     shards = {
-      { id = InfiniteDust_Id, p = 0.22, min = 1, max = 2, },
-      { id = LesserCosmicEssence_Id, p = 0.75, min = 1, max = 2, },
-      { id = SmallDreamShard_Id, p = 0.03, min = 1, max = 1, },
+      { p = 0.75, min = 1, max = 2, id = LesserCosmicEssence_Id, },
+      { p = 0.22, min = 1, max = 3, id = InfiniteDust_Id, },
+      { p = 0.03, min = 1, max = 1, id = SmallDreamShard_Id, },
     },
   },
   {
     minlvl = 152,
-    maxlvl = 200,
+    maxlvl = 187,
     shards = {
-      { id = InfiniteDust_Id, p = 0.22, min = 2, max = 5, },
-      { id = GreaterCosmicEssence_Id, p = 0.75, min = 1, max = 2, },
-      { id = DreamShard_Id, p = 0.03, min = 1, max = 1, },
+      { p = 0.75, min = 1, max = 2, id = GreaterCosmicEssence_Id, },
+      { p = 0.22, min = 2, max = 7, id = InfiniteDust_Id, },
+      { p = 0.03, min = 1, max = 1, id = DreamShard_Id, },
     },
   },
 };
@@ -332,217 +332,141 @@ local Rare = {
     minlvl = 11,
     maxlvl = 25,
     shards = {
-      { id = SmallGlimmeringShard_Id, p = 1, min = 1, max = 1, },
+      { p = 1.00, min = 1, max = 1, id = SmallGlimmeringShard_Id, },
     },
   },
   {
     minlvl = 26,
     maxlvl = 30,
     shards = {
-      { id = LargeGlimmeringShard_Id, p = 1, min = 1, max = 1, },
+      { p = 1.00, min = 1, max = 1, id = LargeGlimmeringShard_Id, },
     },
   },
   {
     minlvl = 31,
     maxlvl = 35,
     shards = {
-      { id = SmallGlowingShard_Id, p = 1, min = 1, max = 1, },
+      { p = 1.00, min = 1, max = 1, id = SmallGlowingShard_Id, },
     },
   },
   {
     minlvl = 36,
     maxlvl = 40,
     shards = {
-      { id = LargeGlowingShard_Id, p = 1, min = 1, max = 1, },
+      { p = 1.00, min = 1, max = 1, id = LargeGlowingShard_Id, },
     },
   },
   {
     minlvl = 41,
     maxlvl = 45,
     shards = {
-      { id = SmallRadiantShard_Id, p = 1, min = 1, max = 1, },
+      { p = 1.00, min = 1, max = 1, id = SmallRadiantShard_Id, },
     },
   },
   {
     minlvl = 46,
     maxlvl = 50,
     shards = {
-      { id = LargeRadiantShard_Id, p = 1, min = 1, max = 1, },
+      { p = 1.00, min = 1, max = 1, id = LargeRadiantShard_Id, },
     },
   },
   {
     minlvl = 51,
     maxlvl = 55,
     shards = {
-      { id = SmallBrilliantShard_Id, p = 1, min = 1, max = 1, },
+      { p = 1.00, min = 1, max = 1, id = SmallBrilliantShard_Id, },
     },
   },
   {
     minlvl = 56,
     maxlvl = 65,
     shards = {
-      { id = LargeBrilliantShard_Id, p = 0.995, min = 1, max = 1, },
-      { id = NexusCrystal_Id, p = 0.005, min = 1, max = 1, },
+      { p = 0.995, min = 1, max = 1, id = LargeBrilliantShard_Id, },
+      { p = 0.005, min = 1, max = 1, id = NexusCrystal_Id, },
     },
   },
   {
     minlvl = 66,
     maxlvl = 99,
     shards = {
-      { id = SmallPrismaticShard_Id, p = 0.995, min = 1, max = 1, },
-      { id = NexusCrystal_Id, p = 0.005, min = 1, max = 1, },
+      { p = 0.995, min = 1, max = 1, id = SmallPrismaticShard_Id, },
+      { p = 0.005, min = 1, max = 1, id = NexusCrystal_Id, },
     },
   },
   {
     minlvl = 100,
-    maxlvl = 120,
+    maxlvl = 115,
     shards = {
-      { id = LargePrismaticShard_Id, p = 0.995, min = 1, max = 1, },
-      { id = VoidCrystal_Id, p = 0.005, min = 1, max = 1, },
+      { p = 0.995, min = 1, max = 1, id = LargePrismaticShard_Id, },
+      { p = 0.005, min = 1, max = 1, id = VoidCrystal_Id, },
     },
   },
   {
-    minlvl = 121,
+    minlvl = 130,
     maxlvl = 166,
     shards = {
-      { id = SmallDreamShard_Id, p = 0.995, min = 1, max = 1, },
-      { id = AbyssCrystal_Id, p = 0.005, min = 1, max = 1, },
+      { p = 0.995, min = 1, max = 1, id = SmallDreamShard_Id, },
+      { p = 0.005, min = 1, max = 1, id = AbyssCrystal_Id, },
     },
   },
   {
     minlvl = 167,
     maxlvl = 200,
     shards = {
-      { id = DreamShard_Id, p = 0.995, min = 1, max = 1, },
-      { id = AbyssCrystal_Id, p = 0.005, min = 1, max = 1, },
+      { p = 0.995, min = 1, max = 1, id = DreamShard_Id, },
+      { p = 0.005, min = 1, max = 1, id = AbyssCrystal_Id, },
     },
   },
 };
 
-local EpicArmor = {
+local Epic = {
   {
     minlvl = 40,
     maxlvl = 45,
     shards = {
-      { id = SmallRadiantShard_Id, p = 1, min = 2, max = 4, },
+      { p = 1.00, min = 2, max = 4, id = SmallRadiantShard_Id, },
     },
   },
   {
     minlvl = 46,
     maxlvl = 50,
     shards = {
-      { id = LargeRadiantShard_Id, p = 1, min = 2, max = 4, },
+      { p = 1.00, min = 2, max = 4, id = LargeRadiantShard_Id, },
     },
   },
   {
     minlvl = 51,
     maxlvl = 55,
     shards = {
-      { id = SmallBrilliantShard_Id, p = 1, min = 2, max = 4, },
+      { p = 1.00, min = 2, max = 4, id = SmallBrilliantShard_Id, },
     },
   },
   {
     minlvl = 56,
     maxlvl = 60,
     shards = {
-      { id = NexusCrystal_Id, p = 1, min = 1, max = 1, },
+      { p = 1.00, min = 1, max = 1, id = NexusCrystal_Id, },
     },
   },
   {
     minlvl = 61,
     maxlvl = 94,
     shards = {
-      { id = NexusCrystal_Id, p = 1, min = 1, max = 2, },
+      { p = 1.00, min = 1, max = 2, id = NexusCrystal_Id, },
     },
   },
   {
     minlvl = 95,
     maxlvl = 165,
     shards = {
-      { id = VoidCrystal_Id, p = 0.33, min = 1, max = 1, },
-      { id = VoidCrystal_Id, p = 0.67, min = 2, max = 2, },
+      { p = 1.00, min = 1, max = 2, id = VoidCrystal_Id, },
     },
   },
   {
-    minlvl = 166,
-    maxlvl = 200,
+    minlvl = 200,
+    maxlvl = 277,
     shards = {
-      { id = AbyssCrystal_Id, p = 1, min = 1, max = 1, },
-    },
-  },
-  {
-    minlvl = 201,
-    maxlvl = 226,
-    shards = {
-      { id = AbyssCrystal_Id, p = 1, min = 1, max = 2, },
-    },
-  },
-};
-
-local EpicWeapon = {
-  {
-    minlvl = 40,
-    maxlvl = 45,
-    shards = {
-      { id = SmallRadiantShard_Id, p = 1, min = 2, max = 4, },
-    },
-  },
-  {
-    minlvl = 46,
-    maxlvl = 50,
-    shards = {
-      { id = LargeRadiantShard_Id, p = 1, min = 2, max = 4, },
-    },
-  },
-  {
-    minlvl = 51,
-    maxlvl = 55,
-    shards = {
-      { id = SmallBrilliantShard_Id, p = 1, min = 2, max = 4, },
-    },
-  },
-  {
-    minlvl = 56,
-    maxlvl = 60,
-    shards = {
-      { id = NexusCrystal_Id, p = 1, min = 1, max = 1, },
-    },
-  },
-  {
-    minlvl = 61,
-    maxlvl = 75,
-    shards = {
-      { id = NexusCrystal_Id, p = 1, min = 1, max = 2, },
-    },
-  },
-  {
-    minlvl = 76,
-    maxlvl = 94,
-    shards = {
-      { id = NexusCrystal_Id, p = 0.33, min = 1, max = 1, },
-      { id = NexusCrystal_Id, p = 0.67, min = 2, max = 2, },
-    },
-  },
-  {
-    minlvl = 95,
-    maxlvl = 165,
-    shards = {
-      { id = VoidCrystal_Id, p = 0.33, min = 1, max = 1, },
-      { id = VoidCrystal_Id, p = 0.67, min = 2, max = 2, },
-    },
-  },
-  {
-    minlvl = 166,
-    maxlvl = 200,
-    shards = {
-      { id = AbyssCrystal_Id, p = 1, min = 1, max = 1, },
-    },
-  },
-  {
-    minlvl = 201,
-    maxlvl = 226,
-    shards = {
-      { id = AbyssCrystal_Id, p = 1, min = 1, max = 2, },
+      { p = 1.00, min = 1, max = 1, id = AbyssCrystal_Id, },
     },
   },
 };
@@ -573,8 +497,8 @@ local DisenchantInfo = {
     [ITEM_TYPE_WEAPON] = Rare,
   },
   [ITEM_QUALITY_EPIC] = {
-    [ITEM_TYPE_ARMOR] = EpicArmor,
-    [ITEM_TYPE_WEAPON] = EpicWeapon,
+    [ITEM_TYPE_ARMOR] = Epic,
+    [ITEM_TYPE_WEAPON] = Epic,
   },
 };
 
