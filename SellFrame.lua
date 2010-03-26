@@ -713,11 +713,11 @@ function AuctionLite:GetDuration()
   local time = 0;
 
   if SellShortAuctionButton:GetChecked() then
-    time = 720;
+    time = 1;
   elseif SellMediumAuctionButton:GetChecked() then
-    time = 1440;
+    time = 2;
   elseif SellLongAuctionButton:GetChecked() then
-    time = 2880;
+    time = 3;
   end
 
   return time;

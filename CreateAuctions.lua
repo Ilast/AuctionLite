@@ -8,6 +8,9 @@ local L = LibStub("AceLocale-3.0"):GetLocale("AuctionLite", false)
 
 -- Flag indicating whether we're currently posting auctions.
 local Selling = false;
+local MultisellCreated = 0;
+local MultisellDone = false;
+local MultisellError = false;
 
 -- Current coroutine.
 local Coro = nil;
@@ -37,16 +40,19 @@ function AuctionLite:CountItems(targetLink)
   return total;
 end
 
--- Find an empty bag slot.
-function AuctionLite:GetEmptySlot()
-  local i, j;
+-- Find item in bags.
+function AuctionLite:FindItem(targetLink)
+  local total = 0;
 
-  for i = 0, 4 do
-    local numItems = GetContainerNumSlots(i);
-    for j = 1, numItems do
-      local link = GetContainerItemLink(i, j);
-      if link == nil then
-        return i, j;
+  if targetLink ~= nil then
+    local i, j;
+    for i = 0, 4 do
+      local numItems = GetContainerNumSlots(i);
+      for j = 1, numItems do
+        local link = self:RemoveUniqueId(GetContainerItemLink(i, j));
+        if link == targetLink then
+          return i, j;
+        end
       end
     end
   end
@@ -54,53 +60,51 @@ function AuctionLite:GetEmptySlot()
   return nil;
 end
 
--- Make a stack of 'size' items of the item identified by 'targetLink'
--- in the bag slot designated by 'container' and 'slot'.  Must be called
--- from within a fresh coroutine.
-function AuctionLite:MakeStackInSlot(targetLink, size, container, slot)
-  local total = 0;
-  local i, j;
-
-  for i = 0, 4 do
-    local numItems = GetContainerNumSlots(i);
-    for j = 1, numItems do
-      if i ~= container or j ~= slot then
-        -- Make sure the item is unlocked so that we can pick it up.  We
-        -- need to do this before getting the link, since the item might
-        -- change/disappear before becoming unlocked.
-        self:WaitForUnlock(i, j);
-
-        local link = self:RemoveUniqueId(GetContainerItemLink(i, j));
-        local _, count = GetContainerItemInfo(i, j);
-
-        if link == targetLink then
-          -- It's the item we're looking for, and it's unlocked.
-          -- Pick up as many as we need.
-          local moved = math.min(count, size - total);
-          SplitContainerItem(i, j, moved);
-
-          -- Drop the item in the target slot.
-          self:WaitForUnlock(container, slot);
-          PickupContainerItem(container, slot);
-          total = total + moved;
-
-          -- Wait for the operation to complete (specifically, the old
-          -- location is unlocked, and the new location has the items).
-          self:WaitForUnlock(i, j);
-          self:WaitForQuantity(container, slot, total);
-
-          if total == size then
-            return;
-          end
-        end
-      end
-    end
-  end
-end
-
 -------------------------------------------------------------------------------
 -- Auction creation
 -------------------------------------------------------------------------------
+
+-- Start the auctions and print a message to the console.
+function AuctionLite:StartAuctions(bid, buyout, time, size, stacks, name, link)
+  -- Make sure the item is present.
+  if GetAuctionSellItemInfo() == nil then
+    local container, slot = self:FindItem(link);
+    if container ~= nil then
+      ClearCursor();
+      PickupContainerItem(container, slot);
+      ClickAuctionSellItemButton();
+    end
+  end
+
+  -- Check again, just to be sure.
+  if GetAuctionSellItemInfo() ~= nil then
+    -- Grab our initial state.
+    local count = self:CountItems(link);
+
+    MultisellCreated = 0;
+    MultisellDone = false;
+    MultisellError = false;
+
+    -- Start the new auction, ignoring console spam.
+    StartAuction(bid, buyout, time, size, stacks);
+    self:IgnoreMessage(ERR_AUCTION_STARTED, stacks);
+
+    -- If it's a multisell, wait for it to complete.  Note that we might
+    -- sell fewer items than originally requested if the user cancels.
+    if stacks > 1 then
+      self:WaitForMultisell();
+      stacks = MultisellCreated;
+    end
+
+    -- Now wait for the inventory to be updated so that CountItems doesn't
+    -- get confused later.
+    self:WaitForQuantity(link, count - (size * stacks));
+
+    -- And tell the user what we did.
+    self:Print(L["Created %d |4auction:auctions; of %s x%d (%s total)."]:
+               format(stacks, name, size, self:PrintMoney(stacks * buyout)));
+  end
+end
 
 -- Create new auctions based on the fields in the "Sell" tab.
 function AuctionLite:CreateAuctionsCore()
@@ -129,10 +133,6 @@ function AuctionLite:CreateAuctionsCore()
       buyout = buyout * size;
     end
 
-    -- Save our original values for later use.
-    local origBuyout = buyout;
-    local origSize = size;
-
     -- Now do some sanity checks.
     if name == nil then
       self:Print(L["Error locating item in bags.  Please try again!"]);
@@ -149,86 +149,31 @@ function AuctionLite:CreateAuctionsCore()
     elseif count ~= nil and stacks > 0 then
       local created = 0;
 
+      -- Determine if we have an excess stack to sell.
+      local excessStacks = 0;
+      local excessSize = 0;
+      if size * stacks > numItems then
+        stacks = stacks - 1;
+        excessStacks = 1;
+        excessSize = numItems - (size * stacks);
+        assert(0 < excessSize);
+        assert(excessSize < size);
+      end
+
       -- Disable the auction creation button.
       SellCreateAuctionButton:Disable();
 
-      -- If the auction slot already contains a stack of the correct size,
-      -- auction it!  Otherwise, just clear out the auction slot to make
-      -- room for the real thing.
-      if count == size then
-        StartAuction(bid, buyout, time);
-        self:IgnoreMessage(ERR_AUCTION_STARTED);
-        self:WaitForEmpty(sellContainer, sellSlot);
-        created = created + 1;
-        SellStacks:SetNumber(stacks - created);
-      else
-        ClearCursor();
-        ClickAuctionSellItemButton();
-        ClearCursor();
+      -- Sell the main batch of items.
+      self:StartAuctions(bid, buyout, time, size, stacks, name, link);
+
+      -- Sell the excess, if necessary.
+      if excessStacks > 0 and not MultisellError then
+        self:StartAuctions(bid * excessSize / size, buyout * excessSize / size,
+                           time, excessSize, excessStacks, name, link);
       end
 
-      -- Do we have more to do?
-      -- Find an empty bag slot in which we can build stacks of items.
-      local container, slot = self:GetEmptySlot();
-      if container ~= nil then
-        -- Create the remaining auctions.
-        while created < stacks do
-          -- If we have an uneven number of items to sell, reduce the
-          -- size of the last stack.
-          if created == stacks - 1 then
-            local remaining = numItems - (created * size);
-            assert(remaining > 0);
-            if remaining < size then
-              size = remaining;
-              bid = bid * size / origSize;
-              buyout = buyout * size / origSize;
-            end
-          end
-
-          -- Create a stack of the appropriate size.
-          self:MakeStackInSlot(link, size, container, slot);
-
-          -- Pick it up and put it in the auction slot.
-          self:WaitForUnlock(container, slot);
-          PickupContainerItem(container, slot);
-          ClickAuctionSellItemButton();
-
-          -- One final sanity check.
-          local auctionName, _, auctionCount = GetAuctionSellItemInfo();
-          if auctionName ~= name or auctionCount ~= size then
-            self:Print(L["Error when creating auctions."]);
-            break;
-          end
-
-          -- And away she goes!
-          StartAuction(bid, buyout, time);
-          self:IgnoreMessage(ERR_AUCTION_STARTED);
-          self:WaitForEmpty(container, slot);
-
-          created = created + 1;
-          SellStacks:SetNumber(stacks - created);
-        end
-
-        self:ClearSellFrame();
-      elseif created < stacks then
-        -- Couldn't find an empty bag slot.
-        self:Print(L["Need an empty bag slot to create auctions."]);
-      else
-        -- We're done anyway.
-        self:ClearSellFrame();
-      end
-
-      if size == origSize then
-        self:Print(L["Created %d |4auction:auctions; of %s x%d (%s total)."]:
-                   format(created, name, size,
-                          self:PrintMoney(created * buyout)));
-      else
-        self:Print(L["Created %d |4auction:auctions; of %s x%d (%s total)."]:
-                   format(created - 1, name, origSize,
-                          self:PrintMoney((created - 1) * origBuyout)));
-        self:Print(L["Created %d |4auction:auctions; of %s x%d (%s total)."]:
-                   format(1, name, size, self:PrintMoney(buyout)));
-      end
+      -- We're done; clear the frame.
+      self:ClearSellFrame();
     end
 
     Selling = false;
@@ -246,31 +191,18 @@ end
 -- Coroutine functions
 -------------------------------------------------------------------------------
 
--- Wait for a bag slot to become unlocked.  Must be called from a
--- coroutine, and must expect that this condition will soon become true.
-function AuctionLite:WaitForUnlock(container, slot)
+-- Yield until the number of items in the inventory drops below a threshold.
+function AuctionLite:WaitForQuantity(link, qty)
   self:WaitUntil(function()
-    local _, _, locked = GetContainerItemInfo(container, slot);
-    return (not locked);
+    local count = self:CountItems(link);
+    return (count <= qty);
   end);
 end
 
--- Wait for a bag slot to become empty.  Must be called from a
--- coroutine, and must expect that this condition will soon become true.
-function AuctionLite:WaitForEmpty(container, slot)
+-- Yield until a multisell operation completes.
+function AuctionLite:WaitForMultisell()
   self:WaitUntil(function()
-    local name = GetContainerItemInfo(container, slot);
-    return (name == nil);
-  end);
-end
-
--- Wait for a bag slot to have a specified number of items.  Must be
--- called from a coroutine, and must expect that this condition will
--- soon become true.
-function AuctionLite:WaitForQuantity(container, slot, qty)
-  self:WaitUntil(function()
-    local _, count = GetContainerItemInfo(container, slot);
-    return (count == qty);
+    return MultisellDone;
   end);
 end
 
@@ -303,20 +235,29 @@ end
 -- Coroutine hooks
 -------------------------------------------------------------------------------
 
--- An item lock has changed, so wake up the coroutine.
-function AuctionLite:ITEM_LOCK_CHANGED()
+function AuctionLite:BAG_UPDATE()
   self:ResumeCoroutine();
 end
 
--- A bag slot has changed, so wake up the coroutine.
-function AuctionLite:BAG_UPDATE()
+function AuctionLite:AUCTION_MULTISELL_UPDATE(_, cur, total)
+  MultisellCreated = cur;
+  if cur == total then
+    MultisellDone = true;
+    self:ResumeCoroutine();
+  end
+end
+
+function AuctionLite:AUCTION_MULTISELL_FAILURE(_, cur, total)
+  MultisellDone = true;
+  MultisellError = true;
   self:ResumeCoroutine();
 end
 
 -- Add the hooks needed for our coroutines.
 function AuctionLite:HookCoroutines()
   self:RegisterEvent("BAG_UPDATE");
-  self:RegisterEvent("ITEM_LOCK_CHANGED");
+  self:RegisterEvent("AUCTION_MULTISELL_UPDATE");
+  self:RegisterEvent("AUCTION_MULTISELL_FAILURE");
 end
 
 -------------------------------------------------------------------------------
@@ -331,5 +272,8 @@ end
 -- Reset state.  Useful for recovering from bugs.
 function AuctionLite:ResetAuctionCreation()
   Selling = false;
+  MultisellCreated = 0;
+  MultisellDone = false;
+  MultisellError = false;
   Coro = nil;
 end

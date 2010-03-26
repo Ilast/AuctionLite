@@ -791,7 +791,7 @@
 					</OnLoad>
 				</Scripts>
 			</Frame>
-			<Button name="SellCreateAuctionButton" inherits="UIPanelButtonTemplate" text="CREATE_AUCTION">
+			<Button name="SellCreateAuctionButton" inherits="UIPanelButtonTemplate2" text="CREATE_AUCTION">
 				<Size>
 					<AbsDimension x="191" y="20"/>
 				</Size>
