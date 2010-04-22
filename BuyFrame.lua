@@ -1055,6 +1055,18 @@ function AuctionLite:SummarySortButton_OnClick(sort)
   self:AuctionFrameBuy_Update();
 end
 
+-- Return a sorted list of favorites list names.
+function AuctionLite:GetFavoritesLists()
+  local names = {};
+
+  for name, list in pairs(self.db.profile.favorites) do
+    table.insert(names, name);
+  end
+  table.sort(names);
+
+  return names;
+end
+
 -- Toggle the favorites flag for this item.
 function AuctionLite:FavoritesButton_OnClick(id)
   local offset = FauxScrollFrame_GetOffset(BuyScrollFrame);
@@ -1097,7 +1109,8 @@ function AuctionLite:FavoritesButton_OnClick(id)
       info.isTitle = true;
       UIDropDownMenu_AddButton(info);
 
-      for name, list in pairs(self.db.profile.favorites) do
+      for _, name in ipairs(self:GetFavoritesLists()) do
+        local list = self.db.profile.favorites[name];
         local info = UIDropDownMenu_CreateInfo();
         info.text = name;
         info.func = function() toggle(list) end;
@@ -1268,7 +1281,8 @@ function AuctionLite:BuyAdvancedButton_OnClick()
       end
       UIDropDownMenu_AddButton(info, level);
     elseif level == 2 then
-      for name, favs in pairs(self.db.profile.favorites) do
+      for _, name in ipairs(self:GetFavoritesLists()) do
+        local favs = self.db.profile.favorites[name];
         local info = UIDropDownMenu_CreateInfo();
         info.text = name;
         info.func = function()
