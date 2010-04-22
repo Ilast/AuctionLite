@@ -379,13 +379,20 @@ function AuctionLite:ClickAuctionSellItemButton_Hook()
 
       self:UpdateDeposit();
 
-      local query = {
-        link = link,
-        update = function(pct) AuctionLite:UpdateProgressSell(pct) end,
-        finish = function(data, link) AuctionLite:SetSellData(data, link) end,
-      };
+      if IsControlKeyDown() then
+        -- Just pretend the scan finished.
+        self:Print(L["Auction scan skipped (control key is down)"]);
+        self:SetSellData({}, link);
+      else
+        -- Start the scan.
+        local query = {
+          link = link,
+          update = function(pct) AuctionLite:UpdateProgressSell(pct) end,
+          finish = function(data, link) AuctionLite:SetSellData(data, link) end,
+        };
 
-      self:StartQuery(query);
+        self:StartQuery(query);
+      end
     end
   end
 end
@@ -628,6 +635,10 @@ function AuctionLite:SellRememberButton_OnClick(widget)
       local value = prefs[field];
       if value ~= nil then
         if isMoney then
+          if self.db.profile.method == METHOD_PER_STACK then
+            local stackSize = SellSize:GetNumber();
+            value = value * stackSize;
+          end
           value = self:PrintMoney(value);
         end
       else
@@ -639,7 +650,12 @@ function AuctionLite:SellRememberButton_OnClick(widget)
           if prefs[field] ~= nil then
             prefs[field] = nil;
           else
-            prefs[field] = fn();
+            local newValue = fn();
+            if isMoney and self.db.profile.method == METHOD_PER_STACK then
+              local stackSize = SellSize:GetNumber();
+              newValue = newValue / stackSize;
+            end
+            prefs[field] = newValue;
           end
           self:SetSavedPrices(link, prefs);
         end,
