@@ -164,3 +164,9 @@ function AuctionLite:AddAuctionFrameTabs()
   BuyTabIndex = self:CreateBuyFrame();
   SellTabIndex = self:CreateSellFrame();
 end
+
+-- Initialize auction duration to avoid Lua errors when we call into
+-- Blizzard code.
+function AuctionLite:InitializeAuctionDuration()
+  AuctionFrameAuctions.duration = 0;
+end

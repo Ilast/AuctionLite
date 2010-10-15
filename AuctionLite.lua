@@ -35,6 +35,7 @@ function AuctionLite:ADDON_LOADED(_, name)
                     "QueryAuctionItems_Hook");
     self:HookAuctionFrameUpdate();
     self:AddAuctionFrameTabs();
+    self:InitializeAuctionDuration();
   elseif name == "Blizzard_GuildBankUI" then
     self:HookBankTooltips();
   end
