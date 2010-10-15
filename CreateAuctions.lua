@@ -142,35 +142,18 @@ function AuctionLite:CreateAuctionsCore()
       self:Print(L["Buyout cannot be less than starting bid."]);
     elseif GetMoney() < self:CalculateDeposit() then
       self:Print(L["Not enough cash for deposit."]);
-    elseif stacks > math.ceil(numItems / size) then
+    elseif numItems < stacks * size then
       self:Print(L["Not enough items available."]);
     elseif maxSize < size then
       self:Print(L["Stack size too large."]);
     elseif count ~= nil and stacks > 0 then
       local created = 0;
 
-      -- Determine if we have an excess stack to sell.
-      local excessStacks = 0;
-      local excessSize = 0;
-      if size * stacks > numItems then
-        stacks = stacks - 1;
-        excessStacks = 1;
-        excessSize = numItems - (size * stacks);
-        assert(0 < excessSize);
-        assert(excessSize < size);
-      end
-
       -- Disable the auction creation button.
       SellCreateAuctionButton:Disable();
 
       -- Sell the main batch of items.
       self:StartAuctions(bid, buyout, time, size, stacks, name, link);
-
-      -- Sell the excess, if necessary.
-      if excessStacks > 0 and not MultisellError then
-        self:StartAuctions(bid * excessSize / size, buyout * excessSize / size,
-                           time, excessSize, excessStacks, name, link);
-      end
 
       -- We're done; clear the frame.
       self:ClearSellFrame();

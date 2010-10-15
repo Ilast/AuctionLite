@@ -92,7 +92,9 @@ end
 -- Zero out the uniqueId field from an item link.
 function AuctionLite:RemoveUniqueId(link)
   if link ~= nil then
-    return link:gsub(":%-?%d*:%-?%d*|h", ":0:0|h");
+    return link:gsub(":%-?%d*:%-?%d*:(%-?%d*)|h", function(reforge)
+      return ":0:0:" .. reforge .. "|h";
+    end)
   else
     return nil;
   end

@@ -186,18 +186,10 @@ function AuctionLite:UserChangedStacks()
       local numItems = self:CountItems(link);
 
       -- If we don't have enough items to fill the order, then we need to
-      -- modify the stack size.  (The funny math here accounts for the fact
-      -- that the final stack may be a partial stack.)
-      if size * stacks - numItems >= size then
-        -- Get our new stack size, and round up since we might want to sell
-        -- the excess as a partial stack.
-        local newSize = math.ceil(numItems / stacks);
-
-        -- If the excess is more than a single stack, then reduce by one,
-        -- which is the same thing as taking floor instead of ceil above.
-        if newSize * stacks - numItems >= newSize and newSize > 1 then
-          newSize = newSize - 1;
-        end
+      -- modify the stack size.
+      if numItems < size * stacks then
+        -- Get our new stack size.
+        local newSize = math.floor(numItems / stacks);
 
         -- Make sure the stack is not too large.
         local _, _, _, _, _, _, _, maxSize = GetItemInfo(link);
@@ -279,7 +271,7 @@ function AuctionLite:ValidateAuction()
       StatusError = true;
       SellStatusText:SetText(L["|cffff0000Stack size too large.|r"]);
       SellCreateAuctionButton:Disable();
-    elseif stacks > math.ceil(numItems / size) then
+    elseif numItems < stacks * size then
       StatusError = true;
       SellStatusText:SetText(L["|cffff0000Not enough items available.|r"]);
       SellCreateAuctionButton:Disable();
@@ -298,12 +290,6 @@ function AuctionLite:ValidateAuction()
     elseif 0 < buyout and buyout <= (vendor * size / count) then
       StatusError = true;
       SellStatusText:SetText(L["|cffff7030Buyout less than vendor price.|r"]);
-      SellCreateAuctionButton:Enable();
-    elseif numItems < size * stacks then
-      StatusError = true;
-      SellStatusText:SetText(
-        L["|cffff7030Stack %d will have %d |4item:items;.|r"]:
-        format(stacks, numItems % size));
       SellCreateAuctionButton:Enable();
     else
       StatusError = false;

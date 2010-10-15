@@ -441,6 +441,10 @@ function AuctionLite:QueryNewData()
           break;
         end
       end
+      -- As of Patch 4.0.1, we can only buy one item at a time.
+      if table.getn(cart) > 0 then
+        break;
+      end
     end
 
     -- If we found something, request approval.
